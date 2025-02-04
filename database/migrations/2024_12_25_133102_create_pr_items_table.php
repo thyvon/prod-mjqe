@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('remark')->nullable();
             $table->decimal('qty', 10, 2);
             $table->string('uom');
-            $table->decimal('price', 10, 2);
+            $table->decimal('unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
             $table->string('campus');
             $table->string('division');
@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('status')->default('Pending');
             $table->boolean('force_close')->default(false);
             $table->boolean('is_cancel')->default(false);
+            $table->string('reason')->nullable();
             $table->timestamps();
         });
     }

@@ -9,16 +9,20 @@
     <meta content="" name="description" />
     <meta content="" name="author" />
 
+    <!-- Include Poppins font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- ================== BEGIN core-css ================== -->
     <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" />
     <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" />
     <!-- ================== END core-css ================== -->
     <link href="/coloradmin/plugins/datatables.net-bs5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
     <link href="/coloradmin/plugins/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css" rel="stylesheet" />
+    <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" />
     @vite(['resources/css/app.css'])
     @inertiaHead
 </head>
-<body>
+<body style="font-family: 'Poppins', sans-serif;">
 
     <script src="/coloradmin/js/vendor.min.js"></script>
     <script src="/coloradmin/js/app.min.js"></script>
@@ -29,6 +33,7 @@
     <script src="/coloradmin/plugins/datatables.net-responsive/js/dataTables.responsive.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive-bs5/js/responsive.bootstrap5.min.js" defer></script>
     <script src="/coloradmin/plugins/sweetalert/dist/sweetalert.min.js" defer></script>
+    <script src="/coloradmin/plugins/select2/dist/js/select2.min.js" defer></script>
     @vite(['resources/js/app.js'])
     @routes
     @inertia

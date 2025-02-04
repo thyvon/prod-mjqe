@@ -1,3 +1,32 @@
 /* @tailwind base; */
 /* @tailwind components; */
 @tailwind utilities;
+
+/* Center all modals */
+.modal-content {
+  display: flex;
+  flex-direction: column; /* Ensure the modal body and footer stack properly */
+  max-height: calc(100vh - 1rem); /* Prevent overflow outside the viewport */
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030; /* Ensure it stays above the body content */
+}
+
+.modal-body {
+  overflow-y: auto; /* Enable vertical scrolling */
+  flex-grow: 1; /* Allow the body to take up remaining space */
+}
+
+
+.dt-nowrap {
+  white-space: nowrap; /* Default: Prevent wrapping for other cells */
+}
+
+.wrap-cell {
+  white-space: normal; /* Allow wrapping for specific columns */
+  word-break: break-word; /* Ensure long words break as needed */
+  max-width: 300px; /* Optional: Limit the wrapping area for better alignment */
+}

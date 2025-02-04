@@ -16,6 +16,7 @@ class Supplier extends Model
         'email',
         'address',
         'payment_term',
+        'vat',
         'status',
     ];
     protected $casts = [

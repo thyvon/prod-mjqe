@@ -41,7 +41,11 @@ const logout = () => {
     <!-- BEGIN #header -->
     <div id="header" class="app-header">
       <div class="navbar-header">
-        <a href="/dashboard" class="navbar-brand"><image src="//www.mjqeducation.edu.kh/FrontEnd/Image/logo/mjq-education-single-logo_1.ico"></image><b>PROD</b> System</a>
+        <a href="/dashboard" class="navbar-brand">
+	<img src="//www.mjqeducation.edu.kh/FrontEnd/Image/logo/mjq-education-single-logo_1.ico" alt="Logo" class="navbar-logo">
+	<span class="navbar-text"><b>PROD</b> System</span>
+	</a>
+
         <button type="button" class="navbar-mobile-toggler" data-toggle="app-sidebar-mobile">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
@@ -98,13 +102,12 @@ const logout = () => {
     <!-- END Sidebar -->
 
     <!-- BEGIN #content -->
-    <div id="content" class="app-content">
+    <div id="content" class="app-content d-flex flex-column p- flex-grow-1">
       <slot />
-    <div id="footer" class="app-footer">
+      <div id="footer" class="app-footer mt-auto">
         &copy; 2024 PROD MJQE All Right Reserved
+      </div>
     </div>
-    </div>
-
     <!-- END #content -->
 
 		<!-- BEGIN theme-panel -->

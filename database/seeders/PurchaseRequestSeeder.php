@@ -9,6 +9,6 @@ class PurchaseRequestSeeder extends Seeder
 {
     public function run()
     {
-        \App\Models\PurchaseRequest::factory(10)->create();
+        \App\Models\PurchaseRequest::factory(5)->create();
     }
 }

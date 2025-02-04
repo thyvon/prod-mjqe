@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, nextTick } from 'vue';
-import { Inertia } from '@inertiajs/inertia';
-import { Head, Link } from '@inertiajs/vue3';
+import { ref, reactive, onMounted, nextTick } from 'vue';
+import axios from 'axios';
+import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 
 // Define the props using defineProps()
@@ -10,27 +10,130 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  users: Array,
+  currentUser: Object,
 });
 
-// Edit a cash request (navigate to the edit page)
-const editCashRequest = (rowData) => {
-  if (rowData && rowData.id) {
-    Inertia.visit(`/cash-request/${rowData.id}/edit`);
-  } else {
-    console.error('Invalid row data:', rowData);
+// Local state for cash requests
+const isEdit = ref(false);
+const cashRequestForm = reactive({
+  id: null,
+  request_type: null, // Changed to integer
+  request_date: '',
+  user_id: null,
+  request_by: '',
+  position: '',
+  id_card: '',
+  campus: '',
+  division: '',
+  department: '',
+  description: '',
+  currency: '',
+  exchange_rate: '',
+  amount: '',
+  via: '',
+  reason: '',
+  remark: '',
+});
+
+const validationErrors = ref({});
+let dataTableInstance;
+
+// Functions
+const openCreateModal = () => {
+  isEdit.value = false;
+  Object.assign(cashRequestForm, {
+    id: null,
+    request_type: null, // Changed to integer
+    request_date: new Date().toISOString().split('T')[0], // Ensure date format is "yyyy-MM-dd"
+    user_id: props.currentUser ? props.currentUser.id : '',
+    request_by: props.currentUser ? props.currentUser.name : '',
+    position: '',
+    id_card: '',
+    campus: '',
+    division: '',
+    department: '',
+    description: '',
+    currency: '',
+    exchange_rate: '',
+    amount: '',
+    via: '',
+    reason: '',
+    remark: '',
+  });
+  const modalElement = document.getElementById('cashRequestModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+  nextTick(() => {
+    initializeSelect2();
+  });
+};
+
+const openEditModal = (cashRequest) => {
+  isEdit.value = true;
+  Object.assign(cashRequestForm, cashRequest);
+  cashRequestForm.request_date = cashRequestForm.request_date.split('T')[0]; // Ensure date format is "yyyy-MM-dd"
+  const modalElement = document.getElementById('cashRequestModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+  nextTick(() => {
+    initializeSelect2();
+  });
+};
+
+const saveCashRequest = async () => {
+  const requestTypeText = cashRequestForm.request_type == 1 ? 'Petty Cash' : 'Cash Advance';
+  const confirmResult = await swal({
+    title: 'Confirm Save',
+    text: `Are you sure you want to save this ${requestTypeText} request?`,
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, save it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-primary',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (!confirmResult) {
+    return;
+  }
+
+  try {
+    if (isEdit.value) {
+      const response = await axios.put(`/cash-request/${cashRequestForm.id}`, cashRequestForm);
+      const updatedRequest = response.data;
+      const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedRequest.id).index();
+      dataTableInstance.row(rowIndex).data(updatedRequest).draw();
+      swal('Success!', 'Cash request updated successfully!', 'success', { timer: 2000 });
+    } else {
+      const response = await axios.post('/cash-request', cashRequestForm);
+      dataTableInstance.row.add(response.data).draw();
+      swal('Success!', 'Cash request created successfully!', 'success', { timer: 2000 });
+    }
+    const modalElement = document.getElementById('cashRequestModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
+  } catch (error) {
+    if (error.response && error.response.status === 422) {
+      validationErrors.value = error.response.data.errors;
+    } else {
+      swal('Error!', 'Failed to save cash request. Please try again.', 'error');
+    }
   }
 };
 
-// View a cash request
-const showCashRequest = (rowData) => {
-  if (rowData && rowData.id) {
-    Inertia.visit(route('cash-request.show', rowData.id));
-  } else {
-    console.error('Invalid row data:', rowData);
-  }
-};
-
-// Function to delete a cash request
 const deleteCashRequest = async (cashRequestId) => {
   swal({
     title: 'Are you sure?',
@@ -56,10 +159,9 @@ const deleteCashRequest = async (cashRequestId) => {
   }).then(async (result) => {
     if (result) {
       try {
-        await Inertia.delete(route('cash-request.destroy', cashRequestId));
-        swal('Deleted!', 'Cash request has been deleted.', 'success').then(() => {
-          Inertia.visit(route('cash-request.index'));
-        });
+        await axios.delete(`/cash-request/${cashRequestId}`);
+        dataTableInstance.row((idx, data) => data.id === cashRequestId).remove().draw();
+        swal('Deleted!', 'Cash request has been deleted.', 'success', { timer: 2000 });
       } catch (error) {
         swal('Error!', 'Failed to delete cash request. Please try again.', 'error');
       }
@@ -67,20 +169,58 @@ const deleteCashRequest = async (cashRequestId) => {
   });
 };
 
-// Helper function to format dates
-const formatDate = (dateString) => {
-  const options = { year: 'numeric', month: 'short', day: '2-digit' };
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', options);
+const clearForm = () => {
+  Object.assign(cashRequestForm, {
+    id: null,
+    request_type: null, // Changed to integer
+    request_date: new Date().toISOString().split('T')[0], // Ensure date format is "yyyy-MM-dd"
+    user_id: props.currentUser ? props.currentUser.id : '',
+    request_by: props.currentUser ? props.currentUser.name : '',
+    position: '',
+    id_card: '',
+    campus: '',
+    division: '',
+    department: '',
+    description: '',
+    currency: '',
+    exchange_rate: '',
+    amount: '',
+    via: '',
+    reason: '',
+    remark: '',
+  });
+  validationErrors.value = {};
 };
 
-// Initialize DataTable after DOM is updated
+const initializeSelect2 = () => {
+  $('#cashRequestModal .select2').select2({
+    dropdownParent: $('#cashRequestModal')
+  }).on('change', function () {
+    const field = $(this).attr('id');
+    cashRequestForm[field] = $(this).val();
+    if (field === 'user_id') {
+      const selectedUser = props.users.find(user => user.id === cashRequestForm.user_id);
+      cashRequestForm.request_by = selectedUser ? selectedUser.name : '';
+    }
+  });
+};
+
+// Helper function to format dates
+const format = (value, type) => {
+  if (type === 'date') {
+    const options = { year: 'numeric', month: 'short', day: '2-digit' };
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', options);
+  }
+};
+
+// Initialize DataTable
 onMounted(() => {
   nextTick(() => {
     const table = $('#cash-request');
     if (table.length) {
       console.log('Initializing DataTable');
-      const dataTableInstance = table.DataTable({
+      dataTableInstance = table.DataTable({
         responsive: true,
         autoWidth: true,
         data: props.cashRequests,
@@ -88,13 +228,20 @@ onMounted(() => {
           { data: null, render: (data, type, row, meta) => meta.row + 1 },
           { data: 'ref_no' },
           { data: 'description' },
-          { data: 'request_type' },
+          {
+            data: 'request_type',
+            render: (data) => {
+              if (data == 1) return '<span class="badge bg-primary">Petty Cash</span>';
+              if (data == 2) return '<span class="badge bg-success">Cash Advance</span>';
+              return ''; // Default case to handle unexpected values
+            }
+          },
           { data: 'request_by' },
           { data: 'campus' },
           { data: 'currency' },
           { data: 'amount' },
           { data: 'remark' },
-          { data: 'request_date', render: (data) => formatDate(data) },
+          { data: 'request_date', render: (data) => format(data, 'date') },
           {
             data: null,
             render: () => `
@@ -113,11 +260,11 @@ onMounted(() => {
         ],
       });
 
-      // Attach event listeners
+      // Attach event listeners to the main table
       $('#cash-request')
         .on('click', '.btn-edit', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
-          if (rowData) editCashRequest(rowData);
+          if (rowData) openEditModal(rowData);
         })
         .on('click', '.btn-delete', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
@@ -125,26 +272,30 @@ onMounted(() => {
         })
         .on('click', '.btn-show', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
-          if (rowData) showCashRequest(rowData);
+          if (rowData) {
+            window.location.href = `/cash-request/${rowData.id}`;
+          }
         });
 
       // Handle actions inside child rows (responsive details)
       $('#cash-request').on('click', '.dtr-details .btn-edit', function () {
-        const tr = $(this).closest('tr').prev();
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
         const rowData = dataTableInstance.row(tr).data();
-        if (rowData) editCashRequest(rowData);
+        if (rowData) openEditModal(rowData);
       });
 
       $('#cash-request').on('click', '.dtr-details .btn-delete', function () {
-        const tr = $(this).closest('tr').prev();
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
         const rowData = dataTableInstance.row(tr).data();
         if (rowData) deleteCashRequest(rowData.id);
       });
 
       $('#cash-request').on('click', '.dtr-details .btn-show', function () {
-        const tr = $(this).closest('tr').prev();
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
         const rowData = dataTableInstance.row(tr).data();
-        if (rowData) showCashRequest(rowData);
+        if (rowData) {
+          window.location.href = `/cash-request/${rowData.id}`;
+        }
       });
     }
   });
@@ -154,20 +305,19 @@ onMounted(() => {
 <template>
   <Main>
     <Head :title="'Cash Request'" />
-
     <div class="panel panel-inverse">
-        <div class="panel-heading">
-          <h4 class="panel-title">Cash Request</h4>
-          <div class="panel-heading-btn">
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
-          </div>
+      <div class="panel-heading">
+        <h4 class="panel-title">Cash Request</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
         </div>
+      </div>
       <div class="panel-body">
         <!-- Create New Cash Request Button -->
-        <Link href="/cash-request/create" class="btn btn-primary mb-4">Create New</Link>
+        <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Create New</button>
 
         <!-- Cash Request Table -->
         <table id="cash-request" class="table table-bordered align-middle text-nowrap" width="100%">
@@ -187,6 +337,127 @@ onMounted(() => {
             </tr>
           </thead>
         </table>
+
+        <!-- Modal for Create/Edit Cash Request -->
+        <div class="modal fade" id="cashRequestModal" tabindex="-1" aria-labelledby="cashRequestModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="cashRequestModalLabel">{{ isEdit ? 'Edit Cash Request' : 'Create Cash Request' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form @submit.prevent="saveCashRequest">
+                  <div class="row">
+                    <!-- Left side for requester information -->
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="user_id" class="form-label">Request By</label>
+                        <select v-model="cashRequestForm.user_id" class="form-select select2" id="user_id" required>
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.user_id" class="text-danger">{{ validationErrors.user_id[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="position" class="form-label">Position</label>
+                        <input v-model="cashRequestForm.position" type="text" class="form-control" id="position" required />
+                        <div v-if="validationErrors.position" class="text-danger">{{ validationErrors.position[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="id_card" class="form-label">ID Card</label>
+                        <input v-model="cashRequestForm.id_card" type="text" class="form-control" id="id_card" required />
+                        <div v-if="validationErrors.id_card" class="text-danger">{{ validationErrors.id_card[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="campus" class="form-label">Campus</label>
+                        <select v-model="cashRequestForm.campus" class="form-select select2" id="campus" required>
+                          <option value="CEN">CEN</option>
+                          <option value="TK">TK</option>
+                        </select>
+                        <div v-if="validationErrors.campus" class="text-danger">{{ validationErrors.campus[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="division" class="form-label">Division</label>
+                        <input v-model="cashRequestForm.division" type="text" class="form-control" id="division" required />
+                        <div v-if="validationErrors.division" class="text-danger">{{ validationErrors.division[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="department" class="form-label">Department</label>
+                        <input v-model="cashRequestForm.department" type="text" class="form-control" id="department" required />
+                        <div v-if="validationErrors.department" class="text-danger">{{ validationErrors.department[0] }}</div>
+                      </div>
+                    </div>
+                    <!-- Right side for other information -->
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="request_type" class="form-label">Request Type</label>
+                        <select v-model="cashRequestForm.request_type" class="form-select select2" id="request_type" required>
+                          <option value="1">Petty Cash</option> <!-- Changed to integer values -->
+                          <option value="2">Cash Advance</option> <!-- Changed to integer values -->
+                        </select>
+                        <div v-if="validationErrors.request_type" class="text-danger">{{ validationErrors.request_type[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="request_date" class="form-label">Request Date</label>
+                        <input v-model="cashRequestForm.request_date" type="date" class="form-control" id="request_date" required />
+                        <div v-if="validationErrors.request_date" class="text-danger">{{ validationErrors.request_date[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="currency" class="form-label">Currency</label>
+                        <select v-model="cashRequestForm.currency" class="form-select select2" id="currency" required>
+                          <option value="USD">USD</option>
+                          <option value="KHR">KHR</option>
+                        </select>
+                        <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="exchange_rate" class="form-label">Exchange Rate</label>
+                        <input v-model="cashRequestForm.exchange_rate" type="number" step="0.01" class="form-control" id="exchange_rate" required />
+                        <div v-if="validationErrors.exchange_rate" class="text-danger">{{ validationErrors.exchange_rate[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="amount" class="form-label">Amount</label>
+                        <input v-model="cashRequestForm.amount" type="number" step="0.01" class="form-control" id="amount" required />
+                        <div v-if="validationErrors.amount" class="text-danger">{{ validationErrors.amount[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="via" class="form-label">Payment Method</label>
+                        <select v-model="cashRequestForm.via" class="form-select select2" id="via" required>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Cheque">Cheque</option>
+                        </select>
+                        <div v-if="validationErrors.via" class="text-danger">{{ validationErrors.via[0] }}</div>
+                      </div>
+                    </div>
+                    <!-- Middle section for description, reason, and remark -->
+                    <div class="col-12">
+                      <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea v-model="cashRequestForm.description" class="form-control" id="description"></textarea>
+                        <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="reason" class="form-label">Reason</label>
+                        <textarea v-model="cashRequestForm.reason" class="form-control" id="reason"></textarea>
+                        <div v-if="validationErrors.reason" class="text-danger">{{ validationErrors.reason[0] }}</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="remark" class="form-label">Remark</label>
+                        <textarea v-model="cashRequestForm.remark" class="form-control" id="remark"></textarea>
+                        <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Create' }}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </Main>
