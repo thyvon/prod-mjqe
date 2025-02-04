@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->string('payment_term')->nullable();
+            $table->decimal('vat', 5, 2)->nullable(); // Add vat field
             $table->tinyInteger('status')->default(1);  // 1 = active, 0 = inactive
             $table->timestamps();
         });

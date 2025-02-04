@@ -18,6 +18,11 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
-        "@inertiajs/inertia": "^0.11.1"
+        "@inertiajs/inertia": "^0.11.1",
+        "date-fns": "^4.1.0",
+        "select2": "^4.1.0-rc.0",
+        "toastr": "^2.1.4",
+        "vue-multiselect": "^3.1.0",
+        "vue-select": "^4.0.0-beta.6"
     }
 }

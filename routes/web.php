@@ -3,14 +3,18 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Application;
-use App\Http\Controllers\PrItemController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\CashRequestController;
-use App\Http\Controllers\PurchaseRequestController;
+use App\Http\Controllers\{
+    PrItemController,
+    ProductController,
+    ProfileController,
+    CategoryController,
+    SupplierController,
+    CashRequestController,
+    PurchaseRequestController,
+    PurchaseOrderController,
+    InvoiceController,
+    UserController
+};
 
 /*
 |----------------------------------------------------------------------
@@ -25,28 +29,16 @@ use App\Http\Controllers\PurchaseRequestController;
 
 // Redirect root URL based on authentication status
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard'); // Redirect to dashboard if authenticated
-    }
-
-    return redirect()->route('login'); // Redirect to login if not authenticated
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
 // Dashboard route (protected with 'auth' middleware)
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', fn() => Inertia::render('Dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
 
 // Auth routes (login, logout, registration)
 Route::middleware('guest')->group(function () {
-    Route::get('/login', function () {
-        return Inertia::render('Auth/Login');
-    })->name('login');
-
-    // Include registration route if needed
-    Route::get('/register', function () {
-        return Inertia::render('Auth/Register');
-    })->name('register');
+    Route::get('/login', fn() => Inertia::render('Auth/Login'))->name('login');
+    Route::get('/register', fn() => Inertia::render('Auth/Register'))->name('register');
 });
 
 // Profile routes (auth required)
@@ -56,14 +48,27 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // CRUD
-    Route::resource('suppliers', SupplierController::class);
-    Route::resource('products', ProductController::class);
-    Route::resource('categories', CategoryController::class);
-    Route::resource('cash-request', CashRequestController::class);
-    Route::resource('purchase-requests', PurchaseRequestController::class);
-    Route::resource('pr-items', PrItemController::class);
+    Route::resources([
+        'suppliers' => SupplierController::class,
+        'products' => ProductController::class,
+        'categories' => CategoryController::class,
+        'cash-request' => CashRequestController::class,
+        'purchase-requests' => PurchaseRequestController::class,
+        'pr-items' => PrItemController::class,
+        'purchase-orders' => PurchaseOrderController::class,
+        'invoices' => InvoiceController::class,
+    ]);
 
-
-
+    Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
+    Route::put('/purchase-requests/{id}/cancel-items', [PurchaseRequestController::class, 'cancelItems'])->name('purchase-requests.cancel-items');
+    Route::put('/purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
+    Route::put('/purchase-orders/items/{id}/cancel', [PurchaseOrderController::class, 'cancelItem'])->name('purchase-orders.items.cancel');
+    
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
+    Route::get('/po-items', [InvoiceController::class, 'getPoItems']);
+    Route::get('/search-suppliers', [InvoiceController::class, 'searchSuppliers']);
+    Route::get('/supplier-vat/{id}', [InvoiceController::class, 'getSupplierVat']);
 });
+
 require __DIR__.'/auth.php';

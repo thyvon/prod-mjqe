@@ -21,7 +21,7 @@ class PrItemFactory extends Factory
             'remark' => $this->faker->sentence,
             'qty' => $this->faker->randomFloat(2, 1, 100),
             'uom' => $this->faker->word,
-            'price' => $this->faker->randomFloat(2, 10, 100),
+            'unit_price' => $this->faker->randomFloat(2, 10, 100),
             'total_price' => $this->faker->randomFloat(2, 100, 1000),
             'campus' => $this->faker->word,
             'division' => $this->faker->word,

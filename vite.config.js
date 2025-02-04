@@ -1,16 +1,17 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
-// import { Ziggy } from './routes';
 
 export default defineConfig({
     plugins: [
+        // Laravel Vite plugin for handling Laravel-specific tasks
         laravel({
             input: [
-            'resources/js/app.js',
+                'resources/js/app.js',
             ],
             refresh: true,
         }),
+        // Vue plugin for handling Vue.js files
         vue({
             template: {
                 transformAssetUrls: {
@@ -20,4 +21,16 @@ export default defineConfig({
             },
         }),
     ],
+    server: {
+        watch: {
+            // Exclude the public/coloradmin directory to reduce watch load
+            ignored: ['**/public/coloradmin/**'],
+        },
+    },
+    resolve: {
+        alias: {
+            // Add aliases for cleaner imports
+            '@': '/resources/js',
+        },
+    },
 });

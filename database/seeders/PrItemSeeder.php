@@ -9,6 +9,6 @@ class PrItemSeeder extends Seeder
 {
     public function run()
     {
-        \App\Models\PrItem::factory(20)->create();
+        \App\Models\PrItem::factory(10)->create();
     }
 }

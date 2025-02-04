@@ -11,19 +11,16 @@ class SupplierController extends Controller
     // Fetch all suppliers
     public function index()
     {
-        // $suppliers = Supplier::all();
-        // return Inertia::render('Suppliers/Index', ['suppliers' => $suppliers]);
         return Inertia::render('Suppliers/Index', [
             'suppliers' => Supplier::all()
-          ]);
+        ]);
     }
 
-
-    // Show the form for creating a new supplier
-    // public function create()
-    // {
-    //     return Inertia::render('Supplier/Create');
-    // }
+    public function show($id)
+    {
+        $supplier = Supplier::findOrFail($id);
+        return response()->json($supplier);
+    }
 
     public function store(Request $request)
     {
@@ -34,20 +31,13 @@ class SupplierController extends Controller
             'email' => 'required|string|email|max:255',
             'address' => 'required|string',
             'payment_term' => 'required|string',
+            'vat' => 'nullable|numeric', // Add vat field
             'status' => 'required|in:0,1', // Ensures status is either 0 or 1
         ]);
 
-        Supplier::create($validated);
-        // return redirect()->route('suppliers.index');
+        $supplier = Supplier::create($validated);
+        return response()->json($supplier, 201); // Return the newly created supplier
     }
-
-    // Show the form for editing a supplier
-    // public function edit(Supplier $supplier)
-    // {
-    //     return Inertia::render('Supplier/Edit', [
-    //         'supplier' => $supplier
-    //     ]);
-    // }
 
     public function update(Request $request, $id)
     {
@@ -58,19 +48,18 @@ class SupplierController extends Controller
             'email' => 'required|string|email|max:255',
             'address' => 'required|string',
             'payment_term' => 'required|string',
+            'vat' => 'nullable|numeric', // Add vat field
             'status' => 'required|in:0,1', // Ensures status is either 0 or 1
         ]);
 
         $supplier = Supplier::findOrFail($id);
         $supplier->update($validated);
-        // return redirect()->route('suppliers.index');
+        return response()->json($supplier, 200); // Return the updated supplier
     }
 
-    // Delete the specified supplier
     public function destroy(Supplier $supplier)
     {
         $supplier->delete();
-
-        // return redirect()->route('suppliers.index');
+        return response()->json(null, 204);
     }
 }

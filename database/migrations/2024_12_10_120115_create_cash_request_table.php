@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cash_request', function (Blueprint $table) {
+        Schema::create('cash_requests', function (Blueprint $table) {
             $table->id(); // Primary key with auto-increment
-            $table->string('request_type');
+            $table->integer('request_type'); // Changed from string to integer
             $table->string('ref_no')->unique(); // Unique reference number
             $table->dateTime('request_date');
             $table->unsignedBigInteger('user_id'); // User ID for relationship
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('department');
             $table->text('description')->nullable();
             $table->string('currency');
-            $table->decimal('exchange_rate', 15, 4); // Adjust precision/scale if needed
+            $table->decimal('exchange_rate', 15, 2); // Adjust precision/scale if needed
             $table->decimal('amount', 15, 2); // Adjust precision/scale if needed
             $table->string('via');
             $table->text('reason')->nullable();
@@ -45,6 +45,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cash_request');
+        Schema::dropIfExists('cash_requests');
     }
 };

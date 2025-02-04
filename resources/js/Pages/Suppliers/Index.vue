@@ -1,14 +1,13 @@
 <script setup>
+import { ref, reactive, onMounted, nextTick } from 'vue';
+import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
-import { ref, reactive, onMounted } from 'vue';
-import { Inertia } from '@inertiajs/inertia';
 
 const props = defineProps({
   suppliers: Array,
 });
 
-// Modal state and form data
 const isEdit = ref(false);
 const supplierForm = reactive({
   id: null,
@@ -16,79 +15,58 @@ const supplierForm = reactive({
   kh_name: '',
   number: '',
   email: '',
-  address: '',
   payment_term: '',
+  vat: null, // Add vat field
+  address: '', // Move address field to the bottom
   status: 1,
 });
 
-// Functions
-const editSupplier = (supplier) => {
-  isEdit.value = true;
-  Object.assign(supplierForm, supplier, { status: supplier.status.toString() });
+const validationErrors = ref({});
+let dataTableInstance;
 
+// Functions
+const openCreateModal = () => {
+  isEdit.value = false;
+  clearForm();
   const modalElement = document.getElementById('supplierFormModal');
   const modal = new bootstrap.Modal(modalElement);
   modal.show();
 };
 
-const createSupplier = async () => {
-  try {
-    await Inertia.post('/suppliers', supplierForm);
-    clearForm();
-
-    // Show success alert with auto-dismiss after 2 seconds and no OK button
-    swal({
-      title: 'Success!',
-      text: 'Supplier created successfully!',
-      icon: 'success',
-      timer: 2000,  // Auto-close after 2 seconds
-      showConfirmButton: false,  // Remove OK button
-    });
-  } catch (error) {
-    console.error('Failed to create supplier:', error);
-
-    // Show error alert with auto-dismiss after 2 seconds and no OK button
-    swal({
-      title: 'Error!',
-      text: 'Failed to create supplier. Please try again.',
-      icon: 'error',
-      timer: 2000,  // Auto-close after 2 seconds
-      showConfirmButton: false,  // Remove OK button
-    });
-  }
+const openEditModal = (supplier) => {
+  isEdit.value = true;
+  Object.assign(supplierForm, supplier, { status: supplier.status.toString() });
+  const modalElement = document.getElementById('supplierFormModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
 };
 
-
-const updateSupplier = async () => {
+const saveSupplier = async () => {
   try {
-    await Inertia.put(`/suppliers/${supplierForm.id}`, supplierForm);
-    clearForm();
-
-    // Show success alert with auto-dismiss after 2 seconds and no OK button
-    swal({
-      title: 'Success!',
-      text: 'Supplier updated successfully!',
-      icon: 'success',
-      timer: 2000,  // Auto-close after 2 seconds
-      showConfirmButton: false,  // Remove OK button
-    });
+    if (isEdit.value) {
+      const response = await axios.put(`/suppliers/${supplierForm.id}`, supplierForm);
+      const updatedSupplier = response.data;
+      const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedSupplier.id).index();
+      dataTableInstance.row(rowIndex).data(updatedSupplier).draw();
+      swal('Success!', 'Supplier updated successfully!', 'success', { timer: 2000 });
+    } else {
+      const response = await axios.post('/suppliers', supplierForm);
+      dataTableInstance.row.add(response.data).draw();
+      swal('Success!', 'Supplier created successfully!', 'success', { timer: 2000 });
+    }
+    const modalElement = document.getElementById('supplierFormModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
   } catch (error) {
-    console.error('Failed to update supplier:', error);
-
-    // Show error alert with auto-dismiss after 2 seconds and no OK button
-    swal({
-      title: 'Error!',
-      text: 'Failed to update supplier. Please try again.',
-      icon: 'error',
-      timer: 2000,  // Auto-close after 2 seconds
-      showConfirmButton: false,  // Remove OK button
-    });
+    if (error.response && error.response.status === 422) {
+      validationErrors.value = error.response.data.errors;
+    } else {
+      swal('Error!', 'Failed to save supplier. Please try again.', 'error');
+    }
   }
 };
-
 
 const deleteSupplier = async (supplierId) => {
-  // Show confirmation alert using SweetAlert (Bootstrap version)
   swal({
     title: 'Are you sure?',
     text: 'You will not be able to recover this supplier!',
@@ -99,32 +77,29 @@ const deleteSupplier = async (supplierId) => {
         value: null,
         visible: true,
         className: 'btn btn-secondary',
-        closeModal: true
+        closeModal: true,
       },
       confirm: {
         text: 'Yes, delete it!',
         value: true,
         visible: true,
         className: 'btn btn-danger',
-        closeModal: true
-      }
+        closeModal: true,
+      },
     },
-    dangerMode: true,  // Enables the danger mode for the confirm button
+    dangerMode: true,
   }).then(async (result) => {
-    // If the user clicks "Yes, delete it!"
     if (result) {
       try {
-        // Send the request to delete the supplier
-        await Inertia.delete(`/suppliers/${supplierId}`);
-        swal('Deleted!', 'Supplier has been deleted.', 'success');  // Success alert
+        await axios.delete(`/suppliers/${supplierId}`);
+        dataTableInstance.row((idx, data) => data.id === supplierId).remove().draw();
+        swal('Deleted!', 'Supplier has been deleted.', 'success', { timer: 2000 });
       } catch (error) {
-        console.error('Failed to delete supplier:', error);
-        swal('Error!', 'Failed to delete supplier. Please try again.', 'error');  // Error alert
+        swal('Error!', 'Failed to delete supplier. Please try again.', 'error');
       }
     }
   });
 };
-
 
 const clearForm = () => {
   Object.assign(supplierForm, {
@@ -133,221 +108,201 @@ const clearForm = () => {
     kh_name: '',
     number: '',
     email: '',
-    address: '',
     payment_term: '',
-    status: '',
+    vat: null, // Add vat field
+    address: '', // Move address field to the bottom
+    status: 1,
   });
+  validationErrors.value = {};
 };
 
-// Initialize DataTable and attach event listeners
+// Initialize DataTable
 onMounted(() => {
-  const table = $('#supplier-table').DataTable({
-    responsive: true,
-    autoWidth: true,
-    data: props.suppliers,
-    columns: [
-      { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'name' },
-      { data: 'kh_name' },
-      { data: 'number' },
-      { data: 'email' },
-      { data: 'address' },
-      { data: 'payment_term' },
-      { data: 'status', render: (data) => (data === 1 ? 'Active' : 'Inactive') },
-      {
-        data: null,
-        // render: () => `
-        //   <button class="btn btn-default btn-edit"><i class="fas fa-edit"></i></button>
-        //   <button class="btn btn-danger btn-delete"><i class="fas fa-trash-alt"></i></button>
-        // `,
-
-        render: () => `
-        <div class="btn-group">
-            <a href="#" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-                <a class="dropdown-item btn-edit">
-                <i class="fas fa-edit"></i> Edit
+  nextTick(() => {
+    const table = $('#supplier-table');
+    if (table.length) {
+      dataTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: false,
+        data: props.suppliers,
+        columns: [
+          { data: null, render: (data, type, row, meta) => meta.row + 1 },
+          { data: 'name' },
+          { data: 'kh_name' },
+          { data: 'number' },
+          { data: 'email' },
+          { data: 'payment_term' },
+          { data: 'vat' }, // Add vat column
+          { data: 'address' }, // Move address column to the bottom
+          { data: 'status', render: (data) => {return `<span class="badge ${data === 1 ? 'bg-primary' : 'bg-danger'}">${data === 1 ? 'Active' : 'Inactive'}</span>`;}, className: 'text-center' },
+          {
+            data: null,
+            render: () => `
+              <div class="btn-group">
+                <a href="#" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
-            </li>
-            <li>
-                <a class="dropdown-item btn-delete text-danger">
-                <i class="fas fa-trash-alt"></i> Delete
-                </a>
-            </li>
-            </ul>
-        </div>
-        `,
-      },
-    ],
-  });
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
+                  <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                </ul>
+              </div>
+            `,
+          },
+        ],
+      });
 
-  // Attach event listeners to the main table
-  $('#supplier-table')
-    .on('click', '.btn-edit', function () {
-      const rowData = table.row($(this).closest('tr')).data();
-      if (rowData) editSupplier(rowData);
-    })
-    .on('click', '.btn-delete', function () {
-      const rowData = table.row($(this).closest('tr')).data();
-      if (rowData) deleteSupplier(rowData.id);
-    });
+      // Attach event listeners to the main table
+      $('#supplier-table')
+        .on('click', '.btn-edit', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) openEditModal(rowData);
+        })
+        .on('click', '.btn-delete', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) deleteSupplier(rowData.id);
+        });
 
-  // Handle actions inside child rows (responsive details)
-  $('#supplier-table').on('click', '.dtr-details .btn-edit', function () {
-    const tr = $(this).closest('tr').prev(); // Get the parent row of the child
-    const rowData = table.row(tr).data();
-    if (rowData) editSupplier(rowData);
-  });
+      // Handle actions inside child rows (responsive details)
+      $('#supplier-table').on('click', '.dtr-details .btn-edit', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) openEditModal(rowData);
+      });
 
-  $('#supplier-table').on('click', '.dtr-details .btn-delete', function () {
-    const tr = $(this).closest('tr').prev(); // Get the parent row of the child
-    const rowData = table.row(tr).data();
-    if (rowData) deleteSupplier(rowData.id);
+      $('#supplier-table').on('click', '.dtr-details .btn-delete', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) deleteSupplier(rowData.id);
+      });
+    }
   });
 });
-
-
 </script>
 
 <template>
-    <Main>
-      <Head :title="'Supplier List'"></Head>
-      <div class="panel panel-inverse">
-        <div class="panel-heading">
-          <h4 class="panel-title">Supplier List</h4>
-          <div class="panel-heading-btn">
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
-            <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
-          </div>
-        </div>
-        <div class="panel-body">
-          <button type="button" class="btn btn-sm btn-primary mb-2" @click="clearForm; isEdit = false;" data-bs-toggle="modal" data-bs-target="#supplierFormModal">
-            Add New Supplier
-          </button>
-
-          <!-- Supplier Table -->
-          <table id="supplier-table" width="100%" class="table table-bordered align-middle text-nowrap">
-            <thead>
-              <tr class="odd gradeX">
-                <th width="1%">#</th>
-                <th>Name</th>
-                <th>Khmer Name</th>
-                <th>Phone Number</th>
-                <th>Email Address</th>
-                <th>Address</th>
-                <th>Payment Term</th>
-                <th>Active?</th>
-                <th width="1%">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(supplier, index) in suppliers" :key="supplier.id">
-                <td>{{ index + 1 }}</td>
-                <td>{{ supplier.name }}</td>
-                <td>{{ supplier.kh_name }}</td>
-                <td>{{ supplier.number }}</td>
-                <td>{{ supplier.email }}</td>
-                <td>{{ supplier.address }}</td>
-                <td>{{ supplier.payment_term }}</td>
-                <td>{{ supplier.status }}</td>
-                <td>
-                  <button class="btn btn-default" @click="editSupplier(supplier)">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <!-- Delete Button -->
-                  <button class="btn btn-danger" @click="deleteSupplier(supplier.id)">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+  <Main>
+    <Head :title="'Supplier List'" />
+    <div class="panel panel-inverse">
+      <div class="panel-heading">
+        <h4 class="panel-title">Supplier List</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
         </div>
       </div>
+      <div class="panel-body">
+        <button @click="openCreateModal" class="btn btn-primary mb-4">Add New Supplier</button>
 
-      <!-- Supplier Form Modal -->
-      <div class="modal fade" id="supplierFormModal" tabindex="-1" aria-labelledby="supplierFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="supplierFormModalLabel">{{ isEdit ? 'Edit Supplier' : 'Add New Supplier' }}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form @submit.prevent="isEdit ? updateSupplier() : createSupplier()">
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text" class="form-control" id="name" v-model="supplierForm.name" required>
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="kh_name" class="form-label">Khmer Name</label>
-                    <input type="text" class="form-control" id="kh_name" v-model="supplierForm.kh_name" required>
-                  </div>
-                </div>
+        <!-- Supplier Table -->
+        <table id="supplier-table" class="table table-bordered align-middle text-nowrap" width="100%">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Khmer Name</th>
+              <th>Phone Number</th>
+              <th>Email Address</th>
+              <th>Payment Term</th>
+              <th>VAT(%)</th> <!-- Add VAT column -->
+              <th>Address</th> <!-- Move Address column to the bottom -->
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+        </table>
 
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" class="form-control" id="email" v-model="supplierForm.email" required>
-                  </div>
-
-                  <div class="col-md-6 mb-3">
-                    <label for="number" class="form-label">Phone</label>
-                    <input type="text" class="form-control" id="number" v-model="supplierForm.number" required>
-                  </div>
-                </div>
-
-                <div class="row mb-2">
-                  <label for="address" class="form-label">Address</label>
-                  <div class="col-md-12">
-                    <textarea class="form-control" rows="3" id="address" v-model="supplierForm.address" required></textarea>
-                  </div>
-                </div>
-
-                <div class="row m-2">
-                  <label for="payment_term" class="form-label col-form-label col-md-3">Payment Term</label>
-                  <div class="col-md-7">
-                    <select class="form-select" id="payment_term" v-model="supplierForm.payment_term" required>
-                      <option value="Credit 1 Week">Credit 1 Week</option>
-                      <option value="Credit 2 Weeks">Credit 2 Weeks</option>
-                      <option value="Credit 1 Month">Credit 1 Month</option>
-                      <option value="None Credit">None Credit</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="row m-2">
-                    <label for="status" class="form-label col-form-label col-md-3">Status</label>
-                    <div class="col-md-7">
-                        <input
-                        type="checkbox"
-                        id="status"
-                        :true-value="'1'"
-                        :false-value="'0'"
-                        v-model="supplierForm.status"
-                        class="form-check-input"
-                        />
-                        <label class="form-check-label" for="status">Active</label>
+        <!-- Supplier Form Modal -->
+        <div class="modal fade" id="supplierFormModal" tabindex="-1" aria-labelledby="supplierFormModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="supplierFormModalLabel">{{ isEdit ? 'Edit Supplier' : 'Add New Supplier' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form @submit.prevent="saveSupplier">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="row mb-3 align-items-center">
+                        <label for="name" class="col-sm-4 col-form-label">Name</label>
+                        <div class="col-sm-8">
+                          <input v-model="supplierForm.name" type="text" class="form-control" id="name" required />
+                          <div v-if="validationErrors.name" class="text-danger">{{ validationErrors.name[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="kh_name" class="col-sm-4 col-form-label">Khmer Name</label>
+                        <div class="col-sm-8">
+                          <input v-model="supplierForm.kh_name" type="text" class="form-control" id="kh_name" required />
+                          <div v-if="validationErrors.kh_name" class="text-danger">{{ validationErrors.kh_name[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="email" class="col-sm-4 col-form-label">Email Address</label>
+                        <div class="col-sm-8">
+                          <input v-model="supplierForm.email" type="email" class="form-control" id="email" required />
+                          <div v-if="validationErrors.email" class="text-danger">{{ validationErrors.email[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="number" class="col-sm-4 col-form-label">Phone</label>
+                        <div class="col-sm-8">
+                          <input v-model="supplierForm.number" type="text" class="form-control" id="number" required />
+                          <div v-if="validationErrors.number" class="text-danger">{{ validationErrors.number[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="payment_term" class="col-sm-4 col-form-label">Payment Term</label>
+                        <div class="col-sm-8">
+                          <select v-model="supplierForm.payment_term" class="form-select" id="payment_term" required>
+                            <option value="Credit 1 Week">Credit 1 Week</option>
+                            <option value="Credit 2 Weeks">Credit 2 Weeks</option>
+                            <option value="Credit 1 Month">Credit 1 Month</option>
+                            <option value="None Credit">None Credit</option>
+                          </select>
+                          <div v-if="validationErrors.payment_term" class="text-danger">{{ validationErrors.payment_term[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="vat" class="col-sm-4 col-form-label">VAT(%)</label>
+                        <div class="col-sm-8">
+                          <input v-model="supplierForm.vat" type="number" class="form-control" id="vat" />
+                          <div v-if="validationErrors.vat" class="text-danger">{{ validationErrors.vat[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
+                        <label for="status" class="col-sm-4 col-form-label">Status</label>
+                        <div class="col-sm-8">
+                          <select v-model="supplierForm.status" class="form-select" id="status" required>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                </div>
-
-                <div class="row mb-3">
-                  <div class="col-md-6">
-                    <button type="submit" class="btn btn-success btn-block">
-                      <span>{{ isEdit ? 'Update Supplier' : 'Save' }}</span>
-                    </button>
+                    <div class="col-md-6">
+                      <div class="row mb-3 align-items-center">
+                        <label for="address" class="col-sm-4 col-form-label">Address</label>
+                        <div class="col-sm-8">
+                          <textarea v-model="supplierForm.address" class="form-control" rows="3" id="address" required></textarea>
+                          <div v-if="validationErrors.address" class="text-danger">{{ validationErrors.address[0] }}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </form>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update Supplier' : 'Add Supplier' }}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </Main>
-  </template>
+    </div>
+  </Main>
+</template>

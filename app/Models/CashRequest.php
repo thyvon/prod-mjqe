@@ -14,7 +14,7 @@ class CashRequest extends Model
      *
      * @var string
      */
-    protected $table = 'cash_request';
+    protected $table = 'cash_requests';
 
     /**
      * The attributes that are mass assignable.
@@ -48,7 +48,7 @@ class CashRequest extends Model
      */
     protected $casts = [
         'request_date' => 'datetime',
-        'exchange_rate' => 'decimal:4',
+        'exchange_rate' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
 
@@ -65,19 +65,45 @@ class CashRequest extends Model
      */
     public static function generateRefNo($requestType)
     {
-        // Get today's date in ddmmyy format
-        $date = now()->format('dmy');
+        // Get today's date in yyyy-mm-dd format
+        $date = now()->format('Ymd');
 
         // Find the latest record for the same type and day
         $latestRequest = self::where('request_type', $requestType)
-            ->whereDate('request_date', today()) // Filter by today's date
+            ->whereDate('request_date', today())
             ->latest('created_at')
             ->first();
 
-        // Get the latest sequential number or start from 1001
-        $sequentialNumber = $latestRequest ? (intval(substr($latestRequest->ref_no, -4)) + 1) : 1001;
+        // Get the latest sequential number or start from 001
+        $sequentialNumber = $latestRequest ? (intval(substr($latestRequest->ref_no, -3)) + 1) : 1;
+        $sequentialNumber = str_pad($sequentialNumber, 3, '0', STR_PAD_LEFT);
 
-        // Return the ref_no in the desired format
-        return "{$requestType}-{$date}-{$sequentialNumber}";
+        $campus = auth()->user()->campus; // Assuming the campus is stored in the user model
+
+        $refNo = '';
+        if ($requestType == 1) {
+            // Format for request_type 1: P-campus-yyyy-mm-dd-count(001)
+            $refNo = "P-{$campus}-{$date}-{$sequentialNumber}";
+        } elseif ($requestType == 2) {
+            // Format for request_type 2: A-campus-yyyy-mm-dd-count(001)
+            $refNo = "A-{$campus}-{$date}-{$sequentialNumber}";
+        } else {
+            // Default format: requestType-yyyy-mm-dd-count(001)
+            $refNo = "{$requestType}-{$date}-{$sequentialNumber}";
+        }
+
+        // Ensure the ref_no is unique
+        while (self::where('ref_no', $refNo)->exists()) {
+            $sequentialNumber = str_pad(intval($sequentialNumber) + 1, 3, '0', STR_PAD_LEFT);
+            if ($requestType == 1) {
+                $refNo = "P-{$campus}-{$date}-{$sequentialNumber}";
+            } elseif ($requestType == 2) {
+                $refNo = "A-{$campus}-{$date}-{$sequentialNumber}";
+            } else {
+                $refNo = "{$requestType}-{$date}-{$sequentialNumber}";
+            }
+        }
+
+        return $refNo;
     }
 }

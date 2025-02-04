@@ -10,129 +10,121 @@ use Illuminate\Support\Facades\Auth;
 
 class CashRequestController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // Display all cash requests with their user details
     public function index()
     {
-        $cashRequests = CashRequest::all();
+        $cashRequests = CashRequest::with('user:id,name')->get(); // Only load necessary fields
+        $users = User::all();
+        $currentUser = Auth::user();
 
         return Inertia::render('CashRequest/Index', [
             'cashRequests' => $cashRequests,
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $requestTypes = ['Petty Cash', 'Cash Advance'];
-        $users = User::all();
-        $currentUser = Auth::user();
-        $defaultRequestType = $requestTypes[0]; // Default to 'Petty Cash'
-        $refNo = CashRequest::generateRefNo($defaultRequestType);
-
-        return Inertia::render('CashRequest/Create', [
             'users' => $users,
             'currentUser' => $currentUser,
-            'requestTypes' => $requestTypes,
-            'refNo' => $refNo,
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // Store a new cash request
     public function store(Request $request)
     {
-        $validated = $this->validateRequest($request);
+        // Debugging: Log the request data
+        \Log::info('Store Cash Request Data:', $request->all());
+
+        // Validation...
+        try {
+            $validated = $request->validate([
+                'request_type' => 'required|integer', // Changed to integer
+                'request_date' => 'required|date_format:Y-m-d',
+                'user_id' => 'required|integer|exists:users,id',
+                'position' => 'required|string|max:255',
+                'id_card' => 'required|string|max:255',
+                'campus' => 'required|string|max:255',
+                'division' => 'required|string|max:255',
+                'department' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'currency' => 'required|string|max:10',
+                'exchange_rate' => 'required|numeric|min:0',
+                'amount' => 'required|numeric|min:0',
+                'via' => 'required|string|max:255',
+                'reason' => 'nullable|string|max:1000',
+                'remark' => 'nullable|string|max:1000',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation Errors:', $e->errors());
+            return response()->json(['errors' => $e->errors()], 422);
+        }
+
+        // Debugging: Log the validated data
+        \Log::info('Validated Cash Request Data:', $validated);
 
         $validated['ref_no'] = CashRequest::generateRefNo($validated['request_type']);
         $validated['request_by'] = User::findOrFail($validated['user_id'])->name;
 
-        CashRequest::create($validated);
+        $cashRequest = CashRequest::create($validated);
 
-        return redirect()
-            ->route('cash-request.index')
-            ->with('success', 'Cash request created successfully!');
+        // Load the relationships
+        $cashRequest->load('user:id,name');
+
+        // Return success response
+        return response()->json($cashRequest, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($id)
-    {
-        $cashRequest = CashRequest::findOrFail($id);
-        $users = User::all(); // Fetch all users or use a specific query to get the user details
-
-        return Inertia::render('CashRequest/Show', [
-            'cashRequest' => $cashRequest,
-            'users' => $users,
-        ]);
-    }
-
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(CashRequest $cashRequest)
-    {
-        $users = User::all();
-
-        return Inertia::render('CashRequest/Edit', [
-            'cashRequest' => $cashRequest,
-            'users' => $users,
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
+    // Update the specified cash request
     public function update(Request $request, CashRequest $cashRequest)
     {
-        $validated = $this->validateRequest($request);
+        // Validation...
+        try {
+            $validated = $request->validate([
+                'request_type' => 'required|integer', // Changed to integer
+                'request_date' => 'required|date',
+                'user_id' => 'required|integer|exists:users,id',
+                'position' => 'required|string|max:255',
+                'id_card' => 'required|string|max:255',
+                'campus' => 'required|string|max:255',
+                'division' => 'required|string|max:255',
+                'department' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'currency' => 'required|string|max:10',
+                'exchange_rate' => 'required|numeric|min:0',
+                'amount' => 'required|numeric|min:0',
+                'via' => 'required|string|max:255',
+                'reason' => 'nullable|string|max:1000',
+                'remark' => 'nullable|string|max:1000',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation Errors:', $e->errors());
+            return response()->json(['errors' => $e->errors()], 422);
+        }
 
+        // Update the request_by field
+        $validated['request_by'] = User::findOrFail($validated['user_id'])->name;
+
+        // Update the cash request
         $cashRequest->update($validated);
 
-        return redirect()
-            ->route('cash-request.index')
-            ->with('success', 'Cash request updated successfully!');
+        // Load the relationships
+        $cashRequest->load('user:id,name');
+
+        // Return success response
+        return response()->json($cashRequest);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    // Delete the specified cash request
     public function destroy(CashRequest $cashRequest)
     {
         $cashRequest->delete();
 
-        return redirect()
-            ->route('cash-request.index')
-            ->with('success', 'Cash request deleted successfully!');
+        // Return success response
+        return response()->json(['message' => 'Cash request deleted successfully!']);
     }
 
-    /**
-     * Validate incoming request data for create or update.
-     */
-    private function validateRequest(Request $request)
+    // Display the specified cash request
+    public function show(CashRequest $cashRequest)
     {
-        return $request->validate([
-            'request_type' => 'required|string|max:255',
-            'request_date' => 'required|date',
-            'user_id' => 'required|integer|exists:users,id',
-            'position' => 'required|string|max:255',
-            'id_card' => 'required|string|max:255',
-            'campus' => 'required|string|max:255',
-            'division' => 'required|string|max:255',
-            'department' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'currency' => 'required|string|max:10',
-            'exchange_rate' => 'required|numeric|min:0',
-            'amount' => 'required|numeric|min:0',
-            'via' => 'required|string|max:255',
-            'reason' => 'nullable|string|max:1000',
-            'remark' => 'nullable|string|max:1000',
+        $cashRequest->load('user:id,name');
+        return Inertia::render('CashRequest/Show', [
+            'cashRequest' => $cashRequest,
+            'users' => User::all(), // Ensure all users are passed to the view
         ]);
     }
 }

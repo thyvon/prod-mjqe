@@ -16,7 +16,7 @@ const isActive = (targetRoute) => {
 <template>
     <div id="sidebar" class="app-sidebar" data-bs-theme="dark">
     <!-- BEGIN scrollbar -->
-    <div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
+    <div class="app-content-padding flex-grow-1 overflow-hidden" data-scrollbar="true" data-height="100%">
         <!-- BEGIN menu -->
         <div class="menu">
             <div class="menu-profile">
@@ -82,10 +82,10 @@ const isActive = (targetRoute) => {
                 </div>
             </div>
 
-            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/cash-request') || isActive('/purchase-requests')}">
+            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices')}">
                 <a href="javascript:;" class="menu-link">
                     <div class="menu-icon">
-                        <i class="fa fa-coins"></i>
+                        <i class="fa fa-money-check-dollar"></i>
                     </div>
                     <div class="menu-text">Purchasing</div>
                     <div class="menu-caret"></div>
@@ -93,12 +93,22 @@ const isActive = (targetRoute) => {
                 <div class="menu-submenu">
                     <div class="menu-item" :class="{'active': isActive('/purchase-requests')}">
                         <Link href="/purchase-requests" class="menu-link">
-                            <div class="menu-text">Purcahse Request</div>
+                            <div class="menu-text">Purcahse Requests</div>
+                        </Link>
+                    </div>
+                    <div class="menu-item" :class="{'active': isActive('/purchase-orders')}">
+                        <Link href="/purchase-orders" class="menu-link">
+                            <div class="menu-text">Purcahse Orders</div>
                         </Link>
                     </div>
                     <div class="menu-item" :class="{'active': isActive('/cash-request')}">
                         <Link href="/cash-request" class="menu-link">
                             <div class="menu-text">Cash Request</div>
+                        </Link>
+                    </div>
+                    <div class="menu-item" :class="{'active': isActive('/invoices')}">
+                        <Link href="/invoices" class="menu-link">
+                            <div class="menu-text">Purchase Invoices</div>
                         </Link>
                     </div>
                 </div>
