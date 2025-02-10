@@ -19,14 +19,3 @@
   overflow-y: auto; /* Enable vertical scrolling */
   flex-grow: 1; /* Allow the body to take up remaining space */
 }
-
-
-.dt-nowrap {
-  white-space: nowrap; /* Default: Prevent wrapping for other cells */
-}
-
-.wrap-cell {
-  white-space: normal; /* Allow wrapping for specific columns */
-  word-break: break-word; /* Ensure long words break as needed */
-  max-width: 300px; /* Optional: Limit the wrapping area for better alignment */
-}

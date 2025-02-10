@@ -20,7 +20,7 @@ class InvoiceController extends Controller
     public function index()
     {
         return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(), // Ensure supplier relationship is loaded
+            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
             'users' => User::all(),
             'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
             'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
@@ -137,32 +137,29 @@ class InvoiceController extends Controller
                 $itemData['transaction_type'] = $invoice->transaction_type;
                 $itemData['requested_by'] = $invoice->created_by;
 
-                $item = new PurchaseInvoiceItem($itemData);
-                $item->save();
-                Log::info('Invoice item created', ['item' => $item->toArray()]);
+                PurchaseInvoiceItem::create($itemData);
+                Log::info('Invoice item created', ['item' => $itemData]);
             }
 
-            return response()->json($invoice->load('items', 'supplier'), 201); // Ensure supplier relationship is loaded
+            return response()->json($invoice->load('items', 'supplier'), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
             return response()->json(['error' => 'Validation Error', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Error storing invoice', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-            // Add console logging for debugging
-            echo 'Error: ' . $e->getMessage();
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
 
     public function edit($id)
     {
-        $invoice = PurchaseInvoice::with(['items', 'supplier'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
         return response()->json($invoice);
     }
 
     public function show($id)
     {
-        $invoice = PurchaseInvoice::with(['items', 'supplier'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
         return response()->json($invoice);
     }
 
@@ -236,7 +233,7 @@ class InvoiceController extends Controller
                 $prItem = PrItem::find($itemData['pr_item']);
                 if ($prItem) {
                     $itemData['pr_number'] = $prItem->purchase_request_id;
-                    $itemData['item_code'] = $prItem->product_id; // Ensure item_code is set to product ID
+                    $itemData['item_code'] = $prItem->product_id;
                 }
 
                 if (isset($itemData['po_item'])) {
@@ -257,16 +254,13 @@ class InvoiceController extends Controller
 
                 if (isset($itemData['id']) && in_array($itemData['id'], $existingItemIds)) {
                     $item = PurchaseInvoiceItem::findOrFail($itemData['id']);
-                    $item->fill($itemData);
-                    $item->save();
+                    $item->update($itemData);
                     $existingItemIds = array_diff($existingItemIds, [$itemData['id']]);
                 } else {
-                    $item = new PurchaseInvoiceItem($itemData);
-                    $item->save();
+                    PurchaseInvoiceItem::create($itemData);
                 }
             }
 
-            // Remove items that were not included in the update request
             PurchaseInvoiceItem::whereIn('id', $existingItemIds)->delete();
 
             return response()->json($invoice->load('items', 'supplier'));

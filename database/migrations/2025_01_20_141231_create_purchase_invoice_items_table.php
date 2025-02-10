@@ -17,12 +17,12 @@ return new class extends Migration
             $table->date('invoice_date');
             $table->integer('payment_type');
             $table->string('invoice_no');
-            $table->foreignId('pr_number')->nullable()->constrained('purchase_requests')->onDelete('cascade');
-            $table->foreignId('po_number')->nullable()->constrained('purchase_orders')->onDelete('cascade');
-            $table->foreignId('pr_item')->constrained('pr_items')->onDelete('cascade');
-            $table->foreignId('po_item')->nullable()->constrained('po_items')->onDelete('cascade');
-            $table->foreignId('supplier')->constrained('suppliers')->onDelete('cascade');
-            $table->foreignId('item_code')->constrained('products')->onDelete('cascade');
+            $table->foreignId('pr_number')->nullable()->constrained('purchase_requests');
+            $table->foreignId('po_number')->nullable()->constrained('purchase_orders');
+            $table->foreignId('pr_item')->constrained('pr_items');
+            $table->foreignId('po_item')->nullable()->constrained('po_items');
+            $table->foreignId('supplier')->constrained('suppliers');
+            $table->foreignId('item_code')->constrained('products');
             $table->string('description');
             $table->string('remark')->nullable();
             $table->decimal('qty', 15, 2);
@@ -38,16 +38,16 @@ return new class extends Migration
             $table->decimal('total_khr', 15, 4)->default(0);
             $table->decimal('due_amount', 15, 4);
             $table->decimal('paid_amount', 15, 4);
-            $table->foreignId('requested_by')->nullable()->constrained('users')->onDelete('cascade');
+            $table->foreignId('requested_by')->nullable()->constrained('users');
             $table->string('campus');
             $table->string('division');
             $table->string('department');
             $table->string('location');
-            $table->foreignId('purchased_by')->constrained('users')->onDelete('cascade');
+            $table->foreignId('purchased_by')->constrained('users');
             $table->string('purpose');
             $table->integer('payment_term');
             $table->integer('transaction_type');
-            $table->foreignId('cash_ref')->nullable()->constrained('cash_requests')->onDelete('cascade'); // Corrected table name
+            $table->foreignId('cash_ref')->nullable()->constrained('cash_requests'); // Corrected table name
             $table->boolean('stop_purchase')->default(false);
             $table->integer('asset_type')->nullable();
             $table->timestamps();

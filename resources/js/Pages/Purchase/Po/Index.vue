@@ -1064,10 +1064,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.description-column {
+/* .description-column {
   word-wrap: break-word;
   white-space: pre-wrap;
-}
+} */
 .wrap-text {
   word-wrap: break-word;
   white-space: pre-wrap;

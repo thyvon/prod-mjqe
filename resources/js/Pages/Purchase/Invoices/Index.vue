@@ -40,7 +40,20 @@ const form = reactive({
   supplier_vat: 0,
   created_by: null,
   items: [],
+  total_discount: 0,
 });
+
+const calculateTotalDiscount = () => {
+  form.total_discount = form.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0);
+};
+
+watch(() => form.items, calculateTotalDiscount, { deep: true });
+
+const calculateTotalAmount = () => {
+  form.total_amount = form.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+};
+
+watch(() => form.items, calculateTotalAmount, { deep: true });
 
 const prItemsTableInstance = ref(null);
 const invoiceItemsTableInstance = ref(null);
@@ -49,12 +62,12 @@ const invoiceListTableInstance = ref(null);
 const editItemForm = reactive({
   id: null,
   description: '',
-  qty: 0,
-  unit_price: 0,
-  discount: 0,
-  vat: 0,
-  return: 0,
-  retention: 0,
+  qty: 0.0,
+  unit_price: 0.0,
+  discount: 0.0,
+  vat: 0.0,
+  return: 0.0,
+  retention: 0.0,
   campus: '',
   division: '',
   department: '',
@@ -64,24 +77,41 @@ const editItemForm = reactive({
   pr_number: '',
   po_number: '',
   item_code: '',
+  paid_amount: 0.0,
+  total_price: 0,
 });
 
 const selectedSupplierVat = computed(() => form.supplier_vat || 0);
 
 const calculateGrandTotal = () => {
   const { qty, unit_price, discount, return: returnAmount, retention, vat } = editItemForm;
-  editItemForm.grand_total = (qty * unit_price) - discount - returnAmount - retention + vat;
+  const vatAmount = ((qty * unit_price - discount - returnAmount - retention) * vat) / 100;
+  editItemForm.grand_total = (qty * unit_price) - discount - returnAmount - retention + vatAmount;
+  editItemForm.total_price = (qty * unit_price) - discount - returnAmount - retention + vatAmount;
+  editItemForm.paid_amount = editItemForm.total_price;
 };
 
-watch(
-  () => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat],
-  calculateGrandTotal
-);
+watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat], calculateGrandTotal);
 
 const formErrors = reactive({});
 const editItemFormErrors = reactive({});
 
+const calculateTotalPrice = (item) => {
+  const { qty, unit_price, discount, return: returnAmount, retention, vat } = item;
+  const vatAmount = ((qty * unit_price - discount - returnAmount - retention) * vat) / 100;
+  return (qty * unit_price) - discount - returnAmount - retention + vatAmount;
+};
+
+const prepareInvoiceItems = (items) => {
+  return items.map(item => ({
+    ...item,
+    total_price: calculateTotalPrice(item)
+  }));
+};
+
 const submitForm = async () => {
+  form.items = prepareInvoiceItems(form.items);
+  calculateTotalAmount();
   if (form.id) {
     await updateInvoice();
   } else {
@@ -143,16 +173,7 @@ const createInvoice = async () => {
       actions: ''
     }).draw(false);
   } catch (error) {
-    if (error.response && error.response.status === 422) {
-      const errors = error.response.data.messages;
-      Object.keys(errors).forEach(key => {
-        formErrors[key] = errors[key][0];
-        toastr.error(errors[key][0]);
-      });
-    } else {
-      toastr.error('Failed to submit invoice.');
-      console.error('Error:', error);
-    }
+    handleFormErrors(error);
   }
 };
 
@@ -211,16 +232,20 @@ const updateInvoice = async () => {
       actions: ''
     }).draw(false);
   } catch (error) {
-    if (error.response && error.response.status === 422) {
-      const errors = error.response.data.messages;
-      Object.keys(errors).forEach(key => {
-        formErrors[key] = errors[key][0];
-        toastr.error(errors[key][0]);
-      });
-    } else {
-      toastr.error('Failed to update invoice.');
-      console.error('Error:', error);
-    }
+    handleFormErrors(error);
+  }
+};
+
+const handleFormErrors = (error) => {
+  if (error.response && error.response.status === 422) {
+    const errors = error.response.data.messages;
+    Object.keys(errors).forEach(key => {
+      formErrors[key] = errors[key][0];
+      toastr.error(errors[key][0]);
+    });
+  } else {
+    toastr.error('Failed to submit invoice.');
+    console.error('Error:', error);
   }
 };
 
@@ -355,9 +380,7 @@ const selectPrItem = (prItem) => {
       const qty = parseFloat(prItem.qty) || 0;
       const unit_price = parseFloat(prItem.unit_price) || 0;
       const discount = 0;
-      const vatPercentage = selectedSupplierVat.value;
-      const vat = calculateVat(qty, unit_price, discount, vatPercentage);
-      const total_price = Number(((qty * unit_price - discount) + vat).toFixed(2));
+      const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedSupplierVat.value });
       form.items.push({
         pr_item: prItem.id,
         po_item: null,
@@ -366,11 +389,11 @@ const selectPrItem = (prItem) => {
         uom: prItem.uom,
         unit_price: unit_price,
         discount: discount,
-        vat: vat,
+        vat: selectedSupplierVat.value,
         return: 0,
         retention: 0,
         due_amount: total_price,
-        paid_amount: 0,
+        paid_amount: total_price,
         campus: prItem.campus,
         division: prItem.division,
         department: prItem.department,
@@ -390,6 +413,7 @@ const selectPrItem = (prItem) => {
         invoice_date: form.invoice_date,
         payment_type: form.payment_type,
         invoice_no: form.invoice_no,
+        total_price: total_price
       });
 
       invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
@@ -411,9 +435,7 @@ const selectPoItem = (poItem) => {
       const qty = parseFloat(poItem.qty) || 0;
       const unit_price = parseFloat(poItem.unit_price) || 0;
       const discount = parseFloat(poItem.discount) || 0;
-      const vatPercentage = selectedSupplierVat.value;
-      const vat = calculateVat(qty, unit_price, discount, vatPercentage);
-      const total_price = Number(((qty * unit_price - discount) + vat).toFixed(2));
+      const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedSupplierVat.value });
       const prNumber = poItem.purchase_request.pr_number;
       form.items.push({
         pr_item: poItem.pr_item_id,
@@ -423,11 +445,11 @@ const selectPoItem = (poItem) => {
         uom: poItem.uom,
         unit_price: unit_price,
         discount: discount,
-        vat: vat,
+        vat: selectedSupplierVat.value,
         return: 0,
         retention: 0,
         due_amount: total_price,
-        paid_amount: 0,
+        paid_amount: total_price,
         campus: poItem.campus,
         division: poItem.division,
         department: poItem.department,
@@ -447,6 +469,7 @@ const selectPoItem = (poItem) => {
         invoice_date: form.invoice_date,
         payment_type: form.payment_type,
         invoice_no: form.invoice_no,
+        total_price: total_price
       });
 
       invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
@@ -567,7 +590,7 @@ const editInvoice = async (invoiceId) => {
     const invoice = response.data;
 
     Object.assign(form, {
-      id: invoice.id, // Ensure form.id is set
+      id: invoice.id,
       transaction_type: invoice.transaction_type,
       cash_ref: invoice.cash_ref,
       payment_type: invoice.payment_type,
@@ -580,7 +603,7 @@ const editInvoice = async (invoiceId) => {
       total_amount: invoice.total_amount,
       paid_amount: invoice.paid_amount,
       supplier_vat: invoice.supplier.vat,
-      items: invoice.items.map(item => ({
+      items: prepareInvoiceItems(invoice.items.map(item => ({
         pr_item: item.pr_item,
         po_item: item.po_item,
         description: item.description,
@@ -599,9 +622,9 @@ const editInvoice = async (invoiceId) => {
         department: item.department,
         location: item.location,
         purpose: item.purpose,
-        pr_number: item.pr_number, // Ensure pr_number is assigned
-        po_number: item.po_number, // Ensure po_number is assigned
-        item_code: item.item_code,
+        pr_number: item.purchase_request?.pr_number || '', // Handle null pr_number
+        po_number: item.purchase_order?.po_number || '', // Handle null po_number
+        item_code: item.product?.sku || '', // Handle null item_code
         requested_by: item.requested_by,
         cash_ref: item.cash_ref,
         transaction_type: item.transaction_type,
@@ -612,23 +635,18 @@ const editInvoice = async (invoiceId) => {
         invoice_date: item.invoice_date,
         payment_type: item.payment_type,
         invoice_no: item.invoice_no,
-      })),
+      }))),
     });
 
+    calculateTotalAmount();
     invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
-    $('#supplier').val(invoice.supplier.id).trigger('change'); // Set supplier select value
+    $('#supplier').val(invoice.supplier.id).trigger('change');
     $('#nav-create-tab').tab('show');
   } catch (error) {
     toastr.error('Failed to load invoice data.');
     console.error('Error:', error);
   }
 };
-
-watch(() => form.supplier, (newSupplierId) => {
-  if (newSupplierId) {
-    updateSupplierVat(newSupplierId);
-  }
-});
 
 const isCreditTransaction = computed(() => form.transaction_type == 2);
 
@@ -637,9 +655,9 @@ watch(() => form.transaction_type, (newTransactionType) => {
   if (newTransactionType == 2) {
     form.cash_ref = null;
   }
-  if (newTransactionType == 1) { // Petty Cash
-    form.payment_term = 4; // Non-Credit
-  } else if (form.payment_term == 4) { // Reset payment_term if it was set to Non-Credit
+  if (newTransactionType == 1) {
+    form.payment_term = 4;
+  } else if (form.payment_term == 4) {
     form.payment_term = null;
   }
 });
@@ -727,7 +745,7 @@ watch(() => form.paid_amount, (newValue) => {
 
 const editItem = (rowIndex) => {
   const item = form.items[rowIndex];
-  editItemForm.id = item.id || rowIndex; // Ensure id is set correctly
+  editItemForm.id = item.id || rowIndex;
   Object.assign(editItemForm, item);
   const modal = new bootstrap.Modal(document.getElementById('editInvoiceItemModal'));
   modal.show();
@@ -782,12 +800,13 @@ onMounted(() => {
     responsive: true,
     autoWidth: false,
     scrollX: false,
+    select: true,
     data: [],
     columns: [
       { data: null, render: (data, type, row, meta) => meta.row + 1 },
       { data: 'product.sku' },
       { data: 'purchase_request.pr_number' },
-      { data: null, render: (data) => `${data.product?.product_description || ''} | ${data.remark || ''}`, className: 'wrap-cell' },
+      { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.remark || ''}</div>`},
       { data: 'qty' },
       { data: 'uom' },
       { data: 'unit_price' },
@@ -814,20 +833,22 @@ onMounted(() => {
   });
 
   invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
-    responsive: false,
+    responsive: true,
     autoWidth: false,
     scrollX: false,
-    data: form.items,
+    select: true,
+    data: prepareInvoiceItems(form.items),
     columns: [
       { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'pr_number' }, // Show pr_number
+      { data: 'pr_number' },
       { data: 'po_number' },
       { data: 'item_code' },
-      { data: 'description' },
-      { data: 'remark', render: (data) => `<div class="wrap-cell">${data}</div>` },
+      { data: null, render: (data) => `<div>${data.description}</div>` },
+      { data: 'remark', render: (data) => `<div>${data}</div>` },
       { data: 'qty' },
       { data: 'uom' },
       { data: 'unit_price' },
+      { data: 'total_price' },
       { data: 'discount' },
       { data: 'vat' },
       { data: 'return' },
@@ -838,7 +859,7 @@ onMounted(() => {
       { data: 'division' },
       { data: 'department' },
       { data: 'location' },
-      { data: 'purpose', render: (data) => `<div class="wrap-cell">${data}</div>` },
+      { data: null, render: (data) => `<div>${data.purpose}</div>` },
       {
         data: null,
         render: (data, type, row, meta) => `
@@ -847,8 +868,8 @@ onMounted(() => {
               ...
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${meta.row}">
-              <li><a class="dropdown-item" href="#" @click="editItem(${meta.row})"><i class="fa fa-edit"></i> Edit</a></li>
-              <li><a class="dropdown-item" href="#" @click="removeItem(${meta.row})"><i class="fa fa-trash"></i> Delete</a></li>
+              <li><a class="dropdown-item text-primary" href="#" @click="editItem(${meta.row})"><i class="fa fa-edit"></i> Edit</a></li>
+              <li><a class="dropdown-item text-danger" href="#" @click="removeItem(${meta.row})"><i class="fa fa-trash"></i> Delete</a></li>
               <li><a class="dropdown-item" href="#" @click="duplicateItem(${meta.row})"><i class="fa fa-copy"></i> Duplicate</a></li>
             </ul>
           </div>
@@ -875,12 +896,13 @@ onMounted(() => {
     responsive: true,
     autoWidth: false,
     scrollX: false,
+    select: true,
     data: [],
     columns: [
       { data: null, render: (data, type, row, meta) => meta.row + 1 },
       { data: 'product.sku' },
       { data: 'purchase_order.po_number' },
-      { data: null, render: (data) => `${data.product?.product_description || ''} | ${data.description || ''}`, className: 'wrap-cell' },
+      { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.description || ''}</div>`},
       { data: 'qty' },
       { data: 'uom' },
       { data: 'unit_price' },
@@ -1136,20 +1158,6 @@ const formatDate = (date) => {
                     <div v-if="formErrors.payment_term" class="text-danger">{{ formErrors.payment_term }}</div>
                   </div>
                 </div>
-                <div class="row mb-1 align-items-center">
-                  <label for="total_amount" class="col-sm-4 col-form-label">Total Amount</label>
-                  <div class="col-sm-8">
-                    <input type="number" v-model="form.total_amount" class="form-control" id="total_amount" />
-                    <div v-if="formErrors.total_amount" class="text-danger">{{ formErrors.total_amount }}</div>
-                  </div>
-                </div>
-                <div class="row mb-1 align-items-center">
-                  <label for="paid_amount" class="col-sm-4 col-form-label">Paid Amount</label>
-                  <div class="col-sm-8">
-                    <input type="number" v-model="form.paid_amount" class="form-control" id="paid_amount" />
-                    <div v-if="formErrors.paid_amount" class="text-danger">{{ formErrors.paid_amount }}</div>
-                  </div>
-                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -1161,21 +1169,22 @@ const formatDate = (date) => {
             <h5>Invoice Items</h5>
             <button type="button" class="btn btn-primary mb-2" @click="openPrItemsModal" :disabled="!form.supplier">Select PR Item</button>
             <button type="button" class="btn btn-secondary mb-2" @click="openPoItemsModal" :disabled="!form.supplier">Select PO Item</button>
-            <div class="table-responsive">
-              <table id="invoice-items-table" class="table table-bordered">
+            <div class="table-responsive mt-3">
+              <table id="invoice-items-table" class="table table-bordered align-middle m-3" width="100%">
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>PR Number</th>
                     <th>PO Number</th>
                     <th>Item Code</th>
-                    <th style="width: 30%;">Description</th>
-                    <th style="width: 10%;">Remark</th>
+                    <th style="min-width: 250px;">Description</th>
+                    <th>Remark</th>
                     <th>Qty</th>
                     <th>UOM</th>
                     <th>Price</th>
+                    <th>Total</th>
                     <th>Discount</th>
-                    <th>VAT</th>
+                    <th>VAT(%)</th>
                     <th>Return</th>
                     <th>Retention</th>
                     <th>Due Amount</th>
@@ -1189,9 +1198,35 @@ const formatDate = (date) => {
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- Remove v-for loop to avoid duplicate rendering -->
                 </tbody>
               </table>
+            </div>
+            <div class="row mt-3">
+              <div class="col-md-6">
+              </div>
+              <div class="col-md-6">
+                <div class="row mb-1 align-items-center">
+                  <label for="total_amount" class="col-sm-4 col-form-label">Total Amount</label>
+                  <div class="col-sm-4">
+                    <input type="number" v-model="form.total_amount" class="form-control" id="total_amount" readonly/>
+                    <div v-if="formErrors.total_amount" class="text-danger">{{ formErrors.total_amount }}</div>
+                  </div>
+                </div>
+                <div class="row mb-1 align-items-center">
+                  <label for="total_discount" class="col-sm-4 col-form-label">Total Discount</label>
+                  <div class="col-sm-4">
+                    <input type="number" v-model="form.total_discount" class="form-control" id="total_discount" readonly/>
+                    <div v-if="formErrors.total_discount" class="text-danger">{{ formErrors.total_discount }}</div>
+                  </div>
+                </div>
+                <div class="row mb-1 align-items-center">
+                  <label for="paid_amount" class="col-sm-4 col-form-label">Paid Amount</label>
+                  <div class="col-sm-4">
+                    <input type="number" v-model="form.paid_amount" class="form-control" id="paid_amount" step="0.0001">
+                    <div v-if="formErrors.paid_amount" class="text-danger">{{ formErrors.paid_amount }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1205,21 +1240,23 @@ const formatDate = (date) => {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <table id="pr-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
-              <thead>
-                <tr>
-                  <th style="width: 5%;">#</th>
-                  <th style="width: 10%;">Item Code</th>
-                  <th style="width: 10%;">PR Number</th>
-                  <th style="width: 30%;">Description</th>
-                  <th style="width: 10%;">Qty</th>
-                  <th style="width: 10%;">UOM</th>
-                  <th style="width: 10%;">Unit Price</th>
-                  <th style="width: 10%;">Total Price</th>
-                  <th style="width: 5%;">Action</th>
-                </tr>
-              </thead>
-            </table>
+            <div class="table-responsive">
+              <table id="pr-items-table" class="table table-bordered align-middle" width="100%">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Item Code</th>
+                    <th>PR Number</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>UOM</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1235,7 +1272,7 @@ const formatDate = (date) => {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <table id="po-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+            <table id="po-items-table" class="table table-bordered align-middle" width="100%">
               <thead>
                 <tr>
                   <th>#</th>
@@ -1274,12 +1311,14 @@ const formatDate = (date) => {
                       <input type="text" v-model="editItemForm.po_number" class="form-control" id="editPoNumber" readonly>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editPrNumber" class="col-sm-4 col-form-label">PR Number</label>
                     <div class="col-sm-8">
                       <input type="text" v-model="editItemForm.pr_number" class="form-control" id="editPrNumber" readonly>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editDescription" class="col-sm-4 col-form-label">Description</label>
                     <div class="col-sm-8">
@@ -1287,51 +1326,68 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.description" class="text-danger">{{ editItemFormErrors.description }}</div>
                     </div>
                   </div>
-                  <div class="row mb-3 align-items-center">
-                    <label for="editRemark" class="col-sm-4 col-form-label">Remark</label>
-                    <div class="col-sm-8">
-                      <textarea v-model="editItemForm.remark" class="form-control" id="editRemark"></textarea>
-                    </div>
-                  </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editQty" class="col-sm-4 col-form-label">Quantity</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.qty" class="form-control" id="editQty" step="0.01">
+                      <input type="number" v-model="editItemForm.qty" class="form-control" id="editQty" step="0.0001">
                       <div v-if="editItemFormErrors.qty" class="text-danger">{{ editItemFormErrors.qty }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editUnitPrice" class="col-sm-4 col-form-label">Unit Price</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.unit_price" class="form-control" id="editUnitPrice" step="0.01">
+                      <input type="number" v-model="editItemForm.unit_price" class="form-control" id="editUnitPrice" step="0.0001">
                       <div v-if="editItemFormErrors.unit_price" class="text-danger">{{ editItemFormErrors.unit_price }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editDiscount" class="col-sm-4 col-form-label">Discount</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.discount" class="form-control" id="editDiscount" step="0.01">
+                      <input type="number" v-model="editItemForm.discount" class="form-control" id="editDiscount" step="0.0001">
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
-                    <label for="editVat" class="col-sm-4 col-form-label">VAT</label>
+                    <label for="editVat" class="col-sm-4 col-form-label">VAT(%)</label>
                     <div class="col-sm-8">
                       <input type="number" v-model="editItemForm.vat" class="form-control" id="editVat" step="0.01">
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editReturn" class="col-sm-4 col-form-label">Return</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.return" class="form-control" id="editReturn" step="0.01">
+                      <input type="number" v-model="editItemForm.return" class="form-control" id="editReturn" step="0.0001">
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editRetention" class="col-sm-4 col-form-label">Retention</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.retention" class="form-control" id="editRetention" step="0.01">
+                      <input type="number" v-model="editItemForm.retention" class="form-control" id="editRetention" step="0.0001">
                     </div>
                   </div>
+
+                  <div class="row mb-3 align-items-center">
+                    <label for="editTotalPrice" class="col-sm-4 col-form-label">Total Price</label>
+                    <div class="col-sm-8">
+                      <input type="number" v-model="editItemForm.total_price" class="form-control" id="editTotalPrice" readonly>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3 align-items-center">
+                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Paid Amount</label>
+                    <div class="col-sm-8">
+                      <input type="number" v-model="editItemForm.paid_amount" class="form-control" id="editPaidAmount" step="0.0001">
+                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
+                    </div>
+                  </div>
+
                 </div>
+
                 <div class="col-md-6">
                   <div class="row mb-3 align-items-center">
                     <label for="editCampus" class="col-sm-4 col-form-label">Campus</label>
@@ -1340,6 +1396,7 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.campus" class="text-danger">{{ editItemFormErrors.campus }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editDivision" class="col-sm-4 col-form-label">Division</label>
                     <div class="col-sm-8">
@@ -1347,6 +1404,7 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.division" class="text-danger">{{ editItemFormErrors.division }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editDepartment" class="col-sm-4 col-form-label">Department</label>
                     <div class="col-sm-8">
@@ -1354,6 +1412,7 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.department" class="text-danger">{{ editItemFormErrors.department }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editLocation" class="col-sm-4 col-form-label">Location</label>
                     <div class="col-sm-8">
@@ -1361,6 +1420,7 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.location" class="text-danger">{{ editItemFormErrors.location }}</div>
                     </div>
                   </div>
+
                   <div class="row mb-3 align-items-center">
                     <label for="editPurpose" class="col-sm-4 col-form-label">Purpose</label>
                     <div class="col-sm-8">
@@ -1368,6 +1428,14 @@ const formatDate = (date) => {
                       <div v-if="editItemFormErrors.purpose" class="text-danger">{{ editItemFormErrors.purpose }}</div>
                     </div>
                   </div>
+
+                  <div class="row mb-3 align-items-center">
+                    <label for="editRemark" class="col-sm-4 col-form-label">Remark</label>
+                    <div class="col-sm-8">
+                      <textarea v-model="editItemForm.remark" class="form-control" id="editRemark"></textarea>
+                    </div>
+                  </div>
+
                 </div>
               </div>
               <button type="submit" class="btn btn-primary">Save changes</button>
@@ -1381,5 +1449,17 @@ const formatDate = (date) => {
 </template>
 
 <style scoped>
-/* Add any specific styles if needed */
+.description-column {
+  min-width: 200px;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 300px;
+}
+
+.wrap-cell {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 300px;
+  min-width: 200px;
+}
 </style>
