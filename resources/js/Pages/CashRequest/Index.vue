@@ -42,17 +42,18 @@ let dataTableInstance;
 // Functions
 const openCreateModal = () => {
   isEdit.value = false;
+  const currentUser = props.currentUser || {};
   Object.assign(cashRequestForm, {
     id: null,
-    request_type: null, // Changed to integer
-    request_date: new Date().toISOString().split('T')[0], // Ensure date format is "yyyy-MM-dd"
-    user_id: props.currentUser ? props.currentUser.id : '',
-    request_by: props.currentUser ? props.currentUser.name : '',
-    position: '',
-    id_card: '',
-    campus: '',
-    division: '',
-    department: '',
+    request_type: null,
+    request_date: new Date().toISOString().split('T')[0],
+    user_id: currentUser.id || '',
+    request_by: currentUser.name || '',
+    position: currentUser.position || '',
+    id_card: currentUser.card_id || '',
+    campus: currentUser.campus || '',
+    division: currentUser.division || '',
+    department: currentUser.department || '',
     description: '',
     currency: '',
     exchange_rate: '',
@@ -201,6 +202,11 @@ const initializeSelect2 = () => {
     if (field === 'user_id') {
       const selectedUser = props.users.find(user => user.id === cashRequestForm.user_id);
       cashRequestForm.request_by = selectedUser ? selectedUser.name : '';
+      cashRequestForm.position = selectedUser ? selectedUser.position : '';
+      cashRequestForm.id_card = selectedUser ? selectedUser.id_card : '';
+      cashRequestForm.campus = selectedUser ? selectedUser.campus : '';
+      cashRequestForm.division = selectedUser ? selectedUser.division : '';
+      cashRequestForm.department = selectedUser ? selectedUser.department : '';
     }
   });
 };
@@ -351,101 +357,128 @@ onMounted(() => {
                   <div class="row">
                     <!-- Left side for requester information -->
                     <div class="col-md-6">
-                      <div class="mb-3">
-                        <label for="user_id" class="form-label">Request By</label>
-                        <select v-model="cashRequestForm.user_id" class="form-select select2" id="user_id" required>
-                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                        </select>
-                        <div v-if="validationErrors.user_id" class="text-danger">{{ validationErrors.user_id[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="user_id" class="col-sm-4 col-form-label">Request By</label>
+                        <div class="col-sm-8">
+                          <select v-model="cashRequestForm.user_id" class="form-select select2" id="user_id" required>
+                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                          </select>
+                          <div v-if="validationErrors.user_id" class="text-danger">{{ validationErrors.user_id[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="position" class="form-label">Position</label>
-                        <input v-model="cashRequestForm.position" type="text" class="form-control" id="position" required />
-                        <div v-if="validationErrors.position" class="text-danger">{{ validationErrors.position[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="position" class="col-sm-4 col-form-label">Position</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.position" type="text" class="form-control" id="position" required readonly />
+                          <div v-if="validationErrors.position" class="text-danger">{{ validationErrors.position[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="id_card" class="form-label">ID Card</label>
-                        <input v-model="cashRequestForm.id_card" type="text" class="form-control" id="id_card" required />
-                        <div v-if="validationErrors.id_card" class="text-danger">{{ validationErrors.id_card[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="id_card" class="col-sm-4 col-form-label">ID Card</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.id_card" type="text" class="form-control" id="id_card" required readonly />
+                          <div v-if="validationErrors.id_card" class="text-danger">{{ validationErrors.id_card[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="campus" class="form-label">Campus</label>
-                        <select v-model="cashRequestForm.campus" class="form-select select2" id="campus" required>
-                          <option value="CEN">CEN</option>
-                          <option value="TK">TK</option>
-                        </select>
-                        <div v-if="validationErrors.campus" class="text-danger">{{ validationErrors.campus[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="campus" class="col-sm-4 col-form-label">Campus</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.campus" type="text" class="form-control" id="campus" required readonly />
+                          <div v-if="validationErrors.campus" class="text-danger">{{ validationErrors.campus[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="division" class="form-label">Division</label>
-                        <input v-model="cashRequestForm.division" type="text" class="form-control" id="division" required />
-                        <div v-if="validationErrors.division" class="text-danger">{{ validationErrors.division[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="division" class="col-sm-4 col-form-label">Division</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.division" type="text" class="form-control" id="division" required readonly />
+                          <div v-if="validationErrors.division" class="text-danger">{{ validationErrors.division[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="department" class="form-label">Department</label>
-                        <input v-model="cashRequestForm.department" type="text" class="form-control" id="department" required />
-                        <div v-if="validationErrors.department" class="text-danger">{{ validationErrors.department[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="department" class="col-sm-4 col-form-label">Department</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.department" type="text" class="form-control" id="department" required readonly />
+                          <div v-if="validationErrors.department" class="text-danger">{{ validationErrors.department[0] }}</div>
+                        </div>
                       </div>
                     </div>
                     <!-- Right side for other information -->
                     <div class="col-md-6">
-                      <div class="mb-3">
-                        <label for="request_type" class="form-label">Request Type</label>
-                        <select v-model="cashRequestForm.request_type" class="form-select select2" id="request_type" required>
-                          <option value="1">Petty Cash</option> <!-- Changed to integer values -->
-                          <option value="2">Cash Advance</option> <!-- Changed to integer values -->
-                        </select>
-                        <div v-if="validationErrors.request_type" class="text-danger">{{ validationErrors.request_type[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="request_type" class="col-sm-4 col-form-label">Request Type</label>
+                        <div class="col-sm-8">
+                          <select v-model="cashRequestForm.request_type" class="form-select select2" id="request_type" required>
+                            <option value="1">Petty Cash</option>
+                            <option value="2">Cash Advance</option>
+                          </select>
+                          <div v-if="validationErrors.request_type" class="text-danger">{{ validationErrors.request_type[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="request_date" class="form-label">Request Date</label>
-                        <input v-model="cashRequestForm.request_date" type="date" class="form-control" id="request_date" required />
-                        <div v-if="validationErrors.request_date" class="text-danger">{{ validationErrors.request_date[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="request_date" class="col-sm-4 col-form-label">Request Date</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.request_date" type="date" class="form-control" id="request_date" required />
+                          <div v-if="validationErrors.request_date" class="text-danger">{{ validationErrors.request_date[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="currency" class="form-label">Currency</label>
-                        <select v-model="cashRequestForm.currency" class="form-select select2" id="currency" required>
-                          <option value="USD">USD</option>
-                          <option value="KHR">KHR</option>
-                        </select>
-                        <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="currency" class="col-sm-4 col-form-label">Currency</label>
+                        <div class="col-sm-8">
+                          <select v-model="cashRequestForm.currency" class="form-select select2" id="currency" required>
+                            <option value="USD">USD</option>
+                            <option value="KHR">KHR</option>
+                          </select>
+                          <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="exchange_rate" class="form-label">Exchange Rate</label>
-                        <input v-model="cashRequestForm.exchange_rate" type="number" step="0.01" class="form-control" id="exchange_rate" required />
-                        <div v-if="validationErrors.exchange_rate" class="text-danger">{{ validationErrors.exchange_rate[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="exchange_rate" class="col-sm-4 col-form-label">Exchange Rate</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.exchange_rate" type="number" step="0.01" class="form-control" id="exchange_rate" required />
+                          <div v-if="validationErrors.exchange_rate" class="text-danger">{{ validationErrors.exchange_rate[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="amount" class="form-label">Amount</label>
-                        <input v-model="cashRequestForm.amount" type="number" step="0.01" class="form-control" id="amount" required />
-                        <div v-if="validationErrors.amount" class="text-danger">{{ validationErrors.amount[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="amount" class="col-sm-4 col-form-label">Amount</label>
+                        <div class="col-sm-8">
+                          <input v-model="cashRequestForm.amount" type="number" step="0.01" class="form-control" id="amount" required />
+                          <div v-if="validationErrors.amount" class="text-danger">{{ validationErrors.amount[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="via" class="form-label">Payment Method</label>
-                        <select v-model="cashRequestForm.via" class="form-select select2" id="via" required>
-                          <option value="Bank Transfer">Bank Transfer</option>
-                          <option value="Cash">Cash</option>
-                          <option value="Cheque">Cheque</option>
-                        </select>
-                        <div v-if="validationErrors.via" class="text-danger">{{ validationErrors.via[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="via" class="col-sm-4 col-form-label">Payment Method</label>
+                        <div class="col-sm-8">
+                          <select v-model="cashRequestForm.via" class="form-select select2" id="via" required>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                          </select>
+                          <div v-if="validationErrors.via" class="text-danger">{{ validationErrors.via[0] }}</div>
+                        </div>
                       </div>
                     </div>
                     <!-- Middle section for description, reason, and remark -->
                     <div class="col-12">
-                      <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea v-model="cashRequestForm.description" class="form-control" id="description"></textarea>
-                        <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="description" class="col-sm-2 col-form-label">Description</label>
+                        <div class="col-sm-10">
+                          <textarea v-model="cashRequestForm.description" class="form-control" id="description"></textarea>
+                          <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="reason" class="form-label">Reason</label>
-                        <textarea v-model="cashRequestForm.reason" class="form-control" id="reason"></textarea>
-                        <div v-if="validationErrors.reason" class="text-danger">{{ validationErrors.reason[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="reason" class="col-sm-2 col-form-label">Reason</label>
+                        <div class="col-sm-10">
+                          <textarea v-model="cashRequestForm.reason" class="form-control" id="reason"></textarea>
+                          <div v-if="validationErrors.reason" class="text-danger">{{ validationErrors.reason[0] }}</div>
+                        </div>
                       </div>
-                      <div class="mb-3">
-                        <label for="remark" class="form-label">Remark</label>
-                        <textarea v-model="cashRequestForm.remark" class="form-control" id="remark"></textarea>
-                        <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
+                      <div class="mb-3 row">
+                        <label for="remark" class="col-sm-2 col-form-label">Remark</label>
+                        <div class="col-sm-10">
+                          <textarea v-model="cashRequestForm.remark" class="form-control" id="remark"></textarea>
+                          <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
