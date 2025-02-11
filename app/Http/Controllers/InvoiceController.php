@@ -137,8 +137,15 @@ class InvoiceController extends Controller
                 $itemData['transaction_type'] = $invoice->transaction_type;
                 $itemData['requested_by'] = $invoice->created_by;
 
-                PurchaseInvoiceItem::create($itemData);
+                $invoiceItem = PurchaseInvoiceItem::create($itemData);
                 Log::info('Invoice item created', ['item' => $itemData]);
+
+                if (isset($itemData['po_item'])) {
+                    $poItem = PoItems::find($itemData['po_item']);
+                    if ($poItem) {
+                        $poItem->recalculateReceivedQty();
+                    }
+                }
             }
 
             return response()->json($invoice->load('items', 'supplier'), 201);
@@ -261,7 +268,27 @@ class InvoiceController extends Controller
                 }
             }
 
-            PurchaseInvoiceItem::whereIn('id', $existingItemIds)->delete();
+            foreach ($existingItemIds as $itemId) {
+                $deletedItem = PurchaseInvoiceItem::find($itemId);
+                if ($deletedItem) {
+                    $deletedItem->delete();
+                    if ($deletedItem->po_item) {
+                        $poItem = PoItems::find($deletedItem->po_item);
+                        if ($poItem) {
+                            $poItem->recalculateReceivedQty();
+                        }
+                    }
+                }
+            }
+
+            foreach ($validatedData['items'] as $itemData) {
+                if (isset($itemData['po_item'])) {
+                    $poItem = PoItems::find($itemData['po_item']);
+                    if ($poItem) {
+                        $poItem->recalculateReceivedQty();
+                    }
+                }
+            }
 
             return response()->json($invoice->load('items', 'supplier'));
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -276,8 +303,29 @@ class InvoiceController extends Controller
     public function destroy($id)
     {
         $invoice = PurchaseInvoice::findOrFail($id);
+        $invoiceItems = $invoice->items;
+
+        foreach ($invoiceItems as $item) {
+            if ($item->po_item) {
+                $poItem = PoItems::find($item->po_item);
+                if ($poItem) {
+                    $poItem->recalculateReceivedQty();
+                }
+            }
+        }
+
         $invoice->items()->delete();
         $invoice->delete();
+
+        foreach ($invoiceItems as $item) {
+            if ($item->po_item) {
+                $poItem = PoItems::find($item->po_item);
+                if ($poItem) {
+                    $poItem->recalculateReceivedQty();
+                }
+            }
+        }
+
         return response()->json(null, 204);
     }
 

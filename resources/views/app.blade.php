@@ -31,7 +31,7 @@
     <!-- ================== BEGIN page-js ================== -->
 
     <script src="/coloradmin/plugins/datatables.net/js/jquery.dataTables.min.js" defer></script>
-    <script src="/coloradmin/plugins/datatables.net/js/dataTables.min.js" defer></script>
+    <!-- <script src="/coloradmin/plugins/datatables.net/js/dataTables.min.js" defer></script> -->
     <script src="/coloradmin/plugins/datatables.net-bs5/js/dataTables.bootstrap5.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive/js/dataTables.responsive.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive-bs5/js/responsive.bootstrap5.min.js" defer></script>

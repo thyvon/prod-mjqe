@@ -10,6 +10,7 @@ use App\Models\PrItem;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Models\PurchaseInvoiceItem;
 
 class PoItems extends Model
 {
@@ -43,6 +44,8 @@ class PoItems extends Model
         'cancelled_reason',
         'status'
     ];
+
+    protected $isCalculating = false;
 
     public function purchaseOrder()
     {
@@ -87,23 +90,84 @@ class PoItems extends Model
         $this->pending = $this->qty - $this->cancelled_qty;
 
         if ($this->cancelled_qty == $this->qty) {
-            $this->status = 'Cancelled';
+            $this->status = 'Void';
             $this->is_cancelled = 1;
         }
 
         $this->save();
 
+        $this->calculatePending();
+
         $purchaseOrder = $this->purchaseOrder;
         $allItemsCancelled = $purchaseOrder->poItems->every(function ($item) {
-            return $item->status === 'Cancelled';
+            return $item->status === 'Void';
         });
 
         if ($allItemsCancelled) {
-            $purchaseOrder->status = 'Cancelled';
+            $purchaseOrder->status = 'Void';
             $purchaseOrder->is_cancelled = 1;
             $purchaseOrder->save();
         }
 
         return $this;
+    }
+
+    public function calculatePending()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->pending = $this->qty - $this->cancelled_qty - $this->received_qty;
+        $this->isCalculating = false;
+    }
+
+    public function calculateReceivedQty()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->received_qty = PurchaseInvoiceItem::where('po_item', $this->id)->sum('qty');
+        $this->isCalculating = false;
+    }
+
+    public function calculateStatus()
+    {
+        if ($this->is_cancelled) {
+            $this->status = 'Void';
+        } elseif ($this->received_qty == ($this->qty - $this->cancelled_qty)) {
+            $this->status = 'Closed';
+        } elseif ($this->received_qty < ($this->qty - $this->cancelled_qty)) {
+            $this->status = 'Partial';
+        } else {
+            $this->status = 'Pending';
+        }
+        $this->save();
+    }
+
+    public function recalculateReceivedQty()
+    {
+        $this->calculateReceivedQty();
+        if ($this->received_qty > ($this->qty - $this->cancelled_qty)) {
+            throw new \Exception('Received quantity cannot exceed the remaining quantity.');
+        }
+        $this->calculateStatus();
+        $this->save();
+    }
+
+    public static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            $model->calculatePending();
+        });
+
+        // static::deleted(function ($model) {
+        //     $model->recalculateReceivedQty();
+        // });
     }
 }

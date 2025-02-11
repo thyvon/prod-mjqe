@@ -426,6 +426,11 @@ const updateItem = () => {
     validationErrors.value.department = ['Department is required.'];
   }
 
+  const remaining_qty = itemForm.qty - (itemForm.cancelled_qty || 0) - (itemForm.received_qty || 0);
+  if (itemForm.cancelled_qty > remaining_qty) {
+    validationErrors.value.cancelled_qty = ['Cancelled quantity cannot exceed remaining quantity.'];
+  }
+
   if (Object.keys(validationErrors.value).length === 0) {
     if (editingItemIndex.value !== null) {
       const item = purchaseOrderForm.items[editingItemIndex.value];

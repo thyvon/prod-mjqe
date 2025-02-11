@@ -204,6 +204,11 @@ class PurchaseOrderController extends Controller
         // Get all users to display in the frontend
         $users = User::all();
 
+        // Calculate remaining quantity for each PO item
+        $purchaseOrder->poItems->each(function ($item) {
+            $item->remaining_qty = $item->qty - $item->cancelled_qty - $item->received_qty;
+        });
+
         // Return the view with the PO data, associated suppliers, PR items, purchase requests, and users
         return Inertia::render('Purchase/Po/Show', [
             'purchaseOrder' => $purchaseOrder,
@@ -336,6 +341,14 @@ class PurchaseOrderController extends Controller
 
         try {
             $purchaseOrder = PurchaseOrder::with('poItems.prItem.product', 'user', 'supplier')->findOrFail($id);
+
+            // Check if any item has received_qty > 0
+            foreach ($purchaseOrder->poItems as $item) {
+                if ($item->received_qty > 0) {
+                    return response()->json(['error' => 'Cannot cancel purchase order with received items.'], 400);
+                }
+            }
+
             $purchaseOrder->cancel($request->cancelled_reason);
 
             return response()->json($purchaseOrder);
@@ -355,6 +368,12 @@ class PurchaseOrderController extends Controller
 
         try {
             $poItem = PoItems::with('prItem.product', 'purchaseOrder')->findOrFail($id);
+            $remaining_qty = $poItem->qty - $poItem->cancelled_qty - $poItem->received_qty;
+
+            if ($request->cancelled_qty > $remaining_qty) {
+                return response()->json(['error' => 'Cancelled quantity cannot exceed remaining quantity.'], 400);
+            }
+
             $poItem->cancelItem($request->cancelled_reason, $request->cancelled_qty);
 
             return response()->json($poItem); // Return the cancelled item instead of the whole purchase order
