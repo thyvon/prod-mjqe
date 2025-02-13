@@ -244,8 +244,11 @@ class InvoiceController extends Controller
                 if (isset($itemData['po_item'])) {
                     $poItem = PoItems::find($itemData['po_item']);
                     
-                    // Reset old qty to 0 before summing
-                    PurchaseInvoiceItem::where('po_item', $poItem->id)->update(['qty' => 0]);
+                    // Reset old qty to 0 for the current invoice item before summing
+                    PurchaseInvoiceItem::where('po_item', $poItem->id)
+                        ->where('id', '!=', $itemData['id'] ?? 0)
+                        ->where('pi_number', $invoice->id)
+                        ->update(['qty' => 0]);
 
                     $pendingQty = $poItem->qty - $poItem->cancelled_qty - PurchaseInvoiceItem::where('po_item', $poItem->id)->sum('qty');
 
