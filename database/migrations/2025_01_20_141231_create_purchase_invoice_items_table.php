@@ -17,7 +17,7 @@ return new class extends Migration
             $table->date('invoice_date');
             $table->integer('payment_type');
             $table->string('invoice_no');
-            $table->foreignId('pr_number')->nullable()->constrained('purchase_requests');
+            $table->foreignId('pr_number')->constrained('purchase_requests');
             $table->foreignId('po_number')->nullable()->constrained('purchase_orders');
             $table->foreignId('pr_item')->constrained('pr_items');
             $table->foreignId('po_item')->nullable()->constrained('po_items');
