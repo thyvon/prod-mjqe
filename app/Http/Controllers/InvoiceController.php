@@ -107,6 +107,16 @@ class InvoiceController extends Controller
 
             $validatedData = $request->validate($rules);
 
+            foreach ($validatedData['items'] as $itemData) {
+                if (isset($itemData['po_item'])) {
+                    $poItem = PoItems::find($itemData['po_item']);
+                    $pendingQty = $poItem->qty - $poItem->cancelled_qty - PurchaseInvoiceItem::where('po_item', $poItem->id)->sum('qty');
+                    if ($poItem && $itemData['qty'] > $pendingQty) {
+                        return response()->json(['error' => 'Validation Error', 'messages' => ['items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']]], 422);
+                    }
+                }
+            }
+
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null;
             }
@@ -227,11 +237,28 @@ class InvoiceController extends Controller
 
             $validatedData = $request->validate($rules);
 
+            $invoice = PurchaseInvoice::findOrFail($id);
+            $existingItems = $invoice->items->keyBy('id');
+
+            foreach ($validatedData['items'] as $itemData) {
+                if (isset($itemData['po_item'])) {
+                    $poItem = PoItems::find($itemData['po_item']);
+                    
+                    // Reset old qty to 0 before summing
+                    PurchaseInvoiceItem::where('po_item', $poItem->id)->update(['qty' => 0]);
+
+                    $pendingQty = $poItem->qty - $poItem->cancelled_qty - PurchaseInvoiceItem::where('po_item', $poItem->id)->sum('qty');
+
+                    if ($itemData['qty'] > $pendingQty) {
+                        return response()->json(['error' => 'Validation Error', 'messages' => ['items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']]], 422);
+                    }
+                }
+            }
+
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null;
             }
 
-            $invoice = PurchaseInvoice::findOrFail($id);
             $invoice->update($validatedData);
 
             $existingItemIds = $invoice->items->pluck('id')->toArray();

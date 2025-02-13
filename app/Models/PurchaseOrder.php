@@ -73,4 +73,45 @@ class PurchaseOrder extends Model
 
         return $this;
     }
+
+    public function updateTotalItem()
+    {
+        $this->total_item = $this->poItems()->count();
+        $this->save();
+    }
+
+    public function updateCancelledItem()
+    {
+        $this->cancelled_item = $this->poItems()->whereColumn('qty', 'cancelled_qty')->count();
+        $this->save();
+    }
+
+    public function updatePurchasedItem()
+    {
+        $this->purchased_item = $this->poItems()
+            ->where('status', 'Closed')
+            ->where('is_cancelled', 0)
+            ->count();
+        $this->save();
+    }
+
+    public function updatePendingItem()
+    {
+        $this->pending_item = $this->total_item - $this->cancelled_item - $this->purchased_item;
+        $this->save();
+    }
+
+    public function updateStatus()
+    {
+        if ($this->purchased_item == ($this->total_item - $this->cancelled_item)) {
+            $this->status = 'Closed';
+        } elseif ($this->cancelled_item == $this->total_item) {
+            $this->status = 'Void';
+        } elseif (($this->total_item - $this->cancelled_item - $this->purchased_item) != 0 && $this->purchased_item != 0) {
+            $this->status = 'Partial';
+        } else {
+            $this->status = 'Pending';
+        }
+        $this->save();
+    }
 }

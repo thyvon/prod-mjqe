@@ -47,6 +47,33 @@ class PoItems extends Model
 
     protected $isCalculating = false;
 
+    protected static function booted()
+    {
+        static::created(function ($poItem) {
+            $poItem->purchaseOrder->updateTotalItem();
+            $poItem->purchaseOrder->updateCancelledItem();
+            $poItem->purchaseOrder->updatePurchasedItem();
+            $poItem->purchaseOrder->updatePendingItem();
+            $poItem->purchaseOrder->updateStatus();
+        });
+
+        static::updated(function ($poItem) {
+            $poItem->purchaseOrder->updateTotalItem();
+            $poItem->purchaseOrder->updateCancelledItem();
+            $poItem->purchaseOrder->updatePurchasedItem();
+            $poItem->purchaseOrder->updatePendingItem();
+            $poItem->purchaseOrder->updateStatus();
+        });
+
+        static::deleted(function ($poItem) {
+            $poItem->purchaseOrder->updateTotalItem();
+            $poItem->purchaseOrder->updateCancelledItem();
+            $poItem->purchaseOrder->updatePurchasedItem();
+            $poItem->purchaseOrder->updatePendingItem();
+            $poItem->purchaseOrder->updateStatus();
+        });
+    }
+
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class, 'po_id');

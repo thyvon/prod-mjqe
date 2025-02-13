@@ -47,18 +47,18 @@ const calculateTotalDiscount = () => {
   form.total_discount = form.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0);
 };
 
-watch(() => form.items, calculateTotalDiscount, { deep: true });
-
 const calculateTotalAmount = () => {
   form.total_amount = form.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
 };
 
+watch(() => form.items, calculateTotalDiscount, { deep: true });
 watch(() => form.items, calculateTotalAmount, { deep: true });
 
 const prItemsTableInstance = ref(null);
 const invoiceItemsTableInstance = ref(null);
 const poItemsTableInstance = ref(null);
 const invoiceListTableInstance = ref(null);
+
 const editItemForm = reactive({
   id: null,
   description: '',
@@ -102,11 +102,42 @@ const calculateTotalPrice = (item) => {
   return (qty * unit_price) - discount - returnAmount - retention + vatAmount;
 };
 
-const prepareInvoiceItems = (items) => {
-  return items.map(item => ({
-    ...item,
-    total_price: calculateTotalPrice(item)
-  }));
+const prepareInvoiceItems = (items) => items.map(item => ({
+  ...item,
+  total_price: calculateTotalPrice(item)
+}));
+
+const handleFormErrors = (error) => {
+  if (error.response && error.response.status === 422) {
+    const errors = error.response.data.messages;
+    Object.keys(errors).forEach(key => {
+      formErrors[key] = errors[key][0];
+      toastr.error(errors[key][0]);
+    });
+  } else {
+    toastr.error('Failed to submit invoice.');
+    console.error('Error:', error);
+  }
+};
+
+const clearForm = () => {
+  Object.assign(form, {
+    transaction_type: null,
+    cash_ref: null,
+    payment_type: null,
+    invoice_date: '',
+    invoice_no: '',
+    supplier: null,
+    currency: null,
+    currency_rate: null,
+    payment_term: null,
+    total_amount: null,
+    paid_amount: null,
+    items: [],
+    supplier_vat: 0,
+  });
+  invoiceItemsTableInstance.value.clear().draw();
+  $('#supplier').val(null).trigger('change');
 };
 
 const submitForm = async () => {
@@ -236,39 +267,6 @@ const updateInvoice = async () => {
   }
 };
 
-const handleFormErrors = (error) => {
-  if (error.response && error.response.status === 422) {
-    const errors = error.response.data.messages;
-    Object.keys(errors).forEach(key => {
-      formErrors[key] = errors[key][0];
-      toastr.error(errors[key][0]);
-    });
-  } else {
-    toastr.error('Failed to submit invoice.');
-    console.error('Error:', error);
-  }
-};
-
-const clearForm = () => {
-  Object.assign(form, {
-    transaction_type: null,
-    cash_ref: null,
-    payment_type: null,
-    invoice_date: '',
-    invoice_no: '',
-    supplier: null,
-    currency: null,
-    currency_rate: null,
-    payment_term: null,
-    total_amount: null,
-    paid_amount: null,
-    items: [],
-    supplier_vat: 0,
-  });
-  invoiceItemsTableInstance.value.clear().draw();
-  $('#supplier').val(null).trigger('change');
-};
-
 const fetchPrItems = async (prNumber) => {
   try {
     const response = await axios.get(`/pr-items?pr_number=${prNumber}`);
@@ -367,10 +365,6 @@ const openPoItemsModal = () => {
   modalElement.addEventListener('hidden.bs.modal', () => {
     $('#po-number-filter').val('').trigger('change');
   });
-};
-
-const calculateVat = (qty, unit_price, discount, vatPercentage) => {
-  return ((qty * unit_price - discount) * vatPercentage) / 100;
 };
 
 const selectPrItem = (prItem) => {
@@ -776,6 +770,21 @@ const removeItem = (rowIndex) => {
 
 const duplicateItem = (rowIndex) => {
   const item = { ...form.items[rowIndex] };
+  if (item.po_item) {
+    const poItem = props.poItems.find(po => po.id === item.po_item);
+    if (poItem) {
+      const receivedQty = form.items.reduce((sum, currentItem) => {
+        return sum + (currentItem.po_item === item.po_item ? parseFloat(currentItem.qty) : 0);
+      }, 0);
+
+      const pendingQty = poItem.qty - poItem.cancelled_qty - receivedQty;
+
+      if (parseFloat(item.qty) > pendingQty) {
+        toastr.warning('The quantity of the PO item cannot exceed the pending quantity.');
+        return;
+      }
+    }
+  }
   form.items.push(item);
   invoiceItemsTableInstance.value.row.add(item).draw();
 };
