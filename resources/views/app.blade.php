@@ -20,7 +20,6 @@
     <link href="/coloradmin/plugins/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/datatables.net-select-bs5/css/select.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" defer />
-    <!-- @vite(['resources/css/app.css']) -->
     @inertiaHead
 </head>
 <body style="font-family: 'Poppins', sans-serif;">

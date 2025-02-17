@@ -3,8 +3,6 @@ import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
-// import 'select2/dist/css/select2.min.css';
-// import 'select2';
 
 const props = defineProps({
   purchaseRequests: { type: Array, required: true },
@@ -33,7 +31,6 @@ const itemForm = reactive({ product_id: '', remark: '', qty: 1, uom: '', unit_pr
 const validationErrors = ref({});
 let dataTableInstance;
 let editingItemIndex = ref(null);
-const cancelItemForm = reactive({ items: [], selectedItems: [], selectedItemId: null });
 
 const totalAmount = computed(() => {
   return purchaseRequestForm.items.reduce((sum, item) => sum + Number(item.total_price), 0).toFixed(2);
@@ -152,101 +149,6 @@ const deletePurchaseRequest = async (purchaseRequestId) => {
   });
 };
 
-const cancelPurchaseRequest = async (purchaseRequestId) => {
-  swal({
-    title: 'Are you sure?',
-    text: 'Do you want to cancel this purchase request?',
-    icon: 'warning',
-    buttons: {
-      cancel: {
-        text: 'No, cancel!',
-        visible: true,
-        className: 'btn btn-secondary',
-        closeModal: true
-      },
-      confirm: {
-        text: 'Yes, cancel it!',
-        visible: true,
-        className: 'btn btn-danger',
-        closeModal: true
-      }
-    },
-    dangerMode: true,
-  }).then(async (result) => {
-    if (result) {
-      try {
-        const response = await axios.put(`/purchase-requests/${purchaseRequestId}/cancel`);
-        const updatedRequest = response.data;
-        const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedRequest.id).index();
-        dataTableInstance.row(rowIndex).data(updatedRequest).draw(false);
-        swal('Canceled!', 'Purchase request has been canceled.', 'success', { timer: 2000 });
-      } catch (error) {
-        console.error('Error canceling purchase request:', error);
-        swal('Error!', 'Failed to cancel purchase request. Please try again.', 'error');
-      }
-    }
-  });
-};
-
-const openCancelItemModal = async (purchaseRequestId) => {
-  try {
-    const response = await axios.get(`/purchase-requests/${purchaseRequestId}/edit`);
-    cancelItemForm.items = response.data.pr_items.map(item => ({
-      id: item.id,
-      product_description: item.product.product_description,
-      qty: item.qty,
-      qty_cancel: 0,
-      uom: item.uom,
-      qty_last: item.qty_last,
-      reason: item.reason,
-    }));
-    cancelItemForm.purchaseRequestId = purchaseRequestId;
-    const modalElement = document.getElementById('cancelItemModal');
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-  } catch (error) {
-    console.error('Error fetching items for cancellation:', error);
-  }
-};
-
-const addItemToCancel = () => {
-  const selectedItem = cancelItemForm.items.find(item => item.id === cancelItemForm.selectedItemId);
-  if (selectedItem) {
-    cancelItemForm.selectedItems.push({ ...selectedItem, qty_cancel: 0 });
-    cancelItemForm.items = cancelItemForm.items.filter(item => item.id !== cancelItemForm.selectedItemId);
-    cancelItemForm.selectedItemId = null;
-  }
-};
-
-const removeCancelItem = (index) => {
-  const removedItem = cancelItemForm.selectedItems.splice(index, 1)[0];
-  cancelItemForm.items.push(removedItem);
-};
-
-const cancelItems = async () => {
-  try {
-    const payload = {
-      items: cancelItemForm.selectedItems.filter(item => item.qty_cancel > 0)
-    };
-    const response = await axios.put(`/purchase-requests/${cancelItemForm.purchaseRequestId}/cancel-items`, payload);
-    const updatedRequest = response.data;
-    const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedRequest.id).index();
-    dataTableInstance.row(rowIndex).data(updatedRequest).draw(false);
-    swal('Canceled!', 'Selected items have been canceled.', 'success', { timer: 2000 });
-    clearCancelItemForm();
-    const modalElement = document.getElementById('cancelItemModal');
-    const modal = bootstrap.Modal.getInstance(modalElement);
-    modal.hide();
-  } catch (error) {
-    console.error('Error canceling items:', error);
-    if (error.response?.status === 422) {
-      validationErrors.value = error.response.data.errors;
-    } else {
-      swal('Error!', 'Failed to cancel items. Please try again.', 'error');
-    }
-  }
-};
-
 const clearForm = () => {
   Object.assign(purchaseRequestForm, {
     id: null, pr_number: '', request_date: new Date().toISOString().split('T')[0],
@@ -254,10 +156,6 @@ const clearForm = () => {
     campus: '', division: '', department: '', purpose: '', is_urgent: false, items: [], total_amount: 0,
   });
   validationErrors.value = {};
-};
-
-const clearCancelItemForm = () => {
-  Object.assign(cancelItemForm, { items: [], selectedItems: [], selectedItemId: null });
 };
 
 const openItemModal = () => {
@@ -331,7 +229,7 @@ const getStatusBadgeClass = (status) => {
     case 'Pending': return 'badge bg-warning';
     case 'Approved': return 'badge bg-success';
     case 'Rejected': return 'badge bg-danger';
-    case 'Cancelled': return 'badge bg-secondary';
+    case 'Void': return 'badge bg-secondary';
     default: return 'badge bg-info';
   }
 };
@@ -410,10 +308,8 @@ onMounted(() => {
                   <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                  ${data.status !== 'Cancelled' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
+                  ${data.status !== 'Void' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
-                  ${data.status !== 'Cancelled' ? '<li><a class="dropdown-item btn-cancel-pr text-warning"><i class="fas fa-ban"></i> Cancel PR</a></li>' : ''}
-                  ${data.status !== 'Cancelled' ? '<li><a class="dropdown-item btn-cancel-items text-warning"><i class="fas fa-ban"></i> Cancel Items</a></li>' : ''}
                   <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> View</a></li>
                 </ul>
               </div>
@@ -432,14 +328,6 @@ onMounted(() => {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
           if (rowData) deletePurchaseRequest(rowData.id);
         })
-        .on('click', '.btn-cancel-pr', function () {
-          const rowData = dataTableInstance.row($(this).closest('tr')).data();
-          if (rowData) cancelPurchaseRequest(rowData.id);
-        })
-        .on('click', '.btn-cancel-items', function () {
-          const rowData = dataTableInstance.row($(this).closest('tr')).data();
-          if (rowData) openCancelItemModal(rowData.id);
-        })
         .on('click', '.btn-show', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
           if (rowData) window.location.href = `/purchase-requests/${rowData.id}`;
@@ -456,18 +344,6 @@ onMounted(() => {
         const tr = $(this).closest('tr').prev();
         const rowData = dataTableInstance.row(tr).data();
         if (rowData) deletePurchaseRequest(rowData.id);
-      });
-
-      $('#purchase-request').on('click', '.dtr-details .btn-cancel-pr', function () {
-        const tr = $(this).closest('tr').prev();
-        const rowData = dataTableInstance.row(tr).data();
-        if (rowData) cancelPurchaseRequest(rowData.id);
-      });
-
-      $('#purchase-request').on('click', '.dtr-details .btn-cancel-items', function () {
-        const tr = $(this).closest('tr').prev();
-        const rowData = dataTableInstance.row(tr).data();
-        if (rowData) openCancelItemModal(rowData.id);
       });
 
       $('#purchase-request').on('click', '.dtr-details .btn-show', function () {
@@ -746,96 +622,6 @@ onMounted(() => {
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-primary">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="modal fade" id="cancelItemModal" tabindex="-1" aria-labelledby="cancelItemModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow-lg rounded-3">
-          <div class="modal-header bg-gray-600 text-white align-items-center p-2">
-            <div class="d-flex align-items-center">
-              <h5 class="modal-title" id="cancelItemModalLabel"><i class="fa-solid fa-ban text-danger"></i> Cancel Items</h5>
-            </div>
-            <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form @submit.prevent="cancelItems">
-              <div class="row mb-4">
-                <label for="items" class="col-md-3 col-form-label fw-bold text-dark">Select Item</label>
-                <div class="col-md-9">
-                  <select v-model="cancelItemForm.selectedItemId" class="form-select mb-3 shadow-sm border-2" id="items">
-                    <option v-for="item in cancelItemForm.items" :key="item.id" :value="item.id">
-                      {{ item.product_description }}
-                    </option>
-                  </select>
-                  <button type="button" class="btn btn-sm btn-primary mb-3" @click="addItemToCancel">
-                    <i class="fa fa-plus-circle"></i> Add Item to Cancel
-                  </button>
-                </div>
-              </div>
-
-              <!-- Table placed below the "Select Item" dropdown -->
-              <div class="table-responsive mt-4">
-                <table class="table table-bordered table-striped text-center mx-auto" style="max-width: 95%;">
-                  <thead class="table-primary">
-                    <tr>
-                      <th>#</th>
-                      <th>Product</th>
-                      <th>Qty</th>
-                      <th>Qty to Cancel</th>
-                      <th>UOM</th>
-                      <th>Qty Last</th>
-                      <th>Reason</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(item, index) in cancelItemForm.selectedItems" :key="index">
-                      <td>{{ index + 1 }}</td>
-                      <td class="text-left">{{ item.product_description }}</td>
-                      <td>{{ item.qty }}</td>
-                      <td>
-                        <input
-                          v-model="item.qty_cancel"
-                          type="number"
-                          step="0.0001"
-                          class="form-control"
-                          placeholder="Qty"
-                          required
-                          min="0.0001"
-                          :max="item.qty_last"
-                        />
-                      </td>
-                      <td>{{ item.uom }}</td>
-                      <td>{{ item.qty_last }}</td>
-                      <td>
-                        <textarea
-                          v-model="item.reason"
-                          class="form-control shadow-sm"
-                          placeholder="Reason for cancellation"
-                          rows="2"
-                          required
-                        ></textarea>
-                      </td>
-                      <td>
-                        <button type="button" class="btn btn-sm btn-danger" @click="removeCancelItem(index)">
-                          <i class="fa fa-trash t-plus-1 fa-fw fa-lg"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                  <i class="fa fa-circle-xmark"></i> Close</button>
-                <button type="submit" class="btn btn-primary">
-                  <i class="fa fa-check-circle"></i> Confirm Cancellation
-                </button>
               </div>
             </form>
           </div>

@@ -122,19 +122,22 @@ const handleFormErrors = (error) => {
 
 const clearForm = () => {
   Object.assign(form, {
+    id: null, // Clear the form ID
     transaction_type: null,
     cash_ref: null,
-    payment_type: null,
+    payment_type: 1,
     invoice_date: '',
     invoice_no: '',
-    supplier: null,
-    currency: null,
+    supplier: '',
+    currency: 1,
     currency_rate: null,
     payment_term: null,
     total_amount: null,
     paid_amount: null,
-    items: [],
     supplier_vat: 0,
+    created_by: null,
+    items: [],
+    total_discount: 0,
   });
   invoiceItemsTableInstance.value.clear().draw();
   $('#supplier').val(null).trigger('change');
@@ -148,6 +151,7 @@ const submitForm = async () => {
   } else {
     await createInvoice();
   }
+  clearForm(); // Clear the form after saving or updating
 };
 
 const createInvoice = async () => {
@@ -615,7 +619,7 @@ const editInvoice = async (invoiceId) => {
         division: item.division,
         department: item.department,
         location: item.location,
-        purpose: item.purpose,
+        purpose: item.purchase_request?.purpose || '', // Handle null purpose
         pr_number: item.purchase_request?.pr_number || '', // Handle null pr_number
         po_number: item.purchase_order?.po_number || '', // Handle null po_number
         item_code: item.product?.sku || '', // Handle null item_code
@@ -795,6 +799,10 @@ onMounted(() => {
     if (newSupplierId) {
       updateSupplierVat(newSupplierId);
     }
+  });
+
+  $('#nav-create-tab').on('click', () => {
+    clearForm(); // Clear the form when switching to create form mode
   });
 
   const initializeDataTable = (selector, options) => {
