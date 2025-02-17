@@ -25,6 +25,7 @@ class PrItem extends Model
         'qty_cancel',
         'qty_po',
         'qty_purchase',
+        'qty_pending',
         'status',
         'force_close',
         'is_cancel',
