@@ -26,6 +26,7 @@ return new class extends Migration
             $table->decimal('qty_cancel', 10, 2)->default(0);
             $table->decimal('qty_po', 10, 2)->default(0);
             $table->decimal('qty_purchase', 10, 2)->default(0);
+            $table->decimal('qty_pending', 10, 2)->default(0);
             $table->string('status')->default('Pending');
             $table->boolean('force_close')->default(false);
             $table->boolean('is_cancel')->default(false);
