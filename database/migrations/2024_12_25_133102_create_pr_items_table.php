@@ -24,7 +24,6 @@ return new class extends Migration
             $table->string('division');
             $table->string('department');
             $table->decimal('qty_cancel', 10, 2)->default(0);
-            $table->decimal('qty_last', 10, 2)->default(0);
             $table->decimal('qty_po', 10, 2)->default(0);
             $table->decimal('qty_purchase', 10, 2)->default(0);
             $table->string('status')->default('Pending');

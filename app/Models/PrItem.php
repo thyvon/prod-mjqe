@@ -23,7 +23,6 @@ class PrItem extends Model
         'division',
         'department',
         'qty_cancel',
-        'qty_last',
         'qty_po',
         'qty_purchase',
         'status',
