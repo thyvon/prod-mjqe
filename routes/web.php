@@ -4,7 +4,6 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
-    PrItemController,
     ProductController,
     ProfileController,
     CategoryController,
@@ -54,7 +53,6 @@ Route::middleware('auth')->group(function () {
         'categories' => CategoryController::class,
         'cash-request' => CashRequestController::class,
         'purchase-requests' => PurchaseRequestController::class,
-        'pr-items' => PrItemController::class,
         'purchase-orders' => PurchaseOrderController::class,
         'invoices' => InvoiceController::class,
     ]);

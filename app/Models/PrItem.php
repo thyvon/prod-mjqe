@@ -80,10 +80,10 @@ class PrItem extends Model
         return $this->hasMany(PoItems::class, 'pr_item_id');
     }
 
-    // public function invoiceItem()
-    // {
-    //     return $this->hasMany(PurchaseInvoiceItem::class, 'pr_item');
-    // }
+    public function invoiceItem()
+    {
+        return $this->hasMany(PurchaseInvoiceItem::class, 'pr_item');
+    }
 
     public function calculateQtyPurchase()
     {
