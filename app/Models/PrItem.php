@@ -6,6 +6,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PurchaseRequest;
+use App\Models\Product;
+use App\Models\PoItem;
+use App\Models\PurchaseInvoiceItem;
 
 class PrItem extends Model
 {
@@ -32,6 +36,35 @@ class PrItem extends Model
         'reason',
     ];
 
+    protected $isCalculating = false;
+
+    protected static function booted()
+    {
+        static::created(function ($prItem) {
+            $prItem->purchaseRequest->updateTotalItem();
+            $prItem->purchaseRequest->updateCancelledItem();
+            $prItem->purchaseRequest->updatePurchasedItem();
+            $prItem->purchaseRequest->updatePendingItem();
+            $prItem->purchaseRequest->updateStatus();
+        });
+
+        static::updated(function ($prItem) {
+            $prItem->purchaseRequest->updateTotalItem();
+            $prItem->purchaseRequest->updateCancelledItem();
+            $prItem->purchaseRequest->updatePurchasedItem();
+            $prItem->purchaseRequest->updatePendingItem();
+            $prItem->purchaseRequest->updateStatus();
+        });
+
+        static::deleted(function ($prItem) {
+            $prItem->purchaseRequest->updateTotalItem();
+            $prItem->purchaseRequest->updateCancelledItem();
+            $prItem->purchaseRequest->updatePurchasedItem();
+            $prItem->purchaseRequest->updatePendingItem();
+            $prItem->purchaseRequest->updateStatus();
+        });
+    }
+
     public function purchaseRequest()
     {
         return $this->belongsTo(PurchaseRequest::class, 'purchase_request_id');
@@ -44,6 +77,84 @@ class PrItem extends Model
 
     public function poItems()
     {
-        return $this->hasMany(PoItem::class, 'pr_item_id');
+        return $this->hasMany(PoItems::class, 'pr_item_id');
+    }
+
+    // public function invoiceItem()
+    // {
+    //     return $this->hasMany(PurchaseInvoiceItem::class, 'pr_item');
+    // }
+
+    public function calculateQtyPurchase()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->qty_purchase = PurchaseInvoiceItem::where('pr_item', $this->id)->sum('qty');
+        $this->isCalculating = false;
+    }
+
+    public function calculatePending()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->qty_pending = $this->qty - $this->qty_cancel - $this->qty_purchase;
+        $this->isCalculating = false;
+    }
+
+    public function calculateStatus()
+    {
+        if ($this->force_close == 1) {
+            $this->status = "Closed";
+        } elseif ($this->is_cancel == 1) {
+            $this->status = "Void";
+        } elseif ($this->qty_purchase == ($this->qty - $this->qty_cancel)) {
+            $this->status = "Closed";
+        } elseif ($this->qty_purchase < ($this->qty - $this->qty_cancel)) {
+            $this->status = "Partial";
+        } else {
+            $this->status = "Pending";
+        }
+    }
+
+    public function recalculateQtyPurchase()
+    {
+        $this->calculateQtyPurchase();
+        if ($this->qty_purchase > ($this->qty - $this->qty_cancel)) {
+            throw new \Exception('Received quantity cannot exceed the remaining quantity.');
+        }
+        $this->calculateStatus();
+        $this->save();
+    }
+
+    public function performCalculations()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+
+        $this->calculateQtyPurchase();
+        $this->calculatePending();
+        $this->calculateStatus();
+        $this->recalculateQtyPurchase();
+
+        $this->isCalculating = false;
+        $this->save();
+    }
+
+    public static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            $model->calculatePending();
+        });
     }
 }

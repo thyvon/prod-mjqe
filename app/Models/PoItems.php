@@ -192,9 +192,5 @@ class PoItems extends Model
         static::saving(function ($model) {
             $model->calculatePending();
         });
-
-        // static::deleted(function ($model) {
-        //     $model->recalculateReceivedQty();
-        // });
     }
 }

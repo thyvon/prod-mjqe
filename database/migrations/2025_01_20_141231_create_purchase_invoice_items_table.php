@@ -17,10 +17,10 @@ return new class extends Migration
             $table->date('invoice_date');
             $table->integer('payment_type');
             $table->string('invoice_no');
-            $table->foreignId('pr_number')->constrained('purchase_requests');
-            $table->foreignId('po_number')->nullable()->constrained('purchase_orders');
-            $table->foreignId('pr_item')->constrained('pr_items');
-            $table->foreignId('po_item')->nullable()->constrained('po_items');
+            $table->foreignId('pr_number')->constrained('purchase_requests')->onUpdate('restrict')->onDelete('restrict');
+            $table->foreignId('po_number')->nullable()->constrained('purchase_orders')->onUpdate('restrict')->onDelete('restrict');
+            $table->foreignId('pr_item')->constrained('pr_items')->onUpdate('restrict')->onDelete('restrict');
+            $table->foreignId('po_item')->nullable()->constrained('po_items')->onUpdate('restrict')->onDelete('restrict');
             $table->foreignId('supplier')->constrained('suppliers');
             $table->foreignId('item_code')->constrained('products');
             $table->string('description');

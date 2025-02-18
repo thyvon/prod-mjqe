@@ -147,11 +147,16 @@ const submitForm = async () => {
   form.items = prepareInvoiceItems(form.items);
   calculateTotalAmount();
   if (form.id) {
-    await updateInvoice();
+    const success = await updateInvoice();
+    if (success) {
+      clearForm(); // Clear the form only after updating successfully
+    }
   } else {
-    await createInvoice();
+    const success = await createInvoice();
+    if (success) {
+      clearForm(); // Clear the form only after creating successfully
+    }
   }
-  clearForm(); // Clear the form after saving or updating
 };
 
 const createInvoice = async () => {
@@ -207,8 +212,10 @@ const createInvoice = async () => {
       payment_type: newInvoice.payment_type || 0,
       actions: ''
     }).draw(false);
+    return true;
   } catch (error) {
     handleFormErrors(error);
+    return false;
   }
 };
 
@@ -250,7 +257,6 @@ const updateInvoice = async () => {
 
     const response = await axios.put(`/invoices/${form.id}`, form);
     toastr.success('Invoice updated successfully.');
-    clearForm();
     $('#nav-list-tab').tab('show');
 
     const updatedInvoice = response.data;
@@ -266,8 +272,10 @@ const updateInvoice = async () => {
       payment_type: updatedInvoice.payment_type || 0,
       actions: ''
     }).draw(false);
+    return true;
   } catch (error) {
     handleFormErrors(error);
+    return false;
   }
 };
 
@@ -379,6 +387,18 @@ const selectPrItem = (prItem) => {
       const unit_price = parseFloat(prItem.unit_price) || 0;
       const discount = 0;
       const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedSupplierVat.value });
+
+      const receivedQty = form.items.reduce((sum, currentItem) => {
+        return sum + (currentItem.pr_item === prItem.id ? parseFloat(currentItem.qty) : 0);
+      }, 0);
+
+      const pendingQty = prItem.qty - prItem.qty_cancel - receivedQty;
+
+      if (qty > pendingQty) {
+        toastr.warning('The quantity of the PR item cannot exceed the pending quantity.');
+        return;
+      }
+
       form.items.push({
         pr_item: prItem.id,
         po_item: null,
@@ -434,6 +454,18 @@ const selectPoItem = (poItem) => {
       const unit_price = parseFloat(poItem.unit_price) || 0;
       const discount = parseFloat(poItem.discount) || 0;
       const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedSupplierVat.value });
+
+      const receivedQty = form.items.reduce((sum, currentItem) => {
+        return sum + (currentItem.po_item === poItem.id ? parseFloat(currentItem.qty) : 0);
+      }, 0);
+
+      const pendingQty = poItem.qty - poItem.cancelled_qty - receivedQty;
+
+      if (qty > pendingQty) {
+        toastr.warning('The quantity of the PO item cannot exceed the pending quantity.');
+        return;
+      }
+
       const prNumber = poItem.purchase_request.pr_number;
       form.items.push({
         pr_item: poItem.pr_item_id,
@@ -789,6 +821,23 @@ const duplicateItem = (rowIndex) => {
       }
     }
   }
+
+  if (item.pr_item) {
+    const prItem = props.prItems.find(pr => pr.id === item.pr_item);
+    if (prItem) {
+      const receivedQty = form.items.reduce((sum, currentItem) => {
+        return sum + (currentItem.pr_item === item.pr_item ? parseFloat(currentItem.qty) : 0);
+      }, 0);
+
+      const pendingQty = prItem.qty - prItem.qty_cancel - receivedQty;
+
+      if (parseFloat(item.qty) > pendingQty) {
+        toastr.warning('The quantity of the PR item cannot exceed the pending quantity.');
+        return;
+      }
+    }
+  }
+
   form.items.push(item);
   invoiceItemsTableInstance.value.row.add(item).draw();
 };
