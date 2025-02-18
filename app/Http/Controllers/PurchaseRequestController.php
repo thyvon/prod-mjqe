@@ -15,14 +15,10 @@ class PurchaseRequestController extends Controller
 {
     public function index()
     {
-        $purchaseRequests = PurchaseRequest::with(['prItems.product', 'requestBy'])->get();
-        $currentUser = auth()->user();
-        $products = Product::all();
-
         return Inertia::render('Purchase/Pr/Index', [
-            'purchaseRequests' => $purchaseRequests,
-            'currentUser' => $currentUser,
-            'products' => $products,
+            'purchaseRequests' => PurchaseRequest::with(['prItems.product', 'requestBy'])->get(),
+            'currentUser' => auth()->user(),
+            'products' => Product::all(),
         ]);
     }
 
@@ -50,7 +46,6 @@ class PurchaseRequestController extends Controller
             ]);
 
             $validated['total_amount'] = collect($validated['items'])->sum('total_price');
-            $validated['total_item'] = count($validated['items']);
             $validated['status'] = 'Pending';
             $validated['is_urgent'] = $request->input('is_urgent') ? 1 : 0;
 
@@ -61,15 +56,11 @@ class PurchaseRequestController extends Controller
                 $purchaseRequest->prItems()->create($item);
             }
 
-            $purchaseRequest->load(['prItems.product', 'requestBy']);
-
-            return response()->json($purchaseRequest, 201);
+            return response()->json($purchaseRequest->load(['prItems.product', 'requestBy']), 201);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             \Log::error('Error creating purchase request: ' . $e->getMessage());
-            \Log::error('Request data: ' . json_encode($request->all()));
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json(['error' => 'Error creating purchase request.'], 500);
         }
     }
@@ -77,26 +68,20 @@ class PurchaseRequestController extends Controller
     public function edit($id)
     {
         try {
-            \Log::info('Edit method called with ID:', ['id' => $id]);
             $purchaseRequest = PurchaseRequest::with(['prItems.product', 'requestBy'])->findOrFail($id);
-            \Log::info('Editing Purchase Request:', ['purchaseRequest' => $purchaseRequest->toArray()]);
             return response()->json($purchaseRequest);
         } catch (\Exception $e) {
-            \Log::error('Error in edit method:', ['message' => $e->getMessage(), 'stack' => $e->getTraceAsString()]);
+            \Log::error('Error in edit method:', ['message' => $e->getMessage()]);
             return response()->json(['error' => 'Error fetching purchase request.'], 500);
         }
     }
 
     public function show($id)
     {
-        $purchaseRequest = PurchaseRequest::with('prItems.product')->findOrFail($id);
-        $products = Product::all();
-        $users = User::all();
-
         return Inertia::render('Purchase/Pr/Show', [
-            'purchaseRequest' => $purchaseRequest,
-            'products' => $products,
-            'users' => $users
+            'purchaseRequest' => PurchaseRequest::with('prItems.product')->findOrFail($id),
+            'products' => Product::all(),
+            'users' => User::all()
         ]);
     }
 
@@ -136,27 +121,22 @@ class PurchaseRequestController extends Controller
             $purchaseRequest->prItems()->whereNotIn('id', $existingItemIds)->delete();
             foreach ($validated['items'] as $itemData) {
                 if (isset($itemData['id'])) {
-                    $item = PrItem::find($itemData['id']);
-                    $item->update($itemData);
+                    PrItem::find($itemData['id'])->update($itemData);
                 } else {
                     $purchaseRequest->prItems()->create($itemData);
                 }
             }
 
-            $purchaseRequest->total_amount = $purchaseRequest->prItems->sum('total_price');
-            $purchaseRequest->total_item = $purchaseRequest->prItems->count();
-            $purchaseRequest->is_urgent = $request->input('is_urgent') ? 1 : 0;
-            $purchaseRequest->save();
+            $purchaseRequest->update([
+                'total_amount' => $purchaseRequest->prItems->sum('total_price'),
+                'is_urgent' => $request->input('is_urgent') ? 1 : 0
+            ]);
 
-            $purchaseRequest->load(['prItems.product', 'requestBy']);
-
-            return response()->json($purchaseRequest, 200);
+            return response()->json($purchaseRequest->load(['prItems.product', 'requestBy']), 200);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             \Log::error('Error updating purchase request: ' . $e->getMessage());
-            \Log::error('Request data: ' . json_encode($request->all()));
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json(['error' => 'Error updating purchase request.'], 500);
         }
     }

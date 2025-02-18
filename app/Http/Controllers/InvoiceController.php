@@ -34,20 +34,20 @@ class InvoiceController extends Controller
 
     public function getPrItems(Request $request)
     {
-        $prItems = PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])
-            ->whereHas('purchaseRequest', fn($query) => $query->where('pr_number', $request->query('pr_number')))
-            ->get();
-
-        return response()->json($prItems);
+        return response()->json(
+            PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])
+                ->whereHas('purchaseRequest', fn($query) => $query->where('pr_number', $request->query('pr_number')))
+                ->get()
+        );
     }
 
     public function getPoItems(Request $request)
     {
-        $poItems = PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
-            ->whereHas('purchaseOrder', fn($query) => $query->where('po_number', $request->query('po_number')))
-            ->get();
-
-        return response()->json($poItems);
+        return response()->json(
+            PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
+                ->whereHas('purchaseOrder', fn($query) => $query->where('po_number', $request->query('po_number')))
+                ->get()
+        );
     }
 
     public function store(Request $request)
@@ -55,67 +55,10 @@ class InvoiceController extends Controller
         try {
             Log::info('Store method called', ['request_data' => $request->all()]);
 
-            $rules = [
-                'transaction_type' => 'required|integer',
-                'cash_ref' => 'nullable|integer|exists:cash_requests,id',
-                'payment_type' => 'required|integer',
-                'invoice_date' => 'required|date',
-                'invoice_no' => 'required|string',
-                'supplier' => 'required|integer|exists:suppliers,id',
-                'currency' => 'required|integer',
-                'currency_rate' => 'required|numeric',
-                'payment_term' => 'required|integer',
-                'total_amount' => 'required|numeric',
-                'paid_amount' => 'required|numeric',
-                'created_by' => 'required|integer|exists:users,id',
-                'supplier_vat' => 'required|numeric',
-                'items' => 'required|array',
-                'items.*.pr_item' => 'required|integer|exists:pr_items,id',
-                'items.*.po_item' => 'nullable|integer|exists:po_items,id',
-                'items.*.description' => 'required|string',
-                'items.*.remark' => 'nullable|string',
-                'items.*.qty' => 'required|numeric',
-                'items.*.uom' => 'required|string',
-                'items.*.currency' => 'required|integer',
-                'items.*.currency_rate' => 'required|numeric',
-                'items.*.unit_price' => 'required|numeric',
-                'items.*.discount' => 'nullable|numeric',
-                'items.*.vat' => 'nullable|numeric',
-                'items.*.return' => 'nullable|numeric',
-                'items.*.retention' => 'nullable|numeric',
-                'items.*.due_amount' => 'required|numeric',
-                'items.*.paid_amount' => 'required|numeric',
-                'items.*.requested_by' => 'nullable|integer|exists:users,id',
-                'items.*.campus' => 'required|string',
-                'items.*.division' => 'required|string',
-                'items.*.department' => 'required|string',
-                'items.*.location' => 'required|string',
-                'items.*.purchased_by' => 'required|integer|exists:users,id',
-                'items.*.purpose' => 'required|string',
-                'items.*.payment_term' => 'required|integer',
-                'items.*.transaction_type' => 'required|integer',
-                'items.*.cash_ref' => 'nullable|integer|exists:cash_requests,id',
-                'items.*.stop_purchase' => 'nullable|boolean',
-                'items.*.asset_type' => 'nullable|integer',
-                'items.*.total_usd' => 'required|numeric',
-                'items.*.total_khr' => 'required|numeric',
-            ];
-
-            if ($request->transaction_type != 2) {
-                $rules['cash_ref'] = 'required|integer|exists:cash_requests,id';
-            }
-
+            $rules = $this->getValidationRules($request->transaction_type);
             $validatedData = $request->validate($rules);
 
-            foreach ($validatedData['items'] as $itemData) {
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    $pendingQty = $poItem->qty - $poItem->cancelled_qty - PurchaseInvoiceItem::where('po_item', $poItem->id)->sum('qty');
-                    if ($poItem && $itemData['qty'] > $pendingQty) {
-                        return response()->json(['error' => 'Validation Error', 'messages' => ['items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']]], 422);
-                    }
-                }
-            }
+            $this->validateItemQuantities($validatedData['items']);
 
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null;
@@ -124,39 +67,7 @@ class InvoiceController extends Controller
             $invoice = PurchaseInvoice::create($validatedData);
             Log::info('Invoice created', ['invoice' => $invoice->toArray()]);
 
-            foreach ($validatedData['items'] as $itemData) {
-                $prItem = PrItem::find($itemData['pr_item']);
-                if ($prItem) {
-                    $itemData['pr_number'] = $prItem->purchase_request_id;
-                    $itemData['item_code'] = $prItem->product_id;
-                }
-
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    if ($poItem) {
-                        $itemData['po_number'] = $poItem->po_id;
-                    }
-                }
-
-                $itemData['pi_number'] = $invoice->id;
-                $itemData['invoice_date'] = $invoice->invoice_date;
-                $itemData['payment_type'] = $invoice->payment_type;
-                $itemData['invoice_no'] = $invoice->invoice_no;
-                $itemData['supplier'] = $invoice->supplier;
-                $itemData['payment_term'] = $invoice->payment_term;
-                $itemData['transaction_type'] = $invoice->transaction_type;
-                $itemData['requested_by'] = $invoice->created_by;
-
-                $invoiceItem = PurchaseInvoiceItem::create($itemData);
-                Log::info('Invoice item created', ['item' => $itemData]);
-
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    if ($poItem) {
-                        $poItem->recalculateReceivedQty();
-                    }
-                }
-            }
+            $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
 
             return response()->json($invoice->load('items', 'supplier'), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -170,14 +81,16 @@ class InvoiceController extends Controller
 
     public function edit($id)
     {
-        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
-        return response()->json($invoice);
+        return response()->json(
+            PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id)
+        );
     }
 
     public function show($id)
     {
-        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
-        return response()->json($invoice);
+        return response()->json(
+            PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id)
+        );
     }
 
     public function update(Request $request, $id)
@@ -185,78 +98,13 @@ class InvoiceController extends Controller
         try {
             Log::info('Update method called', ['request_data' => $request->all()]);
 
-            $rules = [
-                'transaction_type' => 'required|integer',
-                'cash_ref' => 'nullable|integer|exists:cash_requests,id',
-                'payment_type' => 'required|integer',
-                'invoice_date' => 'required|date',
-                'invoice_no' => 'required|string',
-                'supplier' => 'required|integer|exists:suppliers,id',
-                'currency' => 'required|integer',
-                'currency_rate' => 'required|numeric',
-                'payment_term' => 'required|integer',
-                'total_amount' => 'required|numeric',
-                'paid_amount' => 'required|numeric',
-                'created_by' => 'required|integer|exists:users,id',
-                'supplier_vat' => 'required|numeric',
-                'items' => 'required|array',
-                'items.*.pr_item' => 'required|integer|exists:pr_items,id',
-                'items.*.po_item' => 'nullable|integer|exists:po_items,id',
-                'items.*.description' => 'required|string',
-                'items.*.remark' => 'nullable|string',
-                'items.*.qty' => 'required|numeric',
-                'items.*.uom' => 'required|string',
-                'items.*.currency' => 'required|integer',
-                'items.*.currency_rate' => 'required|numeric',
-                'items.*.unit_price' => 'required|numeric',
-                'items.*.discount' => 'nullable|numeric',
-                'items.*.vat' => 'nullable|numeric',
-                'items.*.return' => 'nullable|numeric',
-                'items.*.retention' => 'nullable|numeric',
-                'items.*.due_amount' => 'required|numeric',
-                'items.*.paid_amount' => 'required|numeric',
-                'items.*.requested_by' => 'nullable|integer|exists:users,id',
-                'items.*.campus' => 'required|string',
-                'items.*.division' => 'required|string',
-                'items.*.department' => 'required|string',
-                'items.*.location' => 'required|string',
-                'items.*.purchased_by' => 'required|integer|exists:users,id',
-                'items.*.purpose' => 'required|string',
-                'items.*.payment_term' => 'required|integer',
-                'items.*.transaction_type' => 'required|integer',
-                'items.*.cash_ref' => 'nullable|integer|exists:cash_requests,id',
-                'items.*.stop_purchase' => 'nullable|boolean',
-                'items.*.asset_type' => 'nullable|integer',
-                'items.*.total_usd' => 'required|numeric',
-                'items.*.total_khr' => 'required|numeric',
-            ];
-
-            if ($request->transaction_type != 2) {
-                $rules['cash_ref'] = 'required|integer|exists:cash_requests,id';
-            }
-
+            $rules = $this->getValidationRules($request->transaction_type);
             $validatedData = $request->validate($rules);
 
             $invoice = PurchaseInvoice::findOrFail($id);
             $existingItems = $invoice->items->keyBy('id');
 
-            foreach ($validatedData['items'] as $itemData) {
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    
-                    // Reset old qty to 0 for the current invoice item before summing
-                    PurchaseInvoiceItem::where('po_item', $poItem->id)
-                        ->where('id', '!=', $itemData['id'] ?? 0)
-                        ->where('pi_number', $invoice->id)
-                        ->update(['qty' => 0]);
-
-                    $pendingQty = $poItem->qty - $poItem->cancelled_qty - PurchaseInvoiceItem::where('po_item', $poItem->id)->sum('qty');
-
-                    if ($itemData['qty'] > $pendingQty) {
-                        return response()->json(['error' => 'Validation Error', 'messages' => ['items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']]], 422);
-                    }
-                }
-            }
+            $this->validateItemQuantities($validatedData['items'], $invoice->id);
 
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null;
@@ -264,61 +112,11 @@ class InvoiceController extends Controller
 
             $invoice->update($validatedData);
 
-            $existingItemIds = $invoice->items->pluck('id')->toArray();
+            $updatedItemIds = $this->createOrUpdateInvoiceItems($invoice, $validatedData['items'], $existingItems);
 
-            foreach ($validatedData['items'] as $itemData) {
-                $prItem = PrItem::find($itemData['pr_item']);
-                if ($prItem) {
-                    $itemData['pr_number'] = $prItem->purchase_request_id;
-                    $itemData['item_code'] = $prItem->product_id;
-                }
+            $this->deleteRemovedItems($existingItems, $updatedItemIds);
 
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    if ($poItem) {
-                        $itemData['po_number'] = $poItem->po_id;
-                    }
-                }
-
-                $itemData['invoice_date'] = $invoice->invoice_date;
-                $itemData['payment_type'] = $invoice->payment_type;
-                $itemData['invoice_no'] = $invoice->invoice_no;
-                $itemData['supplier'] = $invoice->supplier;
-                $itemData['payment_term'] = $invoice->payment_term;
-                $itemData['transaction_type'] = $invoice->transaction_type;
-                $itemData['pi_number'] = $invoice->id;
-                $itemData['requested_by'] = $invoice->created_by;
-
-                if (isset($itemData['id']) && in_array($itemData['id'], $existingItemIds)) {
-                    $item = PurchaseInvoiceItem::findOrFail($itemData['id']);
-                    $item->update($itemData);
-                    $existingItemIds = array_diff($existingItemIds, [$itemData['id']]);
-                } else {
-                    PurchaseInvoiceItem::create($itemData);
-                }
-            }
-
-            foreach ($existingItemIds as $itemId) {
-                $deletedItem = PurchaseInvoiceItem::find($itemId);
-                if ($deletedItem) {
-                    $deletedItem->delete();
-                    if ($deletedItem->po_item) {
-                        $poItem = PoItems::find($deletedItem->po_item);
-                        if ($poItem) {
-                            $poItem->recalculateReceivedQty();
-                        }
-                    }
-                }
-            }
-
-            foreach ($validatedData['items'] as $itemData) {
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    if ($poItem) {
-                        $poItem->recalculateReceivedQty();
-                    }
-                }
-            }
+            $this->recalculateItemQuantities($validatedData['items']);
 
             return response()->json($invoice->load('items', 'supplier'));
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -369,5 +167,208 @@ class InvoiceController extends Controller
     {
         $supplier = Supplier::findOrFail($id);
         return response()->json(['vat' => $supplier->vat]);
+    }
+
+    private function getValidationRules($transactionType)
+    {
+        $rules = [
+            'transaction_type' => 'required|integer',
+            'cash_ref' => 'nullable|integer|exists:cash_requests,id',
+            'payment_type' => 'required|integer',
+            'invoice_date' => 'required|date',
+            'invoice_no' => 'required|string',
+            'supplier' => 'required|integer|exists:suppliers,id',
+            'currency' => 'required|integer',
+            'currency_rate' => 'required|numeric',
+            'payment_term' => 'required|integer',
+            'total_amount' => 'required|numeric',
+            'paid_amount' => 'required|numeric',
+            'created_by' => 'required|integer|exists:users,id',
+            'supplier_vat' => 'required|numeric',
+            'items' => 'required|array',
+            'items.*.pr_item' => 'required|integer|exists:pr_items,id',
+            'items.*.po_item' => 'nullable|integer|exists:po_items,id',
+            'items.*.description' => 'required|string',
+            'items.*.remark' => 'nullable|string',
+            'items.*.qty' => 'required|numeric',
+            'items.*.uom' => 'required|string',
+            'items.*.currency' => 'required|integer',
+            'items.*.currency_rate' => 'required|numeric',
+            'items.*.unit_price' => 'required|numeric',
+            'items.*.discount' => 'nullable|numeric',
+            'items.*.vat' => 'nullable|numeric',
+            'items.*.return' => 'nullable|numeric',
+            'items.*.retention' => 'nullable|numeric',
+            'items.*.due_amount' => 'required|numeric',
+            'items.*.paid_amount' => 'required|numeric',
+            'items.*.requested_by' => 'nullable|integer|exists:users,id',
+            'items.*.campus' => 'required|string',
+            'items.*.division' => 'required|string',
+            'items.*.department' => 'required|string',
+            'items.*.location' => 'required|string',
+            'items.*.purchased_by' => 'required|integer|exists:users,id',
+            'items.*.purpose' => 'required|string',
+            'items.*.payment_term' => 'required|integer',
+            'items.*.transaction_type' => 'required|integer',
+            'items.*.cash_ref' => 'nullable|integer|exists:cash_requests,id',
+            'items.*.stop_purchase' => 'nullable|boolean',
+            'items.*.asset_type' => 'nullable|integer',
+            'items.*.total_usd' => 'required|numeric',
+            'items.*.total_khr' => 'required|numeric',
+        ];
+
+        if ($transactionType != 2) {
+            $rules['cash_ref'] = 'required|integer|exists:cash_requests,id';
+        }
+
+        return $rules;
+    }
+
+    private function validateItemQuantities($items, $invoiceId = null)
+    {
+        $itemQuantities = [];
+        foreach ($items as $itemData) {
+            if (isset($itemData['po_item'])) {
+                if (!isset($itemQuantities['po_item'][$itemData['po_item']])) {
+                    $itemQuantities['po_item'][$itemData['po_item']] = 0;
+                }
+                $itemQuantities['po_item'][$itemData['po_item']] += $itemData['qty'];
+            }
+
+            if (isset($itemData['pr_item'])) {
+                if (!isset($itemQuantities['pr_item'][$itemData['pr_item']])) {
+                    $itemQuantities['pr_item'][$itemData['pr_item']] = 0;
+                }
+                $itemQuantities['pr_item'][$itemData['pr_item']] += $itemData['qty'];
+            }
+        }
+
+        foreach ($items as $itemData) {
+            if (isset($itemData['po_item'])) {
+                $poItem = PoItems::find($itemData['po_item']);
+
+                $poQty = $poItem->qty - $poItem->cancelled_qty;
+                $receivedQty = PurchaseInvoiceItem::where('po_item', $poItem->id)
+                    ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
+                    ->sum('qty');
+
+                $pendingQty = $poQty - $receivedQty;
+
+                if ($itemQuantities['po_item'][$itemData['po_item']] > $pendingQty) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']
+                    ]);
+                }
+            }
+
+            if (isset($itemData['pr_item'])) {
+                $prItem = PrItem::find($itemData['pr_item']);
+
+                $prQty = $prItem->qty - $prItem->qty_cancel;
+                $receivedQty = PurchaseInvoiceItem::where('pr_item', $prItem->id)
+                    ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
+                    ->sum('qty');
+
+                $pendingQty = $prQty - $receivedQty;
+
+                if ($itemQuantities['pr_item'][$itemData['pr_item']] > $pendingQty) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items.*.qty' => ['The quantity of the PR item cannot exceed the pending quantity.']
+                    ]);
+                }
+            }
+        }
+    }
+
+    private function createOrUpdateInvoiceItems($invoice, $items, $existingItems = null)
+    {
+        $updatedItemIds = [];
+
+        foreach ($items as $itemData) {
+            $prItem = PrItem::find($itemData['pr_item']);
+            if ($prItem) {
+                $itemData['pr_number'] = $prItem->purchase_request_id;
+                $itemData['item_code'] = $prItem->product_id;
+            }
+
+            if (isset($itemData['po_item'])) {
+                $poItem = PoItems::find($itemData['po_item']);
+                if ($poItem) {
+                    $itemData['po_number'] = $poItem->po_id;
+                }
+            }
+
+            $itemData['invoice_date'] = $invoice->invoice_date;
+            $itemData['payment_type'] = $invoice->payment_type;
+            $itemData['invoice_no'] = $invoice->invoice_no;
+            $itemData['supplier'] = $invoice->supplier;
+            $itemData['payment_term'] = $invoice->payment_term;
+            $itemData['transaction_type'] = $invoice->transaction_type;
+            $itemData['pi_number'] = $invoice->id;
+            $itemData['requested_by'] = $invoice->created_by;
+
+            if ($existingItems && isset($itemData['id']) && $existingItems->has($itemData['id'])) {
+                $existingItem = $existingItems->get($itemData['id']);
+                $existingItem->update($itemData);
+                $updatedItemIds[] = $existingItem->id;
+            } else {
+                $newItem = PurchaseInvoiceItem::create($itemData);
+                $updatedItemIds[] = $newItem->id;
+            }
+        }
+
+        return $updatedItemIds;
+    }
+
+    private function deleteRemovedItems($existingItems, $updatedItemIds)
+    {
+        $itemsToRecalculate = [];
+
+        foreach ($existingItems as $itemId => $item) {
+            if (!in_array($itemId, $updatedItemIds)) {
+                $poItemId = $item->po_item;
+                $prItemId = $item->pr_item;
+                $item->delete();
+                if ($poItemId) {
+                    $itemsToRecalculate['po_item'][] = $poItemId;
+                }
+                if ($prItemId) {
+                    $itemsToRecalculate['pr_item'][] = $prItemId;
+                }
+            }
+        }
+
+        foreach (array_unique($itemsToRecalculate['po_item'] ?? []) as $poItemId) {
+            $poItem = PoItems::find($poItemId);
+            if ($poItem) {
+                $poItem->recalculateReceivedQty();
+            }
+        }
+
+        foreach (array_unique($itemsToRecalculate['pr_item'] ?? []) as $prItemId) {
+            $prItem = PrItem::find($prItemId);
+            if ($prItem) {
+                $prItem->recalculateQtyPurchase();
+            }
+        }
+    }
+
+    private function recalculateItemQuantities($items)
+    {
+        foreach ($items as $itemData) {
+            if (isset($itemData['po_item'])) {
+                $poItem = PoItems::find($itemData['po_item']);
+                if ($poItem) {
+                    $poItem->recalculateReceivedQty();
+                }
+            }
+
+            if (isset($itemData['pr_item'])) {
+                $prItem = PrItem::find($itemData['pr_item']);
+                if ($prItem) {
+                    $prItem->recalculateQtyPurchase();
+                }
+            }
+        }
     }
 }

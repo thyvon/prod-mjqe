@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PrItem;
 
 class PurchaseRequest extends Model
 {
@@ -69,5 +70,46 @@ class PurchaseRequest extends Model
         }
 
         return $pr_number;
+    }
+
+    public function updateTotalItem()
+    {
+        $this->total_item = $this->prItems()->count();
+        $this->save();
+    }
+
+    public function updateCancelledItem()
+    {
+        $this->item_cancel = $this->prItems()->whereColumn('qty', 'qty_cancel')->count();
+        $this->save();
+    }
+
+    public function updatePurchasedItem()
+    {
+        $this->item_purchas = $this->prItems()
+            ->where('status', 'Closed')
+            ->where('is_cancel', 0)
+            ->count();
+        $this->save();
+    }
+
+    public function updatePendingItem()
+    {
+        $this->item_pending = $this->total_item - $this->item_cancel - $this->item_purchas;
+        $this->save();
+    }
+
+    public function updateStatus()
+    {
+        if ($this->item_purchas == ($this->total_item - $this->item_cancel)) {
+            $this->status = 'Closed';
+        } elseif ($this->item_cancel == $this->total_item) {
+            $this->status = 'Void';
+        } elseif (($this->total_item - $this->item_cancel - $this->item_purchas) != 0 && $this->item_purchas != 0) {
+            $this->status = 'Partial';
+        } else {
+            $this->status = 'Pending';
+        }
+        $this->save();
     }
 }

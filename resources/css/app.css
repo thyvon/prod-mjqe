@@ -19,3 +19,12 @@
   overflow-y: auto; /* Enable vertical scrolling */
   flex-grow: 1; /* Allow the body to take up remaining space */
 }
+
+.form-control,
+select.form-select {
+  border-radius: 0 !important;
+}
+body {
+    font-size: 12px;
+    font-family: 'TW Cen MT', 'Poppins', 'Montserrat', sans-serif;
+}
