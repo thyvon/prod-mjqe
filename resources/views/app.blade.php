@@ -22,7 +22,7 @@
     <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" defer />
     @inertiaHead
 </head>
-<body style="font-family: 'Poppins', sans-serif;">
+<body>
 
     <script src="/coloradmin/js/vendor.min.js" defer></script>
     <script src="/coloradmin/js/app.min.js" defer></script>

@@ -255,8 +255,10 @@ class InvoiceController extends Controller
                 $pendingQty = $poQty - $receivedQty;
 
                 if ($itemQuantities['po_item'][$itemData['po_item']] > $pendingQty) {
+                    $product = $poItem->product;
+                    $sku = $product ? $product->sku : 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items.*.qty' => ['The quantity of the PO item cannot exceed the pending quantity.']
+                        'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PO.']
                     ]);
                 }
             }
@@ -272,8 +274,10 @@ class InvoiceController extends Controller
                 $pendingQty = $prQty - $receivedQty;
 
                 if ($itemQuantities['pr_item'][$itemData['pr_item']] > $pendingQty) {
+                    $product = $prItem->product;
+                    $sku = $product ? $product->sku : 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items.*.qty' => ['The quantity of the PR item cannot exceed the pending quantity.']
+                        'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PR.']
                     ]);
                 }
             }
