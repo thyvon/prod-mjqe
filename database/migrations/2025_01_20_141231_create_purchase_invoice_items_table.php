@@ -17,10 +17,10 @@ return new class extends Migration
             $table->date('invoice_date');
             $table->integer('payment_type');
             $table->string('invoice_no');
-            $table->foreignId('pr_number')->constrained('purchase_requests')->onUpdate('restrict')->onDelete('restrict');
-            $table->foreignId('po_number')->nullable()->constrained('purchase_orders')->onUpdate('restrict')->onDelete('restrict');
-            $table->foreignId('pr_item')->constrained('pr_items')->onUpdate('restrict')->onDelete('restrict');
-            $table->foreignId('po_item')->nullable()->constrained('po_items')->onUpdate('restrict')->onDelete('restrict');
+            $table->foreignId('pr_number')->constrained('purchase_requests');
+            $table->foreignId('po_number')->nullable()->constrained('purchase_orders');
+            $table->foreignId('pr_item')->constrained('pr_items');
+            $table->foreignId('po_item')->nullable()->constrained('po_items');
             $table->foreignId('supplier')->constrained('suppliers');
             $table->foreignId('item_code')->constrained('products');
             $table->string('description');
@@ -30,14 +30,16 @@ return new class extends Migration
             $table->integer('currency')->default(1);
             $table->decimal('currency_rate', 8, 2);
             $table->decimal('unit_price', 15, 4);
+            $table->decimal('total_price', 15, 8);
             $table->decimal('discount', 15, 4)->nullable();
             $table->decimal('vat', 15, 4)->nullable();
             $table->decimal('return', 15, 4)->nullable();
             $table->decimal('retention', 15, 4)->nullable();
-            $table->decimal('total_usd', 15, 4)->default(0);
-            $table->decimal('total_khr', 15, 4)->default(0);
-            $table->decimal('due_amount', 15, 4);
-            $table->decimal('paid_amount', 15, 4);
+            $table->decimal('service_charge', 15, 8)->nullable()->default(0); // Add service_charge field
+            $table->decimal('total_usd', 20, 8)->default(0);
+            $table->decimal('total_khr', 20, 8)->default(0);
+            $table->decimal('due_amount', 15, 8);
+            $table->decimal('paid_amount', 15, 8)->default(0);
             $table->foreignId('requested_by')->nullable()->constrained('users');
             $table->string('campus');
             $table->string('division');

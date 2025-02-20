@@ -81,9 +81,16 @@ class InvoiceController extends Controller
 
     public function edit($id)
     {
-        return response()->json(
-            PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id)
-        );
+        try {
+            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
+            return response()->json([
+                'invoice' => $invoice,
+                'vat_rate' => $invoice->vat_rate, // Ensure VAT rate is retrieved
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in edit method:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Error fetching invoice.'], 500);
+        }
     }
 
     public function show($id)
@@ -181,10 +188,14 @@ class InvoiceController extends Controller
             'currency' => 'required|integer',
             'currency_rate' => 'required|numeric',
             'payment_term' => 'required|integer',
-            'total_amount' => 'required|numeric',
+            'sub_total' => 'nullable|numeric',
+            'vat_rate' => 'nullable|numeric', // Ensure VAT is saved to the invoice table
+            'vat_amount' => 'nullable|numeric',
+            'discount_total' => 'nullable|numeric',
+            'service_charge' => 'nullable|numeric',
+            'total_amount' => 'nullable|numeric',
             'paid_amount' => 'required|numeric',
             'created_by' => 'required|integer|exists:users,id',
-            'supplier_vat' => 'required|numeric',
             'items' => 'required|array',
             'items.*.pr_item' => 'required|integer|exists:pr_items,id',
             'items.*.po_item' => 'nullable|integer|exists:po_items,id',
@@ -287,6 +298,8 @@ class InvoiceController extends Controller
     private function createOrUpdateInvoiceItems($invoice, $items, $existingItems = null)
     {
         $updatedItemIds = [];
+        $itemCount = count($items);
+        $serviceChargePerItem = $itemCount > 0 ? $invoice->service_charge / $itemCount : 0;
 
         foreach ($items as $itemData) {
             $prItem = PrItem::find($itemData['pr_item']);
@@ -310,6 +323,14 @@ class InvoiceController extends Controller
             $itemData['transaction_type'] = $invoice->transaction_type;
             $itemData['pi_number'] = $invoice->id;
             $itemData['requested_by'] = $invoice->created_by;
+
+            // Calculate total price for the item
+            $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
+
+            // Distribute service charge evenly across all items
+            $itemData['service_charge'] = floatval($serviceChargePerItem);
+
+            $itemData['discount_total'] = $invoice->discount_total;
 
             if ($existingItems && isset($itemData['id']) && $existingItems->has($itemData['id'])) {
                 $existingItem = $existingItems->get($itemData['id']);
