@@ -23,6 +23,11 @@ class PurchaseInvoice extends Model
         'currency',
         'currency_rate',
         'payment_term',
+        'sub_total',
+        'vat_rate',
+        'vat_amount',
+        'discount_total',
+        'service_charge',
         'total_amount',
         'paid_amount',
         'created_by'
