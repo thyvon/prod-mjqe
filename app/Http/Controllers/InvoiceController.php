@@ -2,15 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PurchaseInvoice;
-use App\Models\PurchaseInvoiceItem;
-use App\Models\User;
-use App\Models\PrItem;
-use App\Models\PoItems;
-use App\Models\CashRequest;
-use App\Models\PurchaseRequest;
-use App\Models\PurchaseOrder;
-use App\Models\Supplier;
+use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, CashRequest, PurchaseRequest, PurchaseOrder, Supplier};
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
@@ -88,7 +80,7 @@ class InvoiceController extends Controller
                 'vat_rate' => $invoice->vat_rate, // Ensure VAT rate is retrieved
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in edit method:', ['message' => $e->getMessage()]);
+            Log::error('Error in edit method:', ['message' => $e->getMessage()]);
             return response()->json(['error' => 'Error fetching invoice.'], 500);
         }
     }
@@ -207,6 +199,7 @@ class InvoiceController extends Controller
             'items.*.currency_rate' => 'required|numeric',
             'items.*.unit_price' => 'required|numeric',
             'items.*.discount' => 'nullable|numeric',
+            'items.*.service_charge' => 'nullable|numeric',
             'items.*.vat' => 'nullable|numeric',
             'items.*.return' => 'nullable|numeric',
             'items.*.retention' => 'nullable|numeric',
@@ -240,34 +233,25 @@ class InvoiceController extends Controller
         $itemQuantities = [];
         foreach ($items as $itemData) {
             if (isset($itemData['po_item'])) {
-                if (!isset($itemQuantities['po_item'][$itemData['po_item']])) {
-                    $itemQuantities['po_item'][$itemData['po_item']] = 0;
-                }
-                $itemQuantities['po_item'][$itemData['po_item']] += $itemData['qty'];
+                $itemQuantities['po_item'][$itemData['po_item']] = ($itemQuantities['po_item'][$itemData['po_item']] ?? 0) + $itemData['qty'];
             }
 
             if (isset($itemData['pr_item'])) {
-                if (!isset($itemQuantities['pr_item'][$itemData['pr_item']])) {
-                    $itemQuantities['pr_item'][$itemData['pr_item']] = 0;
-                }
-                $itemQuantities['pr_item'][$itemData['pr_item']] += $itemData['qty'];
+                $itemQuantities['pr_item'][$itemData['pr_item']] = ($itemQuantities['pr_item'][$itemData['pr_item']] ?? 0) + $itemData['qty'];
             }
         }
 
         foreach ($items as $itemData) {
             if (isset($itemData['po_item'])) {
                 $poItem = PoItems::find($itemData['po_item']);
-
                 $poQty = $poItem->qty - $poItem->cancelled_qty;
                 $receivedQty = PurchaseInvoiceItem::where('po_item', $poItem->id)
                     ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
                     ->sum('qty');
-
                 $pendingQty = $poQty - $receivedQty;
 
                 if ($itemQuantities['po_item'][$itemData['po_item']] > $pendingQty) {
-                    $product = $poItem->product;
-                    $sku = $product ? $product->sku : 'unknown';
+                    $sku = $poItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PO.']
                     ]);
@@ -276,17 +260,14 @@ class InvoiceController extends Controller
 
             if (isset($itemData['pr_item'])) {
                 $prItem = PrItem::find($itemData['pr_item']);
-
                 $prQty = $prItem->qty - $prItem->qty_cancel;
                 $receivedQty = PurchaseInvoiceItem::where('pr_item', $prItem->id)
                     ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
                     ->sum('qty');
-
                 $pendingQty = $prQty - $receivedQty;
 
                 if ($itemQuantities['pr_item'][$itemData['pr_item']] > $pendingQty) {
-                    $product = $prItem->product;
-                    $sku = $product ? $product->sku : 'unknown';
+                    $sku = $prItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PR.']
                     ]);
@@ -327,10 +308,17 @@ class InvoiceController extends Controller
             // Calculate total price for the item
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 
-            // Distribute service charge evenly across all items
-            $itemData['service_charge'] = floatval($serviceChargePerItem);
+            // Distribute service charge evenly across all items if service_charge of invoice is not 0 or blank
+            if ($invoice->service_charge != 0 && $invoice->service_charge != '') {
+                $itemData['service_charge'] = floatval($serviceChargePerItem);
+            } else {
+                $itemData['service_charge'] = $itemData['service_charge'] ?? 0;
+            }
 
             $itemData['discount_total'] = $invoice->discount_total;
+
+            // Ensure total_khr does not exceed the column's limit
+            $itemData['total_khr'] = min($itemData['total_usd'] * $invoice->currency_rate, PHP_INT_MAX);
 
             if ($existingItems && isset($itemData['id']) && $existingItems->has($itemData['id'])) {
                 $existingItem = $existingItems->get($itemData['id']);

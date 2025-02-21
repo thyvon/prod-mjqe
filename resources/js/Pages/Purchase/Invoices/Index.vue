@@ -24,7 +24,7 @@ const props = defineProps({
   cashRequests: Array,
   prItems: Array,
   purchaseInvoices: Array,
-  vatRate: Number, // Add vatRate prop
+  vatRate: Number,
 });
 
 const form = reactive({
@@ -39,12 +39,12 @@ const form = reactive({
   payment_term: null,
   total_amount: null,
   paid_amount: null,
-  vat_rate: props.vatRate || 0, // Use vatRate prop
+  vat_rate: props.vatRate || 0,
   created_by: null,
   items: [],
   total_discount: 0,
-  service_charge: 0, // Add service_charge field
-  discount_total: 0, // Make discount_total editable
+  service_charge: 0,
+  discount_total: 0,
 });
 
 const calculateTotalDiscount = () => {
@@ -55,39 +55,40 @@ const calculateTotalAmount = () => {
   form.total_amount = form.items.reduce((sum, item) => sum + (parseFloat(item.qty) * parseFloat(item.unit_price) || 0), 0);
 };
 
+const calculateTotalPaidAmount = () => {
+    form.paid_amount = form.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
+};
+
 const calculateServiceChargeForItems = () => {
   const itemCount = form.items.length;
-  if (itemCount > 0) {
+  if (itemCount > 0 && form.service_charge > 0) {
     const serviceChargePerItem = form.service_charge / itemCount;
     form.items.forEach(item => {
       item.service_charge = parseFloat(serviceChargePerItem.toFixed(10));
+      item.service_charge_overwritten = false;
     });
   } else {
     form.items.forEach(item => {
-      item.service_charge = 0;
+      if (!item.service_charge_overwritten) {
+        item.service_charge = 0;
+      }
     });
   }
-  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw(); // Update table data
-};
-
-const calculateTotalExpense = (item) => {
-  const { qty = 0, unit_price = 0, discount = 0, service_charge = 0, return: returnAmount = 0, retention = 0, vat = 0 } = item;
-  const total_price = qty * unit_price;
-  const vatAmount = ((total_price - discount) * vat) / 100;
-  return total_price - discount + service_charge - returnAmount - retention + vatAmount;
+  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 };
 
 watch(() => form.items, () => {
   calculateTotalDiscount();
   calculateTotalAmount();
   calculateServiceChargeForItems();
-  form.items.forEach(item => {
-    item.total_expense = calculateTotalExpense(item); // Calculate total_expense in real-time
-  });
+  calculateTotalPaidAmount();
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 }, { deep: true });
 
-watch(() => form.service_charge, calculateServiceChargeForItems);
+watch(() => form.service_charge, (newServiceCharge) => {
+  calculateServiceChargeForItems();
+  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+});
 
 const prItemsTableInstance = ref(null);
 const invoiceItemsTableInstance = ref(null);
@@ -103,7 +104,7 @@ const editItemForm = reactive({
   vat: 0.0,
   return: 0.0,
   retention: 0.0,
-  service_charge: 0.0, // Add service_charge field
+  service_charge: 0.0,
   campus: '',
   division: '',
   department: '',
@@ -115,7 +116,8 @@ const editItemForm = reactive({
   item_code: '',
   paid_amount: 0.0,
   total_price: 0,
-  uom: '', // Add UoM field
+  uom: '',
+  service_charge_overwritten: false,
 });
 
 const selectedVatRate = computed(() => form.vat_rate || 0);
@@ -137,14 +139,13 @@ const calculateTotalPrice = (item) => {
   const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0 } = item;
   const total_price = qty * unit_price;
   const vatAmount = ((total_price - discount) * vat) / 100;
-  return total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge.toFixed(10));
+  return total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge).toFixed(10);
 };
 
 const prepareInvoiceItems = (items) => items.map(item => ({
   ...item,
   total_price: calculateTotalPrice(item),
-  service_charge: item.service_charge || 0, // Ensure service_charge is included
-  total_expense: calculateTotalExpense(item) // Add total_expense field
+  service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0)
 }));
 
 const handleFormErrors = (error) => {
@@ -160,12 +161,12 @@ const handleFormErrors = (error) => {
   }
 };
 
-const isEditMode = ref(false); // Add a flag to indicate edit mode
+const isEditMode = ref(false);
 
 const clearForm = () => {
-  isEditMode.value = false; // Reset edit mode flag
+  isEditMode.value = false;
   Object.assign(form, {
-    id: null, // Clear the form ID
+    id: null,
     transaction_type: null,
     cash_ref: null,
     payment_type: 1,
@@ -177,7 +178,7 @@ const clearForm = () => {
     payment_term: null,
     total_amount: null,
     paid_amount: null,
-    vat_rate: props.vatRate || 0, // Use vatRate prop
+    vat_rate: props.vatRate || 0,
     created_by: null,
     items: [],
     total_discount: 0,
@@ -193,12 +194,12 @@ const submitForm = async () => {
   if (form.id) {
     const success = await updateInvoice();
     if (success) {
-      clearForm(); // Clear the form only after updating successfully
+      clearForm();
     }
   } else {
     const success = await createInvoice();
     if (success) {
-      clearForm(); // Clear the form only after creating successfully
+      clearForm();
     }
   }
 };
@@ -237,6 +238,14 @@ const createInvoice = async () => {
         item.transaction_type = parseInt(item.transaction_type);
         item.payment_type = parseInt(item.payment_type);
         item.currency = parseInt(item.currency);
+
+        if (form.service_charge != 0 && form.service_charge != '') {
+          item.service_charge = parseFloat((form.service_charge / form.items.length).toFixed(10));
+          item.service_charge_overwritten = false;
+        } else {
+          item.service_charge = parseFloat(item.service_charge) || 0;
+          item.service_charge_overwritten = true;
+        }
       });
     }
 
@@ -426,141 +435,133 @@ const openPoItemsModal = () => {
 };
 
 const selectPrItem = (prItem) => {
-  if (prItem.purchase_request) {
-    const existingItem = form.items.find(item => item.pr_item === prItem.id);
-    if (!existingItem) {
-      const qty = parseFloat(prItem.qty) || 0;
-      const unit_price = parseFloat(prItem.unit_price) || 0;
-      const discount = 0;
-      const service_charge = 0;
-      const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedVatRate.value, service_charge });
+  const existingItem = form.items.find(item => item.pr_item === prItem.id);
+  if (!existingItem) {
+    const qty = form.payment_type === 2 ? 0 : parseFloat(prItem.qty) || 0;
+    const unit_price = parseFloat(prItem.unit_price) || 0;
+    const discount = 0;
+    const service_charge = 0;
+    const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedVatRate.value, service_charge });
 
-      const receivedQty = form.items.reduce((sum, currentItem) => {
-        return sum + (currentItem.pr_item === prItem.id ? parseFloat(currentItem.qty) : 0);
-      }, 0);
+    const receivedQty = form.items.reduce((sum, currentItem) => {
+      return sum + (currentItem.pr_item === prItem.id ? parseFloat(currentItem.qty) : 0);
+    }, 0);
 
-      const pendingQty = prItem.qty - prItem.qty_cancel - receivedQty;
+    const pendingQty = prItem.qty - prItem.qty_cancel - receivedQty;
 
-      if (qty > pendingQty) {
-        toastr.warning('The quantity of the PR item cannot exceed the pending quantity.');
-        return;
-      }
-
-      form.items.push({
-        pr_item: prItem.id,
-        po_item: null,
-        remark: prItem.remark,
-        qty: qty,
-        uom: prItem.uom,
-        unit_price: unit_price,
-        discount: discount,
-        vat: selectedVatRate.value,
-        return: 0,
-        retention: 0,
-        service_charge: service_charge,
-        due_amount: total_price,
-        paid_amount: total_price,
-        campus: prItem.campus,
-        division: prItem.division,
-        department: prItem.department,
-        purpose: prItem.purchase_request.purpose,
-        location: '',
-        description: `${prItem.product.product_description} | ${prItem.remark}`,
-        pr_number: prItem.purchase_request.pr_number,
-        po_number: '',
-        item_code: prItem.product.sku,
-        requested_by: prItem.purchase_request.requested_by,
-        cash_ref: form.cash_ref,
-        transaction_type: form.transaction_type,
-        payment_term: form.payment_term,
-        purchased_by: form.created_by,
-        currency_rate: form.currency_rate,
-        currency: form.currency,
-        invoice_date: form.invoice_date,
-        payment_type: form.payment_type,
-        invoice_no: form.invoice_no,
-        total_price: total_price
-      });
-
-      invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
-
-      const rowIndex = prItemsTableInstance.value.row((idx, data) => data.id === prItem.id).index();
-      prItemsTableInstance.value.row(rowIndex).remove().draw();
-    } else {
-      toastr.warning('Item already exists in the invoice items table.');
+    if (qty > pendingQty) {
+      toastr.warning('The quantity of the PR item cannot exceed the pending quantity.');
+      return;
     }
+
+    form.items.push({
+      pr_item: prItem.id,
+      po_item: null,
+      remark: prItem.remark,
+      qty: qty,
+      uom: prItem.uom,
+      unit_price: unit_price,
+      discount: discount,
+      vat: selectedVatRate.value,
+      return: 0,
+      retention: 0,
+      service_charge: service_charge,
+      due_amount: total_price,
+      paid_amount: total_price,
+      campus: prItem.campus,
+      division: prItem.division,
+      department: prItem.department,
+      purpose: prItem.purchase_request.purpose,
+      location: '',
+      description: `${prItem.product.product_description} | ${prItem.remark}`,
+      pr_number: prItem.purchase_request.pr_number,
+      po_number: '',
+      item_code: prItem.product.sku,
+      requested_by: prItem.purchase_request.requested_by,
+      cash_ref: form.cash_ref,
+      transaction_type: form.transaction_type,
+      payment_term: form.payment_term,
+      purchased_by: form.created_by,
+      currency_rate: form.currency_rate,
+      currency: form.currency,
+      invoice_date: form.invoice_date,
+      payment_type: form.payment_type,
+      invoice_no: form.invoice_no,
+      total_price: total_price
+    });
+
+    invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+
+    const rowIndex = prItemsTableInstance.value.row((idx, data) => data.id === prItem.id).index();
+    prItemsTableInstance.value.row(rowIndex).remove().draw();
   } else {
-    console.error('Purchase request not loaded for PR item:', prItem);
+    toastr.warning('Item already exists in the invoice items table.');
   }
 };
 
 const selectPoItem = (poItem) => {
-  if (poItem.purchase_order) {
-    const existingItem = form.items.find(item => item.po_item === poItem.id);
-    if (!existingItem) {
-      const qty = parseFloat(poItem.qty) || 0;
-      const unit_price = parseFloat(poItem.unit_price) || 0;
-      const discount = parseFloat(poItem.discount) || 0;
-      const service_charge = 0;
-      const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedVatRate.value, service_charge });
+  const existingItem = form.items.find(item => item.po_item === poItem.id);
+  if (!existingItem) {
+    const qty = form.payment_type === 2 ? 0 : parseFloat(poItem.qty) || 0;
+    const unit_price = parseFloat(poItem.unit_price) || 0;
+    const discount = parseFloat(poItem.discount) || 0;
+    const service_charge = 0;
+    const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: selectedVatRate.value, service_charge });
 
-      const receivedQty = form.items.reduce((sum, currentItem) => {
-        return sum + (currentItem.po_item === poItem.id ? parseFloat(currentItem.qty) : 0);
-      }, 0);
+    const receivedQty = form.items.reduce((sum, currentItem) => {
+      return sum + (currentItem.po_item === poItem.id ? parseFloat(currentItem.qty) : 0);
+    }, 0);
 
-      const pendingQty = poItem.qty - poItem.cancelled_qty - receivedQty;
+    const pendingQty = poItem.qty - poItem.cancelled_qty - receivedQty;
 
-      if (qty > pendingQty) {
-        toastr.warning('The quantity of the PO item cannot exceed the pending quantity.');
-        return;
-      }
-
-      const prNumber = poItem.purchase_request.pr_number;
-      form.items.push({
-        pr_item: poItem.pr_item_id,
-        po_item: poItem.id,
-        remark: '',
-        qty: qty,
-        uom: poItem.uom,
-        unit_price: unit_price,
-        discount: discount,
-        vat: selectedVatRate.value,
-        return: 0,
-        retention: 0,
-        service_charge: service_charge,
-        due_amount: total_price,
-        paid_amount: total_price,
-        campus: poItem.campus,
-        division: poItem.division,
-        department: poItem.department,
-        purpose: poItem.purchase_order.purpose,
-        location: poItem.location,
-        description: `${poItem.product.product_description} | ${poItem.description}`,
-        pr_number: prNumber,
-        po_number: poItem.purchase_order.po_number,
-        item_code: poItem.product.sku,
-        requested_by: poItem.purchase_request.requested_by,
-        cash_ref: form.cash_ref,
-        transaction_type: form.transaction_type,
-        payment_term: form.payment_term,
-        purchased_by: form.created_by,
-        currency_rate: form.currency_rate,
-        currency: form.currency,
-        invoice_date: form.invoice_date,
-        payment_type: form.payment_type,
-        invoice_no: form.invoice_no,
-        total_price: total_price
-      });
-
-      invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
-
-      const rowIndex = poItemsTableInstance.value.row((idx, data) => data.id === poItem.id).index();
-      poItemsTableInstance.value.row(rowIndex).remove().draw();
-    } else {
-      toastr.warning('Item already exists in the invoice items table.');
+    if (qty > pendingQty) {
+      toastr.warning('The quantity of the PO item cannot exceed the pending quantity.');
+      return;
     }
+
+    const prNumber = poItem.purchase_request.pr_number;
+    form.items.push({
+      pr_item: poItem.pr_item_id,
+      po_item: poItem.id,
+      remark: '',
+      qty: qty,
+      uom: poItem.uom,
+      unit_price: unit_price,
+      discount: discount,
+      vat: selectedVatRate.value,
+      return: 0,
+      retention: 0,
+      service_charge: service_charge,
+      due_amount: total_price,
+      paid_amount: total_price,
+      campus: poItem.campus,
+      division: poItem.division,
+      department: poItem.department,
+      purpose: poItem.purchase_order.purpose,
+      location: poItem.location,
+      description: `${poItem.product.product_description} | ${poItem.description}`,
+      pr_number: prNumber,
+      po_number: poItem.purchase_order.po_number,
+      item_code: poItem.product.sku,
+      requested_by: poItem.purchase_request.requested_by,
+      cash_ref: form.cash_ref,
+      transaction_type: form.transaction_type,
+      payment_term: form.payment_term,
+      purchased_by: form.created_by,
+      currency_rate: form.currency_rate,
+      currency: form.currency,
+      invoice_date: form.invoice_date,
+      payment_type: form.payment_type,
+      invoice_no: form.invoice_no,
+      total_price: total_price
+    });
+
+    invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+
+    const rowIndex = poItemsTableInstance.value.row((idx, data) => data.id === poItem.id).index();
+    poItemsTableInstance.value.row(rowIndex).remove().draw();
   } else {
-    console.error('Purchase order not loaded for PO item:', poItem);
+    toastr.warning('Item already exists in the invoice items table.');
   }
 };
 
@@ -664,9 +665,13 @@ const deleteInvoice = async (invoiceId) => {
   });
 };
 
+const formatNumber = (value) => {
+  return parseFloat(value).toString();
+};
+
 const editInvoice = async (invoiceId) => {
   try {
-    isEditMode.value = true; // Set edit mode to true
+    isEditMode.value = true;
     const response = await axios.get(`/invoices/${invoiceId}`);
     const invoice = response.data;
 
@@ -679,27 +684,27 @@ const editInvoice = async (invoiceId) => {
       invoice_no: invoice.invoice_no,
       supplier: invoice.supplier.id,
       currency: invoice.currency,
-      currency_rate: invoice.currency_rate,
+      currency_rate: formatNumber(invoice.currency_rate),
       payment_term: invoice.payment_term,
-      total_amount: invoice.total_amount,
-      paid_amount: invoice.paid_amount,
-      vat_rate: invoice.vat_rate, // Ensure VAT is retrieved from the invoice
-      service_charge: invoice.service_charge,
-      discount_total: invoice.discount_total,
+      total_amount: formatNumber(invoice.total_amount),
+      paid_amount: formatNumber(invoice.paid_amount),
+      vat_rate: formatNumber(invoice.vat_rate),
+      service_charge: formatNumber(invoice.service_charge),
+      discount_total: formatNumber(invoice.discount_total),
       items: prepareInvoiceItems(invoice.items.map(item => ({
         pr_item: item.pr_item,
         po_item: item.po_item,
         description: item.description,
         remark: item.remark,
-        qty: item.qty,
+        qty: formatNumber(item.qty),
         uom: item.uom,
-        unit_price: item.unit_price,
-        discount: item.discount,
-        vat: item.vat,
-        return: item.return,
-        retention: item.retention,
-        due_amount: item.due_amount,
-        paid_amount: item.paid_amount,
+        unit_price: formatNumber(item.unit_price),
+        discount: formatNumber(item.discount),
+        vat: formatNumber(item.vat),
+        return: formatNumber(item.return),
+        retention: formatNumber(item.retention),
+        due_amount: formatNumber(item.due_amount),
+        paid_amount: formatNumber(item.paid_amount),
         campus: item.campus,
         division: item.division,
         department: item.department,
@@ -713,15 +718,18 @@ const editInvoice = async (invoiceId) => {
         transaction_type: item.transaction_type,
         payment_term: item.payment_term,
         purchased_by: item.purchased_by,
-        currency_rate: item.currency_rate,
+        currency_rate: formatNumber(item.currency_rate),
         currency: item.currency,
         invoice_date: item.invoice_date,
         payment_type: item.payment_type,
         invoice_no: item.invoice_no,
+        service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
+        service_charge_overwritten: item.service_charge !== 0
       }))),
     });
 
     calculateTotalAmount();
+    calculateServiceChargeForItems();
     invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
     $('#supplier').val(invoice.supplier.id).trigger('change');
     $('#nav-create-tab').tab('show');
@@ -764,6 +772,13 @@ watch(() => form.payment_type, (newValue) => {
   if (formErrors.payment_type) {
     delete formErrors.payment_type;
   }
+  if (newValue === 2) { // Deposit
+    form.items.forEach(item => {
+      item.qty = 0;
+    });
+  }
+  calculateTotalPaidAmount();
+  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
 
 watch(() => form.invoice_date, (newValue) => {
@@ -779,7 +794,7 @@ watch(() => form.invoice_no, (newValue) => {
 });
 
 watch(() => form.supplier, async (newSupplierId) => {
-  if (newSupplierId && !isEditMode.value) { // Only update VAT if not in edit mode
+  if (newSupplierId && !isEditMode.value) {
     await updateSupplierVat(newSupplierId);
   }
 });
@@ -841,6 +856,7 @@ const updateInvoiceItem = () => {
     const index = form.items.findIndex(item => item.id === editItemForm.id || form.items.indexOf(item) === editItemForm.id);
     if (index !== -1) {
       Object.assign(form.items[index], editItemForm);
+      form.items[index].service_charge_overwritten = form.service_charge === 0 || form.service_charge === '' || editItemForm.service_charge !== 0;
       invoiceItemsTableInstance.value.row(index).data(form.items[index]).draw();
       toastr.success('Invoice item updated successfully.');
     } else {
@@ -893,7 +909,12 @@ const duplicateItem = (rowIndex) => {
     }
   }
 
+  item.id = form.items.length;
+  item.service_charge_overwritten = form.service_charge === 0 || form.service_charge === '';
+  item.service_charge = form.service_charge === 0 || form.service_charge === '' ? item.service_charge : 0;
+
   form.items.push(item);
+  calculateServiceChargeForItems();
   invoiceItemsTableInstance.value.row.add(item).draw();
 };
 
@@ -906,7 +927,7 @@ onMounted(() => {
   });
 
   $('#nav-create-tab').on('click', () => {
-    clearForm(); // Clear the form when switching to create form mode
+    clearForm();
   });
 
   const initializeDataTable = (selector, options) => {
@@ -969,9 +990,9 @@ onMounted(() => {
       { data: 'qty' },
       { data: 'uom' },
       { data: 'unit_price' },
-      { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) }, // Total column
+      { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
       { data: 'discount' },
-      { data: 'service_charge' }, // Ensure service_charge column is included
+      { data: 'service_charge' },
       { data: 'vat' },
       { data: 'return' },
       { data: 'retention' },
@@ -982,7 +1003,6 @@ onMounted(() => {
       { data: 'department' },
       { data: 'location' },
       { data: null, render: (data) => `<div>${data.purpose}</div>` },
-      { data: 'total_expense', render: (data) => (data ? data.toFixed(4) : '0.0000') }, // Add Total Expense column
       {
         data: null,
         render: (data, type, row, meta) => `
@@ -1248,16 +1268,6 @@ const totalVat = computed(() => {
                       </div>
                     </div>
                     <div class="row mb-1 align-items-center">
-                      <label for="payment_type" class="col-sm-4 col-form-label">Payment Type</label>
-                      <div class="col-sm-8">
-                        <select v-model="form.payment_type" class="form-select" id="payment_type">
-                          <option value="1">Final</option>
-                          <option value="2">Deposit</option>
-                        </select>
-                        <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
-                      </div>
-                    </div>
-                    <div class="row mb-1 align-items-center">
                       <label for="invoice_date" class="col-sm-4 col-form-label">Invoice Date</label>
                       <div class="col-sm-8">
                         <input type="date" v-model="form.invoice_date" class="form-control" id="invoice_date" />
@@ -1322,6 +1332,16 @@ const totalVat = computed(() => {
                         <div v-if="formErrors.payment_term" class="text-danger">{{ formErrors.payment_term }}</div>
                       </div>
                     </div>
+                    <div class="row mb-1 align-items-center">
+                      <label for="payment_type" class="col-sm-4 col-form-label">Payment Type</label>
+                      <div class="col-sm-8">
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" v-model="form.payment_type" id="payment_type" :true-value="1" :false-value="2">
+                          <label class="form-check-label" for="payment_type">{{ form.payment_type === 2 ? 'Deposit' : 'Final' }}</label>
+                        </div>
+                        <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1365,7 +1385,6 @@ const totalVat = computed(() => {
                         <th>Department</th>
                         <th>Location</th>
                         <th style="width: 20%;">Purpose</th>
-                        <th>Total Expense</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -1375,13 +1394,23 @@ const totalVat = computed(() => {
                 </div>
                 <div class="row mt-3">
                   <div class="col-md-6">
+
                     <div class="row mb-1 align-items-center">
-                      <label for="discount_total" class="col-sm-4 col-form-label">Discount Total</label>
+                      <label for="service_charge" class="col-sm-4 col-form-label">Service Charge</label>
+                      <div class="col-sm-4">
+                        <input type="number" v-model="form.service_charge" class="form-control" id="service_charge" step="0.0001">
+                        <div v-if="formErrors.service_charge" class="text-danger">{{ formErrors.service_charge }}</div>
+                      </div>
+                    </div>
+
+                    <div class="row mb-1 align-items-center">
+                      <label for="discount_total" class="col-sm-4 col-form-label">Discount Overall</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.discount_total" class="form-control" id="discount_total" step="0.0001"/>
                         <div v-if="formErrors.discount_total" class="text-danger">{{ formErrors.discount_total }}</div>
                       </div>
                     </div>
+
                   </div>
                   <div class="col-md-6">
                     <div class="row mb-1 align-items-center">
@@ -1392,7 +1421,7 @@ const totalVat = computed(() => {
                       </div>
                     </div>
                     <div class="row mb-1 align-items-center">
-                      <label for="total_discount" class="col-sm-4 col-form-label">Total Discount</label>
+                      <label for="total_discount" class="col-sm-4 col-form-label">Discount Item</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.total_discount" class="form-control" id="total_discount" disabled/>
                         <div v-if="formErrors.total_discount" class="text-danger">{{ formErrors.total_discount }}</div>
@@ -1407,17 +1436,9 @@ const totalVat = computed(() => {
                     </div>
 
                     <div class="row mb-1 align-items-center">
-                      <label for="service_charge" class="col-sm-4 col-form-label">Service Charge</label>
+                      <label for="paid_amount" class="col-sm-4 col-form-label">Total Expense</label>
                       <div class="col-sm-4">
-                        <input type="number" v-model="form.service_charge" class="form-control" id="service_charge" step="0.0001">
-                        <div v-if="formErrors.service_charge" class="text-danger">{{ formErrors.service_charge }}</div>
-                      </div>
-                    </div>
-
-                    <div class="row mb-1 align-items-center">
-                      <label for="paid_amount" class="col-sm-4 col-form-label">Paid Amount</label>
-                      <div class="col-sm-4">
-                        <input type="number" v-model="form.paid_amount" class="form-control" id="paid_amount" step="0.0001">
+                        <input type="number" v-model="form.paid_amount" class="form-control bg-light" id="paid_amount" step="0.0001" disabled>
                         <div v-if="formErrors.paid_amount" class="text-danger">{{ formErrors.paid_amount }}</div>
                       </div>
                     </div>
@@ -1518,7 +1539,7 @@ const totalVat = computed(() => {
                   <div class="row mb-3 align-items-center">
                     <label for="editQty" class="col-sm-4 col-form-label">Quantity</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.qty" class="form-control" id="editQty" step="0.0001">
+                      <input type="number" v-model="editItemForm.qty" class="form-control" id="editQty" step="0.0001" :disabled="form.payment_type === 2">
                       <div v-if="editItemFormErrors.qty" class="text-danger">{{ editItemFormErrors.qty }}</div>
                     </div>
                   </div>
@@ -1548,7 +1569,7 @@ const totalVat = computed(() => {
                   <div class="row mb-3 align-items-center">
                     <label for="editServiceCharge" class="col-sm-4 col-form-label">Service Charge</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.service_charge" class="form-control bg-light" id="editServiceCharge" step="0.00000001" disabled>
+                      <input type="number" v-model="editItemForm.service_charge" class="form-control" id="editServiceCharge" step="0.00000001" :disabled="form.service_charge !== 0 && form.service_charge !== '' && editItemForm.service_charge !== 0 && !editItemForm.service_charge_overwritten">
                       <div v-if="editItemFormErrors.service_charge" class="text-danger">{{ editItemFormErrors.service_charge }}</div>
                     </div>
                   </div>
@@ -1577,14 +1598,14 @@ const totalVat = computed(() => {
                   <div class="row mb-3 align-items-center">
                     <label for="editTotalPrice" class="col-sm-4 col-form-label">Total Price</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.total_price" class="form-control" id="editTotalPrice" readonly>
+                      <input type="number" v-model="editItemForm.total_price" class="form-control bg-light" id="editTotalPrice" disabled>
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
                     <label for="editPaidAmount" class="col-sm-4 col-form-label">Paid Amount</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.paid_amount" class="form-control" id="editPaidAmount" step="0.0001">
+                      <input type="number" v-model="editItemForm.paid_amount" class="form-control" id="editPaidAmount" step="0.0001" :disabled="form.payment_type === 1">
                       <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
                     </div>
                   </div>
@@ -1596,14 +1617,14 @@ const totalVat = computed(() => {
                   <div v-if="editItemForm.po_item" class="row mb-3 align-items-center">
                     <label for="editPoNumber" class="col-sm-4 col-form-label">PO Number</label>
                     <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.po_number" class="form-control" id="editPoNumber" readonly>
+                      <input type="text" v-model="editItemForm.po_number" class="form-control bg-light" id="editPoNumber" disabled>
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
                     <label for="editPrNumber" class="col-sm-4 col-form-label">PR Number</label>
                     <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.pr_number" class="form-control" id="editPrNumber" readonly>
+                      <input type="text" v-model="editItemForm.pr_number" class="form-control bg-light" id="editPrNumber" disabled>
                     </div>
                   </div>
 

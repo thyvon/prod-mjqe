@@ -36,8 +36,8 @@ return new class extends Migration
             $table->decimal('return', 15, 4)->nullable();
             $table->decimal('retention', 15, 4)->nullable();
             $table->decimal('service_charge', 15, 8)->nullable()->default(0); // Add service_charge field
-            $table->decimal('total_usd', 20, 8)->default(0);
-            $table->decimal('total_khr', 20, 8)->default(0);
+            $table->decimal('total_usd', 23, 15)->default(0);
+            $table->decimal('total_khr', 23, 15)->default(0);
             $table->decimal('due_amount', 15, 8);
             $table->decimal('paid_amount', 15, 8)->default(0);
             $table->foreignId('requested_by')->nullable()->constrained('users');
