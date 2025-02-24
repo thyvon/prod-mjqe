@@ -32,6 +32,7 @@ class PurchaseInvoiceItem extends Model
         'total_price',
         'discount',
         'service_charge',
+        'deposit',
         'vat',
         'return',
         'retention',

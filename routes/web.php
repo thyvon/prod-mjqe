@@ -66,7 +66,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
     Route::get('/po-items', [InvoiceController::class, 'getPoItems']);
     Route::get('/search-suppliers', [InvoiceController::class, 'searchSuppliers']);
-    Route::get('/supplier-vat/{id}', [InvoiceController::class, 'getSupplierVat']);
     
 });
 
