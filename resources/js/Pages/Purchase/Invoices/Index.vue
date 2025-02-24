@@ -396,7 +396,6 @@ const openPrItemsModal = () => {
 const openPoItemsModal = () => {
   const modalElement = document.getElementById('poItemsModal');
   if (!modalElement) {
-:::
     console.error('PO Items Modal element not found');
     return;
   }
