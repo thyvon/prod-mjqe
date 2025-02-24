@@ -162,12 +162,6 @@ class InvoiceController extends Controller
         return response()->json($suppliers);
     }
 
-    public function getSupplierVat($id)
-    {
-        $supplier = Supplier::findOrFail($id);
-        return response()->json(['vat' => $supplier->vat]);
-    }
-
     private function getValidationRules($transactionType)
     {
         $rules = [
@@ -219,6 +213,7 @@ class InvoiceController extends Controller
             'items.*.asset_type' => 'nullable|integer',
             'items.*.total_usd' => 'required|numeric',
             'items.*.total_khr' => 'required|numeric',
+            'items.*.deposit' => 'nullable|numeric',
         ];
 
         if ($transactionType != 2) {
@@ -319,6 +314,8 @@ class InvoiceController extends Controller
 
             // Ensure total_khr does not exceed the column's limit
             $itemData['total_khr'] = min($itemData['total_usd'] * $invoice->currency_rate, PHP_INT_MAX);
+
+            $itemData['deposit'] = $itemData['deposit'] ?? 0;
 
             if ($existingItems && isset($itemData['id']) && $existingItems->has($itemData['id'])) {
                 $existingItem = $existingItems->get($itemData['id']);

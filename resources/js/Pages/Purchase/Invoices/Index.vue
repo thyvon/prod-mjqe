@@ -118,16 +118,17 @@ const editItemForm = reactive({
   total_price: 0,
   uom: '',
   service_charge_overwritten: false,
+  deposit: 0.0,
 });
 
 const selectedVatRate = computed(() => form.vat_rate || 0);
 
 const calculateGrandTotal = () => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge } = editItemForm;
+  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge, deposit } = editItemForm;
   const vatAmount = ((qty * unit_price - discount - returnAmount - retention) * vat) / 100;
-  editItemForm.grand_total = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge;
-  editItemForm.total_price = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge;
-  editItemForm.paid_amount = editItemForm.total_price;
+  // editItemForm.grand_total = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge;
+  editItemForm.total_price = (qty * unit_price);
+  editItemForm.paid_amount = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge - deposit;
 };
 
 watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat, editItemForm.service_charge], calculateGrandTotal);
@@ -136,16 +137,17 @@ const formErrors = reactive({});
 const editItemFormErrors = reactive({});
 
 const calculateTotalPrice = (item) => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0 } = item;
+  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit = 0 } = item;
   const total_price = qty * unit_price;
   const vatAmount = ((total_price - discount) * vat) / 100;
-  return total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge).toFixed(10);
+  return total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge).toFixed(4) - deposit;
 };
 
 const prepareInvoiceItems = (items) => items.map(item => ({
   ...item,
   total_price: calculateTotalPrice(item),
-  service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0)
+  service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
+  deposit: item.deposit || 0,
 }));
 
 const handleFormErrors = (error) => {
@@ -394,6 +396,7 @@ const openPrItemsModal = () => {
 const openPoItemsModal = () => {
   const modalElement = document.getElementById('poItemsModal');
   if (!modalElement) {
+:::
     console.error('PO Items Modal element not found');
     return;
   }
@@ -587,26 +590,15 @@ const initializeSupplierSelect = () => {
     },
   }).on('select2:select', function (e) {
     form.supplier = e.params.data.id;
-    updateSupplierVat(e.params.data.id);
   }).on('select2:unselect', function () {
     form.supplier = '';
     form.vat_rate = 0;
   });
 };
 
-const updateSupplierVat = async (supplierId) => {
-  try {
-    const response = await axios.get(`/suppliers/${supplierId}`);
-    form.vat_rate = response.data.vat;
-  } catch (error) {
-    console.error('Error fetching supplier VAT:', error);
-  }
-};
-
 const addSupplier = (newSupplier) => {
   props.suppliers.push(newSupplier);
   form.supplier = newSupplier.id;
-  updateSupplierVat(newSupplier.id);
 };
 
 const getPaymentType = (type) => {
@@ -724,7 +716,8 @@ const editInvoice = async (invoiceId) => {
         payment_type: item.payment_type,
         invoice_no: item.invoice_no,
         service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
-        service_charge_overwritten: item.service_charge !== 0
+        service_charge_overwritten: item.service_charge !== 0,
+        deposit: item.deposit || 0,
       }))),
     });
 
@@ -795,7 +788,6 @@ watch(() => form.invoice_no, (newValue) => {
 
 watch(() => form.supplier, async (newSupplierId) => {
   if (newSupplierId && !isEditMode.value) {
-    await updateSupplierVat(newSupplierId);
   }
 });
 
@@ -922,7 +914,6 @@ onMounted(() => {
   initializeSupplierSelect();
   watch(() => form.supplier, (newSupplierId) => {
     if (newSupplierId) {
-      updateSupplierVat(newSupplierId);
     }
   });
 
@@ -1003,6 +994,7 @@ onMounted(() => {
       { data: 'department' },
       { data: 'location' },
       { data: null, render: (data) => `<div>${data.purpose}</div>` },
+      { data: 'deposit' },
       {
         data: null,
         render: (data, type, row, meta) => `
@@ -1222,7 +1214,7 @@ const totalVat = computed(() => {
                 <th>Invoice Date</th>
                 <th>Supplier</th>
                 <th>Total Amount</th>
-                <th>Paid Amount</th>
+                <th>Grand Total</th>
                 <th>Transaction Type</th>
                 <th>Payment Type</th>
                 <th>Actions</th>
@@ -1372,19 +1364,20 @@ const totalVat = computed(() => {
                         <th>Qty</th>
                         <th>UOM</th>
                         <th>Price</th>
-                        <th>Total</th>
+                        <th>Total Price</th>
                         <th>Discount</th>
                         <th>Service Charge</th>
                         <th>VAT(%)</th>
                         <th>Return</th>
                         <th>Retention</th>
                         <th>Due Amount</th>
-                        <th>Paid Amount</th>
+                        <th>Grand Total</th>
                         <th>Campus</th>
                         <th>Division</th>
                         <th>Department</th>
                         <th>Location</th>
                         <th style="width: 20%;">Purpose</th>
+                        <th>Deposit</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -1414,14 +1407,14 @@ const totalVat = computed(() => {
                   </div>
                   <div class="col-md-6">
                     <div class="row mb-1 align-items-center">
-                      <label for="total_amount" class="col-sm-4 col-form-label">Total Amount</label>
+                      <label for="total_amount" class="col-sm-4 col-form-label">Sub Total</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.total_amount" class="form-control" id="total_amount" disabled/>
                         <div v-if="formErrors.total_amount" class="text-danger">{{ formErrors.total_amount }}</div>
                       </div>
                     </div>
                     <div class="row mb-1 align-items-center">
-                      <label for="total_discount" class="col-sm-4 col-form-label">Discount Item</label>
+                      <label for="total_discount" class="col-sm-4 col-form-label">Discount</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.total_discount" class="form-control" id="total_discount" disabled/>
                         <div v-if="formErrors.total_discount" class="text-danger">{{ formErrors.total_discount }}</div>
@@ -1436,7 +1429,7 @@ const totalVat = computed(() => {
                     </div>
 
                     <div class="row mb-1 align-items-center">
-                      <label for="paid_amount" class="col-sm-4 col-form-label">Total Expense</label>
+                      <label for="paid_amount" class="col-sm-4 col-form-label">Grand Total</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.paid_amount" class="form-control bg-light" id="paid_amount" step="0.0001" disabled>
                         <div v-if="formErrors.paid_amount" class="text-danger">{{ formErrors.paid_amount }}</div>
@@ -1459,7 +1452,7 @@ const totalVat = computed(() => {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="prItemsModalLabel">PR Items</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="table-responsive">
@@ -1491,7 +1484,7 @@ const totalVat = computed(() => {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="poItemsModalLabel">PO Items</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <table id="po-items-table" class="table table-bordered align-middle" width="100%">
@@ -1521,7 +1514,7 @@ const totalVat = computed(() => {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="editInvoiceItemModalLabel">{{ editItemForm.po_item ? 'Edit PO Item' : 'Edit PR Item' }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <form @submit.prevent="updateInvoiceItem">
@@ -1539,7 +1532,7 @@ const totalVat = computed(() => {
                   <div class="row mb-3 align-items-center">
                     <label for="editQty" class="col-sm-4 col-form-label">Quantity</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.qty" class="form-control" id="editQty" step="0.0001" :disabled="form.payment_type === 2">
+                      <input type="number" v-model="editItemForm.qty" class="form-control bg-light" id="editQty" step="0.0001" :disabled="form.payment_type === 2">
                       <div v-if="editItemFormErrors.qty" class="text-danger">{{ editItemFormErrors.qty }}</div>
                     </div>
                   </div>
@@ -1556,6 +1549,13 @@ const totalVat = computed(() => {
                     <div class="col-sm-8">
                       <input type="number" v-model="editItemForm.unit_price" class="form-control" id="editUnitPrice" step="0.0001">
                       <div v-if="editItemFormErrors.unit_price" class="text-danger">{{ editItemFormErrors.unit_price }}</div>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3 align-items-center">
+                    <label for="editTotalPrice" class="col-sm-4 col-form-label">Total Price</label>
+                    <div class="col-sm-8">
+                      <input type="number" v-model="editItemForm.total_price" class="form-control bg-light" id="editTotalPrice" disabled>
                     </div>
                   </div>
 
@@ -1596,17 +1596,18 @@ const totalVat = computed(() => {
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="editTotalPrice" class="col-sm-4 col-form-label">Total Price</label>
+                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Grand Total</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.total_price" class="form-control bg-light" id="editTotalPrice" disabled>
+                      <input type="number" v-model="editItemForm.paid_amount" class="form-control bg-light" id="editPaidAmount" step="0.0001" disabled>
+                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
                     </div>
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Paid Amount</label>
+                    <label for="editDeposit" class="col-sm-4 col-form-label">Deposit</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.paid_amount" class="form-control" id="editPaidAmount" step="0.0001" :disabled="form.payment_type === 1">
-                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
+                      <input type="number" v-model="editItemForm.deposit" class="form-control" id="editDeposit" step="0.0001">
+                      <div v-if="editItemFormErrors.deposit" class="text-danger">{{ editItemFormErrors.deposit }}</div>
                     </div>
                   </div>
 
@@ -1688,7 +1689,7 @@ const totalVat = computed(() => {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="pdfViewerModalLabel">Invoice PDF</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <PdfViewer :pdfUrl="pdfUrl" />
