@@ -31,7 +31,7 @@ return new class extends Migration
             $table->decimal('currency_rate', 8, 2);
             $table->decimal('unit_price', 15, 4);
             $table->decimal('total_price', 15, 8);
-            $table->decimal('discount', 15, 4)->nullable();
+            $table->decimal('discount', 15, 8)->nullable();
             $table->decimal('vat', 15, 4)->nullable();
             $table->decimal('return', 15, 4)->nullable();
             $table->decimal('retention', 15, 4)->nullable();
