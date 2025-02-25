@@ -194,6 +194,7 @@ class InvoiceController extends Controller
             'items.*.unit_price' => 'required|numeric',
             'items.*.discount' => 'nullable|numeric',
             'items.*.service_charge' => 'nullable|numeric',
+            'items.*.deposit' => 'nullable|numeric',
             'items.*.vat' => 'nullable|numeric',
             'items.*.return' => 'nullable|numeric',
             'items.*.retention' => 'nullable|numeric',
@@ -277,6 +278,14 @@ class InvoiceController extends Controller
         $itemCount = count($items);
         $serviceChargePerItem = $itemCount > 0 ? $invoice->service_charge / $itemCount : 0;
 
+        // Calculate the total price of all items
+        $totalPriceSum = array_reduce($items, function ($sum, $item) {
+            return $sum + ($item['qty'] * $item['unit_price']);
+        }, 0);
+
+        // Calculate the rate discount
+        $rateDiscount = $totalPriceSum > 0 ? $invoice->discount_total / $totalPriceSum : 0;
+
         foreach ($items as $itemData) {
             $prItem = PrItem::find($itemData['pr_item']);
             if ($prItem) {
@@ -299,9 +308,24 @@ class InvoiceController extends Controller
             $itemData['transaction_type'] = $invoice->transaction_type;
             $itemData['pi_number'] = $invoice->id;
             $itemData['requested_by'] = $invoice->created_by;
+            $itemData['currency'] = $invoice->currency; // Ensure currency is copied from invoice
 
             // Calculate total price for the item
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
+
+            // Calculate total_usd based on currency
+            if ($itemData['currency'] == 1) {
+                $itemData['total_usd'] = $itemData['paid_amount'];
+            } elseif ($itemData['currency'] == 2) {
+                $itemData['total_usd'] = $itemData['paid_amount'] / $itemData['currency_rate'];
+            }
+
+            // Calculate total_khr based on currency
+            if ($itemData['currency'] == 1) {
+                $itemData['total_khr'] = 0;
+            } elseif ($itemData['currency'] == 2) {
+                $itemData['total_khr'] = $itemData['paid_amount'];
+            }
 
             // Distribute service charge evenly across all items if service_charge of invoice is not 0 or blank
             if ($invoice->service_charge != 0 && $invoice->service_charge != '') {
@@ -310,10 +334,16 @@ class InvoiceController extends Controller
                 $itemData['service_charge'] = $itemData['service_charge'] ?? 0;
             }
 
+            // Calculate discount for the item based on the rate discount if discount_total is not zero or blank
+            if ($invoice->discount_total != 0 && $invoice->discount_total != '') {
+                $itemData['discount'] = $itemData['total_price'] * $rateDiscount;
+            } else {
+                $itemData['discount'] = $itemData['discount'] ?? 0;
+            }
+
             $itemData['discount_total'] = $invoice->discount_total;
 
             // Ensure total_khr does not exceed the column's limit
-            $itemData['total_khr'] = min($itemData['total_usd'] * $invoice->currency_rate, PHP_INT_MAX);
 
             $itemData['deposit'] = $itemData['deposit'] ?? 0;
 
