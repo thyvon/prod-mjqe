@@ -212,6 +212,13 @@ class InvoiceController extends Controller
         return response()->json($filteredItems);
     }
 
+    public function searchSuppliers(Request $request)
+    {
+        $query = $request->input('q');
+        $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
+        return response()->json($suppliers);
+    }
+
     private function getValidationRules($transactionType)
     {
         $rules = [
