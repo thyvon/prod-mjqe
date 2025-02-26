@@ -77,7 +77,7 @@ class InvoiceController extends Controller
             $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
             return response()->json([
                 'invoice' => $invoice,
-                'vat_rate' => $invoice->vat_rate, // Ensure VAT rate is retrieved
+                'vat_rate' => $invoice->vat_rate,
             ]);
         } catch (\Exception $e) {
             Log::error('Error in edit method:', ['message' => $e->getMessage()]);
@@ -156,10 +156,60 @@ class InvoiceController extends Controller
         return response()->json(null, 204);
     }
 
-    public function searchSuppliers(Request $request)
+    public function itemList()
     {
-        $suppliers = Supplier::where('name', 'like', '%' . $request->get('q', '') . '%')->get();
-        return response()->json($suppliers);
+        return Inertia::render('Purchase/Invoices/ItemList', [
+            'invoiceItems' => PurchaseInvoiceItem::with([
+                'purchaseRequest:id,pr_number',
+                'purchaseOrder:id,po_number',
+                'product:id,sku,product_description',
+                'supplier:id,name',
+                'invoice:id,pi_number'
+            ])->get(),
+            'suppliers' => Supplier::all(),
+            'vatRate' => config('app.vat_rate', 0),
+        ]);
+    }
+
+    public function forceClose($id)
+    {
+        $invoiceItem = PurchaseInvoiceItem::findOrFail($id); // Fix class reference
+        $invoiceItem->stop_purchase = 1;
+        $invoiceItem->save();
+
+        return response()->json(['message' => 'Invoice item force closed successfully.']);
+    }
+
+    public function filterInvoiceItems(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $supplierId = $request->input('supplier_id');
+        $transactionType = $request->input('transaction_type');
+
+        $query = PurchaseInvoiceItem::with([
+            'purchaseRequest:id,pr_number',
+            'purchaseOrder:id,po_number',
+            'product:id,sku,product_description',
+            'supplier:id,name',
+            'invoice:id,pi_number'
+        ]);
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('invoice_date', [$startDate, $endDate]);
+        }
+
+        if ($supplierId) {
+            $query->where('supplier', $supplierId);
+        }
+
+        if ($transactionType) {
+            $query->where('transaction_type', $transactionType);
+        }
+
+        $filteredItems = $query->get();
+
+        return response()->json($filteredItems);
     }
 
     private function getValidationRules($transactionType)
@@ -175,7 +225,7 @@ class InvoiceController extends Controller
             'currency_rate' => 'required|numeric',
             'payment_term' => 'required|integer',
             'sub_total' => 'nullable|numeric',
-            'vat_rate' => 'nullable|numeric', // Ensure VAT is saved to the invoice table
+            'vat_rate' => 'nullable|numeric',
             'vat_amount' => 'nullable|numeric',
             'discount_total' => 'nullable|numeric',
             'service_charge' => 'nullable|numeric',
@@ -278,12 +328,10 @@ class InvoiceController extends Controller
         $itemCount = count($items);
         $serviceChargePerItem = $itemCount > 0 ? $invoice->service_charge / $itemCount : 0;
 
-        // Calculate the total price of all items
         $totalPriceSum = array_reduce($items, function ($sum, $item) {
             return $sum + ($item['qty'] * $item['unit_price']);
         }, 0);
 
-        // Calculate the rate discount
         $rateDiscount = $totalPriceSum > 0 ? $invoice->discount_total / $totalPriceSum : 0;
 
         foreach ($items as $itemData) {
@@ -308,33 +356,28 @@ class InvoiceController extends Controller
             $itemData['transaction_type'] = $invoice->transaction_type;
             $itemData['pi_number'] = $invoice->id;
             $itemData['requested_by'] = $invoice->created_by;
-            $itemData['currency'] = $invoice->currency; // Ensure currency is copied from invoice
+            $itemData['currency'] = $invoice->currency;
 
-            // Calculate total price for the item
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 
-            // Calculate total_usd based on currency
             if ($itemData['currency'] == 1) {
                 $itemData['total_usd'] = $itemData['paid_amount'];
             } elseif ($itemData['currency'] == 2) {
                 $itemData['total_usd'] = $itemData['paid_amount'] / $itemData['currency_rate'];
             }
 
-            // Calculate total_khr based on currency
             if ($itemData['currency'] == 1) {
                 $itemData['total_khr'] = 0;
             } elseif ($itemData['currency'] == 2) {
                 $itemData['total_khr'] = $itemData['paid_amount'];
             }
 
-            // Distribute service charge evenly across all items if service_charge of invoice is not 0 or blank
             if ($invoice->service_charge != 0 && $invoice->service_charge != '') {
                 $itemData['service_charge'] = floatval($serviceChargePerItem);
             } else {
                 $itemData['service_charge'] = $itemData['service_charge'] ?? 0;
             }
 
-            // Calculate discount for the item based on the rate discount if discount_total is not zero or blank
             if ($invoice->discount_total != 0 && $invoice->discount_total != '') {
                 $itemData['discount'] = $itemData['total_price'] * $rateDiscount;
             } else {
@@ -342,8 +385,6 @@ class InvoiceController extends Controller
             }
 
             $itemData['discount_total'] = $invoice->discount_total;
-
-            // Ensure total_khr does not exceed the column's limit
 
             $itemData['deposit'] = $itemData['deposit'] ?? 0;
 
