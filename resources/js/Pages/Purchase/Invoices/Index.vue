@@ -1236,6 +1236,13 @@ onMounted(() => {
       openPdfViewer(rowData.pdf_url);
     }
   });
+
+  $('#invoice_date').datepicker({
+    todayHighlight: true,
+    autoclose: true
+  }).on('changeDate', function (e) {
+    form.invoice_date = e.format('yyyy-mm-dd');
+  });
 });
 
 const DeleteInvoice = (invoiceId) => {

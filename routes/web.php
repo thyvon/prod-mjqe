@@ -66,7 +66,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
     Route::get('/po-items', [InvoiceController::class, 'getPoItems']);
     Route::get('/search-suppliers', [InvoiceController::class, 'searchSuppliers']);
-    
+    Route::get('/invoice-items', [InvoiceController::class, 'itemList'])->name('invoice.items');
+    Route::post('/invoices/{id}/force-close', [InvoiceController::class, 'forceClose']);
+    Route::post('/invoices/filter', [InvoiceController::class, 'filterInvoiceItems']);
 });
 
 require __DIR__.'/auth.php';

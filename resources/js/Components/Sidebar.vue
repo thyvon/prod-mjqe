@@ -82,7 +82,7 @@ const isActive = (targetRoute) => {
                 </div>
             </div>
 
-            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices')}">
+            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices') || isActive('/invoice-items')}">
                 <a href="javascript:;" class="menu-link">
                     <div class="menu-icon">
                         <i class="fa fa-money-check-dollar"></i>
@@ -106,10 +106,23 @@ const isActive = (targetRoute) => {
                             <div class="menu-text">Cash Request</div>
                         </Link>
                     </div>
-                    <div class="menu-item" :class="{'active': isActive('/invoices')}">
-                        <Link href="/invoices" class="menu-link">
+                    <div class="menu-item has-sub" :class="{'active': isActive('/invoices') || isActive('/invoice-items')}">
+                        <a href="javascript:;" class="menu-link">
                             <div class="menu-text">Purchase Invoices</div>
-                        </Link>
+                            <div class="menu-caret"></div>
+                        </a>
+                        <div class="menu-submenu">
+                            <div class="menu-item" :class="{'active': isActive('/invoices')}">
+                                <Link href="/invoices" class="menu-link">
+                                    <div class="menu-text">Invoice List</div>
+                                </Link>
+                            </div>
+                            <div class="menu-item" :class="{'active': isActive('/invoice-items')}">
+                                <Link href="/invoice-items" class="menu-link">
+                                    <div class="menu-text">Invoice Item List</div>
+                                </Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

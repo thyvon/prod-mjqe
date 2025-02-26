@@ -20,6 +20,8 @@
     <link href="/coloradmin/plugins/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/datatables.net-select-bs5/css/select.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" defer />
+    <link href="/coloradmin/plugins/bootstrap-datepicker/dist/css/bootstrap-datepicker.css" rel="stylesheet" defer/>
+    <link href="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" defer/>
     @inertiaHead
 </head>
 <body>
@@ -30,7 +32,6 @@
     <!-- ================== BEGIN page-js ================== -->
 
     <script src="/coloradmin/plugins/datatables.net/js/jquery.dataTables.min.js" defer></script>
-    <!-- <script src="/coloradmin/plugins/datatables.net/js/dataTables.min.js" defer></script> -->
     <script src="/coloradmin/plugins/datatables.net-bs5/js/dataTables.bootstrap5.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive/js/dataTables.responsive.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive-bs5/js/responsive.bootstrap5.min.js" defer></script>
@@ -38,6 +39,9 @@
     <script src="/coloradmin/plugins/datatables.net-select-bs5/js/select.bootstrap5.min.js" defer></script>
     <script src="/coloradmin/plugins/sweetalert/dist/sweetalert.min.js" defer></script>
     <script src="/coloradmin/plugins/select2/dist/js/select2.min.js" defer></script>
+    <script src="/coloradmin/plugins/bootstrap-datepicker/dist/js/bootstrap-datepicker.js" defer></script>
+    <script src="/coloradmin/plugins/moment/min/moment.min.js" defer></script>
+    <script src="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.js" defer></script>
     @vite(['resources/js/app.js'])
     @routes
     @inertia
