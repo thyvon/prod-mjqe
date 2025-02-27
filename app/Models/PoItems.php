@@ -34,8 +34,11 @@ class PoItems extends Model
         'unit_price',
         'discount',
         'vat',
+        'grand_total',
         'total_usd',
         'total_khr',
+        'paid_amount',
+        'due_amount',
         'received_qty',
         'cancelled_qty',
         'pending',
@@ -161,6 +164,17 @@ class PoItems extends Model
         $this->isCalculating = false;
     }
 
+    public function calculatePaidAmount()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->paid_amount = PurchaseInvoiceItem::where('po_item', $this->id)->sum('paid_amount');
+        $this->isCalculating = false;
+    }
+
     public function calculateStatus()
     {
         if ($this->is_cancelled) {
@@ -185,12 +199,34 @@ class PoItems extends Model
         $this->save();
     }
 
+    public function recalculatePaidAmount()
+    {
+        $this->calculatePaidAmount();
+        if ($this->paid_amount > $this->grand_total) {
+            throw new \Exception('Paid amount cannot exceed the grand total.');
+        }
+        $this->save();
+    }
+
+    public function calculateDueAmount()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+
+        $this->isCalculating = true;
+        $this->due_amount = $this->grand_total - $this->paid_amount;
+        $this->isCalculating = false;
+    }
+
     public static function boot()
     {
         parent::boot();
 
         static::saving(function ($model) {
             $model->calculatePending();
+            $model->calculatePaidAmount();
+            $model->calculateDueAmount();
         });
     }
 }

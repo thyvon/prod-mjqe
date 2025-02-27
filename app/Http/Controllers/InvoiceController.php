@@ -61,6 +61,17 @@ class InvoiceController extends Controller
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
 
+            // Recalculate quantities and amounts for PO items
+            foreach ($validatedData['items'] as $itemData) {
+                if (isset($itemData['po_item'])) {
+                    $poItem = PoItems::find($itemData['po_item']);
+                    if ($poItem) {
+                        $poItem->recalculateReceivedQty();
+                        $poItem->recalculatePaidAmount();
+                    }
+                }
+            }
+
             return response()->json($invoice->load('items', 'supplier'), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
@@ -137,6 +148,7 @@ class InvoiceController extends Controller
                 $poItem = PoItems::find($item->po_item);
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
+                    $poItem->recalculatePaidAmount();
                 }
             }
         }
@@ -149,6 +161,7 @@ class InvoiceController extends Controller
                 $poItem = PoItems::find($item->po_item);
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
+                    $poItem->recalculatePaidAmount();
                 }
             }
         }
@@ -284,9 +297,12 @@ class InvoiceController extends Controller
     private function validateItemQuantities($items, $invoiceId = null)
     {
         $itemQuantities = [];
+        $itemPaidAmounts = [];
+
         foreach ($items as $itemData) {
             if (isset($itemData['po_item'])) {
                 $itemQuantities['po_item'][$itemData['po_item']] = ($itemQuantities['po_item'][$itemData['po_item']] ?? 0) + $itemData['qty'];
+                $itemPaidAmounts['po_item'][$itemData['po_item']] = ($itemPaidAmounts['po_item'][$itemData['po_item']] ?? 0) + $itemData['paid_amount'];
             }
 
             if (isset($itemData['pr_item'])) {
@@ -307,6 +323,18 @@ class InvoiceController extends Controller
                     $sku = $poItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PO.']
+                    ]);
+                }
+
+                $paidAmount = PurchaseInvoiceItem::where('po_item', $poItem->id)
+                    ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
+                    ->sum('paid_amount');
+                $remainingDueAmount = $poItem->grand_total - $paidAmount;
+
+                if ($itemPaidAmounts['po_item'][$itemData['po_item']] > $remainingDueAmount) {
+                    $sku = $poItem->product->sku ?? 'unknown';
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items.*.paid_amount' => ['The paid amount of Item: ' . $sku . ' cannot exceed the due amount (' . $remainingDueAmount . ') in PO.']
                     ]);
                 }
             }
@@ -430,6 +458,7 @@ class InvoiceController extends Controller
             $poItem = PoItems::find($poItemId);
             if ($poItem) {
                 $poItem->recalculateReceivedQty();
+                $poItem->recalculatePaidAmount();
             }
         }
 
@@ -448,6 +477,7 @@ class InvoiceController extends Controller
                 $poItem = PoItems::find($itemData['po_item']);
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
+                    $poItem->recalculatePaidAmount();
                 }
             }
 
