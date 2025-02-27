@@ -3,6 +3,8 @@ import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
+// import 'bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css';
+// import 'bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js';
 
 const props = defineProps({
   purchaseOrders: { type: Array, required: true },
@@ -19,7 +21,7 @@ const purchaseOrderForm = reactive({
   date: '',
   user_id: null,
   supplier_id: '',
-  currency: 'USD',
+  currency: 1, // Ensure default to 1 (USD)
   currency_rate: 1,
   payment_term: '',
   purpose: '',
@@ -150,11 +152,43 @@ watch(() => purchaseOrderForm.supplier_id, (newSupplierId) => {
   }
 });
 
+const initializeSelect2 = () => {
+  $('#supplier_id').select2().on('change', function () {
+    purchaseOrderForm.supplier_id = $(this).val();
+  });
+};
+
+const initializeSupplierSelect = () => {
+  $('#supplier_id').select2({
+    data: props.suppliers.map(supplier => ({ id: supplier.id, text: supplier.name })),
+    dropdownParent: $('#supplier_id').parent(),
+    placeholder: 'Select Supplier',
+    allowClear: true,
+    width: 'resolve',
+    ajax: {
+      url: '/search-suppliers',
+      dataType: 'json',
+      delay: 250,
+      data: (params) => ({ q: params.term }),
+      processResults: (data) => ({ results: data.map(supplier => ({ id: supplier.id, text: supplier.name })) }),
+      cache: true,
+    },
+  }).on('select2:select', function (e) {
+    purchaseOrderForm.supplier_id = e.params.data.id;
+  }).on('select2:unselect', function () {
+    purchaseOrderForm.supplier_id = '';
+    purchaseOrderForm.payment_term = '';
+    purchaseOrderForm.supplier_phone = '';
+    purchaseOrderForm.supplier_address = '';
+  });
+};
+
 const openCreatePage = () => {
   isEdit.value = false;
   Object.assign(purchaseOrderForm, {
     id: null, po_number: '', date: new Date().toISOString().split('T')[0],
-    user_id: props.currentUser?.id || '', supplier_id: '', currency: 'USD', currency_rate: 1, payment_term: '', purpose: '', vat: 0, items: [], total_amount_usd: 0,
+    user_id: props.currentUser?.id || '', supplier_id: '', currency: 1, // Ensure default currency is set to 1 (USD)
+    currency_rate: 4022, payment_term: '', purpose: '', vat: 0, items: [], total_amount_usd: 0,
   });
 
   // Clear itemForm fields
@@ -175,6 +209,17 @@ const openCreatePage = () => {
     discount: 0,
     vat: 0,
     location: '',
+  });
+
+  nextTick(() => {
+    initializeSupplierSelect(); // Re-initialize Select2 when opening the create form
+    $('#date').datepicker({
+      todayHighlight: true,
+      autoclose: true,
+      format: 'yyyy-mm-dd'
+    }).on('changeDate', function (e) {
+      purchaseOrderForm.date = e.format('yyyy-mm-dd');
+    });
   });
 };
 
@@ -239,6 +284,17 @@ const openEditPage = async (purchaseOrder) => {
       vat: 0,
       location: '',
     });
+
+    nextTick(() => {
+      initializeSupplierSelect(); // Re-initialize Select2 when opening the edit form
+      $('#date').datepicker({
+        todayHighlight: true,
+        autoclose: true,
+        format: 'yyyy-mm-dd'
+      }).on('changeDate', function (e) {
+        purchaseOrderForm.date = e.format('yyyy-mm-dd');
+      });
+    });
   } catch (error) {
     console.error('Error fetching purchase order:', error); // Log the error
   }
@@ -262,7 +318,7 @@ const savePurchaseOrder = async () => {
       user_id: props.currentUser?.id || purchaseOrderForm.user_id,
       total_amount_usd: parseFloat(totalAmountUsd.value), // Ensure total_amount_usd is a float
       total_item: parseInt(itemCount.value), // Ensure total_item is an integer
-      currency: purchaseOrderForm.currency, // Ensure currency is included
+      currency: parseInt(purchaseOrderForm.currency), // Ensure currency is an integer
       currency_rate: parseFloat(purchaseOrderForm.currency_rate), // Ensure currency_rate is a float
       payment_term: purchaseOrderForm.payment_term, // Ensure payment_term is included
       purpose: purchaseOrderForm.purpose, // Ensure purpose is included
@@ -512,7 +568,7 @@ const openPrItemsModal = () => {
 };
 
 const addItemToPo = (prItem) => {
-  const qty = parseFloat(prItem.qty) || 0;
+  const qty = parseFloat(prItem.qty_pending) || 0;
   const unit_price = parseFloat(prItem.unit_price) || 0;
   const discount = 0;
   const vat = 0;
@@ -582,6 +638,8 @@ onMounted(() => {
         ],
       });
 
+      initializeSupplierSelect(); // Initialize Select2 on mount
+
       $('#purchase-order')
         .on('click', '.btn-edit', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
@@ -645,7 +703,7 @@ onMounted(() => {
               render: (data) => `${data.product.product_description} | ${data.remark}`,
               className: 'wrap-cell',
             },
-            { data: 'qty' },
+            { data: 'qty_pending' },
             { data: 'uom' },
             { data: 'unit_price' }, // Use 'unit_price' for prItem
             { data: 'total_price' },
@@ -708,39 +766,42 @@ onMounted(() => {
             <div class="row">
               <div class="col-md-6">
                 <div class="row mb-1">
-                  <label for="user_id" class="col-sm-4 col-form-label">User</label>
+                  <label for="user_id" class="col-sm-4 col-form-label">Purchaser</label>
                   <div class="col-sm-8">
-                    <input v-model="props.currentUser.name" type="text" class="form-control" id="user_name" readonly />
+                    <input v-model="props.currentUser.name" type="text" class="form-control text-primary" id="user_name" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="user_position" class="col-sm-4 col-form-label">Position</label>
                   <div class="col-sm-8">
-                    <input v-model="props.currentUser.position" type="text" class="form-control" id="user_position" readonly />
+                    <input v-model="props.currentUser.position" type="text" class="form-control text-primary" id="user_position" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="user_card_id" class="col-sm-4 col-form-label">Card ID</label>
                   <div class="col-sm-8">
-                    <input v-model="props.currentUser.card_id" type="text" class="form-control" id="user_card_id" readonly />
+                    <input v-model="props.currentUser.card_id" type="text" class="form-control text-primary" id="user_card_id" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="user_phone" class="col-sm-4 col-form-label">Phone</label>
                   <div class="col-sm-8">
-                    <input v-model="props.currentUser.phone" type="text" class="form-control" id="user_phone" readonly />
+                    <input v-model="props.currentUser.phone" type="text" class="form-control text-primary" id="user_phone" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="user_email" class="col-sm-4 col-form-label">Email</label>
                   <div class="col-sm-8">
-                    <input v-model="props.currentUser.email" type="text" class="form-control" id="user_email" readonly />
+                    <input v-model="props.currentUser.email" type="text" class="form-control text-primary" id="user_email" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="currency" class="col-sm-4 col-form-label">Currency</label>
                   <div class="col-sm-8">
-                    <input v-model="purchaseOrderForm.currency" type="text" class="form-control" id="currency" />
+                    <select v-model="purchaseOrderForm.currency" class="form-select" id="currency">
+                      <option value="1">USD</option>
+                      <option value="2">KHR</option>
+                    </select>
                     <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
                   </div>
                 </div>
@@ -781,26 +842,26 @@ onMounted(() => {
                 <div class="row mb-1">
                   <label for="supplier_phone" class="col-sm-4 col-form-label">Supplier Phone</label>
                   <div class="col-sm-8">
-                    <input v-model="purchaseOrderForm.supplier_phone" type="text" class="form-control" id="supplier_phone" readonly />
+                    <input v-model="purchaseOrderForm.supplier_phone" type="text" class="form-control text-primary" id="supplier_phone" readonly />
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="supplier_address" class="col-sm-4 col-form-label">Supplier Address</label>
                   <div class="col-sm-8">
-                    <textarea v-model="purchaseOrderForm.supplier_address" class="form-control" id="supplier_address" rows="3" readonly></textarea>
+                    <textarea v-model="purchaseOrderForm.supplier_address" class="form-control text-primary" id="supplier_address" rows="3" readonly></textarea>
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="payment_term" class="col-sm-4 col-form-label">Payment Term</label>
                   <div class="col-sm-8">
-                    <input v-model="purchaseOrderForm.payment_term" type="text" class="form-control" id="payment_term" readonly />
+                    <input v-model="purchaseOrderForm.payment_term" type="text" class="form-control text-primary" id="payment_term" readonly />
                     <div v-if="validationErrors.payment_term" class="text-danger">{{ validationErrors.payment_term[0] }}</div>
                   </div>
                 </div>
                 <div class="row mb-1">
                   <label for="date" class="col-sm-4 col-form-label">Date</label>
                   <div class="col-sm-8">
-                    <input v-model="purchaseOrderForm.date" type="date" class="form-control" id="date" />
+                    <input v-model="purchaseOrderForm.date" type="text" class="form-control" id="date" />
                     <div v-if="validationErrors.date" class="text-danger">{{ validationErrors.date[0] }}</div>
                   </div>
                 </div>

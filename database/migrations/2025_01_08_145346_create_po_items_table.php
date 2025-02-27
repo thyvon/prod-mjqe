@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('po_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('po_id')->constrained('purchase_orders')->onDelete('cascade');
-            $table->foreignId('pr_id')->constrained('purchase_requests')->onDelete('cascade');
-            $table->foreignId('pr_item_id')->constrained('pr_items')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignId('supplier_id')->constrained('suppliers')->onDelete('cascade');
+            $table->foreignId('po_id')->constrained('purchase_orders');
+            $table->foreignId('pr_id')->constrained('purchase_requests');
+            $table->foreignId('pr_item_id')->constrained('pr_items');
+            $table->foreignId('product_id')->constrained('products');
+            $table->foreignId('supplier_id')->constrained('suppliers');
             $table->string('campus');
             $table->string('division');
             $table->string('department');
@@ -32,10 +32,13 @@ return new class extends Migration
             $table->decimal('vat', 15, 4)->nullable();
             $table->decimal('total_usd', 15, 4);
             $table->decimal('total_khr', 15, 4);
+            $table->decimal('deposit_amount', 15, 4);
+            $table->decimal('paid_amount', 15, 4)->default(0);
+            $table->decimal('due_amount', 15, 4)->default(0);
             $table->decimal('received_qty', 10, 4)->default(0);
             $table->decimal('cancelled_qty', 10, 4)->default(0);
             $table->decimal('pending', 10, 4)->default(0);
-            $table->foreignId('purchaser_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('purchaser_id')->constrained('users');
             $table->boolean('is_cancelled')->default(false);
             $table->text('cancelled_reason')->nullable();
             $table->string('status', 50)->default('Pending');

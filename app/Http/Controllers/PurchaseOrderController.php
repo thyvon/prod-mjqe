@@ -77,7 +77,7 @@ class PurchaseOrderController extends Controller
 
         $validator = Validator::make($request->all(), [
             'date' => 'required|date',
-            'currency' => 'required|string|max:10',
+            'currency' => 'required|integer',
             'currency_rate' => 'required|numeric',
             'payment_term' => 'required|string',
             'purpose' => 'required|string',
@@ -136,6 +136,7 @@ class PurchaseOrderController extends Controller
             foreach ($request->items as $item) {
                 $prItem = PrItem::with('purchaseRequest')->findOrFail($item['pr_item_id']);
                 $total_usd = (($item['qty'] * $item['unit_price']) - $item['discount']) * (1 + ($item['vat'] / 100));
+                $grand_total = (($item['qty'] * $item['unit_price']) - $item['discount']) * (1 + ($item['vat'] / 100));
                 $poItemData = [
                     'po_id' => $purchaseOrder->id,
                     'pr_item_id' => $prItem->id,
@@ -154,6 +155,7 @@ class PurchaseOrderController extends Controller
                     'unit_price' => $item['unit_price'],
                     'discount' => $item['discount'] ?? 0,
                     'vat' => $item['vat'],
+                    'grand_total' => $grand_total,
                     'total_usd' => $total_usd,
                     'total_khr' => $total_usd * $request->currency_rate,
                     'received_qty' => $item['received_qty'] ?? 0,
@@ -239,7 +241,7 @@ class PurchaseOrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'date' => 'sometimes|required|date',
-            'currency' => 'sometimes|required|string|max:10',
+            'currency' => 'required|integer',
             'currency_rate' => 'sometimes|required|numeric',
             'payment_term' => 'sometimes|required|string',
             'purpose' => 'sometimes|required|string',
@@ -287,6 +289,7 @@ class PurchaseOrderController extends Controller
             foreach ($request->items as $item) {
                 $prItem = PrItem::with('purchaseRequest')->findOrFail($item['pr_item_id']);
                 $total_usd = (($item['qty'] * $item['unit_price']) - $item['discount']) * (1 + ($item['vat'] / 100));
+                $grand_total = (($item['qty'] * $item['unit_price']) - $item['discount']) * (1 + ($item['vat'] / 100));
                 $poItemData = [
                     'po_id' => $purchaseOrder->id,
                     'pr_item_id' => $prItem->id,
@@ -305,6 +308,7 @@ class PurchaseOrderController extends Controller
                     'unit_price' => $item['unit_price'],
                     'discount' => $item['discount'] ?? 0,
                     'vat' => $item['vat'],
+                    'grand_total' => $grand_total,
                     'total_usd' => $total_usd,
                     'total_khr' => $total_usd * $request->currency_rate,
                     'received_qty' => $item['received_qty'] ?? 0,
@@ -395,5 +399,12 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error deleting purchase order.'], 500);
         }
+    }
+
+    public function searchSuppliers(Request $request)
+    {
+        $query = $request->input('q');
+        $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
+        return response()->json($suppliers);
     }
 }

@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
     Route::get('/po-items', [InvoiceController::class, 'getPoItems']);
+    Route::get('/search-suppliers', [PurchaseOrderController::class, 'searchSuppliers']);
     Route::get('/search-suppliers', [InvoiceController::class, 'searchSuppliers']);
     Route::get('/invoice-items', [InvoiceController::class, 'itemList'])->name('invoice.items');
     Route::post('/invoices/{id}/force-close', [InvoiceController::class, 'forceClose']);

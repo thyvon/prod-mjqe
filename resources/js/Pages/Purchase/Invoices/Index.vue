@@ -141,9 +141,16 @@ const editItemForm = reactive({
 
 const calculateGrandTotal = () => {
   const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge, deposit } = editItemForm;
-  const vatAmount = ((qty * unit_price - discount) * vat) / 100;
-  editItemForm.total_price = (qty * unit_price);
-  editItemForm.paid_amount = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge - deposit;
+  let vatAmount;
+
+  if (form.payment_type === 2) { // Deposit
+    vatAmount = (deposit * vat) / 100;
+    editItemForm.paid_amount = (deposit + vatAmount).toFixed(2);
+  } else {
+    vatAmount = ((qty * unit_price - discount) * vat) / 100;
+    editItemForm.total_price = (qty * unit_price);
+    editItemForm.paid_amount = (qty * unit_price) - discount - returnAmount - retention + vatAmount + service_charge;
+  }
 };
 
 const grandTotal = computed(() => {
@@ -166,8 +173,15 @@ const editItemFormErrors = reactive({});
 const calculateTotalPrice = (item) => {
   const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit = 0 } = item;
   const total_price = qty * unit_price;
-  const vatAmount = ((total_price - discount) * vat) / 100;
-  return (total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge) - deposit).toFixed(2);
+  let vatAmount;
+
+  if (form.payment_type === 2) { // Deposit
+    vatAmount = (deposit * vat) / 100;
+    return (deposit + vatAmount).toFixed(2);
+  } else {
+    vatAmount = ((total_price - discount) * vat) / 100;
+    return (total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge)).toFixed(2);
+  }
 };
 
 const formatNumber = (value, decimalPlaces = 2) => {
@@ -233,7 +247,7 @@ const submitForm = async () => {
   calculateTotalAmount();
   calculateServiceChargeForItems();
   calculateItemDiscounts(); // Ensure discounts are calculated correctly before submitting
-  if (form.id) {
+  if (isEditMode.value && form.id) {
     const success = await updateInvoice();
     if (success) {
       clearForm();
@@ -485,7 +499,7 @@ const openPoItemsModal = () => {
 const selectPrItem = (prItem) => {
   const existingItem = form.items.find(item => item.pr_item === prItem.id);
   if (!existingItem) {
-    const qty = form.payment_type === 2 ? 0 : parseFloat(prItem.qty) || 0;
+    const qty = form.payment_type === 2 ? 0 : parseFloat(prItem.qty_pending) || 0;
     const unit_price = parseFloat(prItem.unit_price) || 0;
     const discount = 0;
     const service_charge = 0;
@@ -552,10 +566,11 @@ const selectPrItem = (prItem) => {
 const selectPoItem = (poItem) => {
   const existingItem = form.items.find(item => item.po_item === poItem.id);
   if (!existingItem) {
-    const qty = form.payment_type === 2 ? 0 : parseFloat(poItem.qty) || 0;
+    const qty = form.payment_type === 2 ? 0 : parseFloat(poItem.pending) || 0;
     const unit_price = parseFloat(poItem.unit_price) || 0;
     const discount = parseFloat(poItem.discount) || 0;
     const service_charge = 0;
+    const due_amount = parseFloat(poItem.due_amount) || 0; // Lookup due_amount from poItem
     const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge });
 
     const receivedQty = form.items.reduce((sum, currentItem) => {
@@ -582,7 +597,7 @@ const selectPoItem = (poItem) => {
       return: 0,
       retention: 0,
       service_charge: service_charge,
-      due_amount: total_price,
+      due_amount: due_amount, // Use due_amount from poItem
       paid_amount: total_price,
       campus: poItem.campus,
       division: poItem.division,
@@ -603,7 +618,9 @@ const selectPoItem = (poItem) => {
       invoice_date: form.invoice_date,
       payment_type: form.payment_type,
       invoice_no: form.invoice_no,
-      total_price: total_price
+      total_price: total_price,
+      deposit: 0, // Initialize deposit to 0
+      stop_purchase: 0, // Initialize stop_purchase to 0
     });
 
     invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
@@ -1000,6 +1017,16 @@ const duplicateItem = (rowIndex) => {
   invoiceItemsTableInstance.value.row.add(item).draw();
 };
 
+const getPrNumberById = (id) => {
+  const prItem = props.prItems.find(pr => pr.id === id);
+  return prItem ? prItem.purchase_request.pr_number : '';
+};
+
+const getPoNumberById = (id) => {
+  const poItem = props.poItems.find(po => po.id === id);
+  return poItem ? poItem.purchase_order.po_number : '';
+};
+
 onMounted(() => {
   initializeSupplierSelect();
   watch(() => form.supplier, (newSupplierId) => {
@@ -1030,7 +1057,7 @@ onMounted(() => {
       { data: 'product.sku' },
       { data: 'purchase_request.pr_number' },
       { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.remark || ''}</div>`},
-      { data: 'qty' },
+      { data: 'qty_pending' },
       { data: 'uom' },
       { data: 'unit_price' },
       { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
@@ -1063,8 +1090,8 @@ onMounted(() => {
     data: prepareInvoiceItems(form.items),
     columns: [
       { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'pr_number' },
-      { data: 'po_number' },
+      { data: 'pr_item', render: (data) => getPrNumberById(data) },
+      { data: 'po_item', render: (data) => getPoNumberById(data) },
       { data: 'item_code' },
       { data: null, render: (data) => `<div>${data.description}</div>` },
       { data: 'remark', render: (data) => `<div>${data}</div>` },
@@ -1129,7 +1156,7 @@ onMounted(() => {
       { data: 'product.sku' },
       { data: 'purchase_order.po_number' },
       { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.description || ''}</div>`},
-      { data: 'qty' },
+      { data: 'pending' },
       { data: 'uom' },
       { data: 'unit_price' },
       { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
@@ -1294,8 +1321,6 @@ const formatCurrency = (value, currency) => {
   return `${symbol} ${parseFloat(value).toFixed(2)}`;
 };
 
-const formattedServiceCharge = computed(() => form.service_charge);
-const formattedDiscountTotal = computed(() => form.discount_total);
 const formattedTotalAmount = computed(() => formatCurrency(form.total_amount, form.currency));
 const formattedTotalDiscount = computed(() => formatCurrency(form.total_discount, form.currency));
 const formattedTotalServiceCharge = computed(() => formatCurrency(totalServiceCharge.value, form.currency));
@@ -1438,9 +1463,13 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div class="row mb-1 align-items-center">
                       <label for="payment_type" class="col-sm-4 col-form-label">Payment Type</label>
                       <div class="col-sm-8">
-                        <div class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" v-model="form.payment_type" id="payment_type" :true-value="1" :false-value="2">
-                          <label class="form-check-label" for="payment_type">{{ form.payment_type === 2 ? 'Deposit' : 'Final' }}</label>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="radio" v-model="form.payment_type" id="payment_type_final" :value="1">
+                          <label class="form-check-label" for="payment_type_final">Final</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="radio" v-model="form.payment_type" id="payment_type_deposit" :value="2">
+                          <label class="form-check-label" for="payment_type_deposit">Deposit</label>
                         </div>
                         <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
                       </div>
@@ -1534,16 +1563,16 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     </div>
 
                     <div class="row mb-1 align-items-center">
-                      <label for="total_service_charge" class="col-sm-4 col-form-label">Service Charge</label>
+                      <label for="total_vat" class="col-sm-4 col-form-label">Total VAT</label>
                       <div class="col-sm-4">
-                        <input type="text" :value="formattedTotalServiceCharge" class="form-control" id="total_service_charge" disabled>
+                        <input type="text" :value="formattedTotalVat" class="form-control" id="total_vat" disabled>
                       </div>
                     </div>
 
                     <div class="row mb-1 align-items-center">
-                      <label for="total_vat" class="col-sm-4 col-form-label">Total VAT</label>
+                      <label for="total_service_charge" class="col-sm-4 col-form-label">Service Charge</label>
                       <div class="col-sm-4">
-                        <input type="text" :value="formattedTotalVat" class="form-control" id="total_vat" disabled>
+                        <input type="text" :value="formattedTotalServiceCharge" class="form-control" id="total_service_charge" disabled>
                       </div>
                     </div>
 
@@ -1582,7 +1611,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <th>Item Code</th>
                     <th>PR Number</th>
                     <th>Description</th>
-                    <th>Qty</th>
+                    <th>Qty Pending</th>
                     <th>UOM</th>
                     <th>Unit Price</th>
                     <th>Total Price</th>
@@ -1613,7 +1642,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                   <th>Item Code</th>
                   <th>PO Number</th>
                   <th>Description</th>
-                  <th>Qty</th>
+                  <th>Qty Pending</th>
                   <th>UOM</th>
                   <th>Unit Price</th>
                   <th>Total Price</th>
@@ -1715,18 +1744,18 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                   </div>
 
                   <div class="row mb-3 align-items-center">
-                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Grand Total</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.paid_amount" class="form-control bg-light" id="editPaidAmount" step="0.0001" disabled>
-                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
-                    </div>
-                  </div>
-
-                  <div class="row mb-3 align-items-center">
                     <label for="editDeposit" class="col-sm-4 col-form-label">Deposit</label>
                     <div class="col-sm-8">
                       <input type="number" v-model="editItemForm.deposit" class="form-control" id="editDeposit" step="0.0001">
                       <div v-if="editItemFormErrors.deposit" class="text-danger">{{ editItemFormErrors.deposit }}</div>
+                    </div>
+                  </div>
+
+                  <div class="row mb-3 align-items-center">
+                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Grand Total</label>
+                    <div class="col-sm-8">
+                      <input type="number" v-model="editItemForm.paid_amount" class="form-control bg-light" id="editPaidAmount" step="0.0001" disabled>
+                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
                     </div>
                   </div>
 

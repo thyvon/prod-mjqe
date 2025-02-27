@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
             $table->date('date'); // Date field
-            $table->string('currency', 10);
+            $table->integer('currency')->default(1);
             $table->decimal('currency_rate', 10, 2);
             $table->string('po_number')->unique();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
