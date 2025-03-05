@@ -268,7 +268,6 @@ class InvoiceController extends Controller
             'items.*.vat' => 'nullable|numeric',
             'items.*.return' => 'nullable|numeric',
             'items.*.retention' => 'nullable|numeric',
-            'items.*.due_amount' => 'required|numeric',
             'items.*.paid_amount' => 'required|numeric',
             'items.*.requested_by' => 'nullable|integer|exists:users,id',
             'items.*.campus' => 'required|string',
@@ -310,7 +309,7 @@ class InvoiceController extends Controller
             }
         }
 
-        foreach ($items as $itemData) {
+        foreach ($items as $index => $itemData) {
             if (isset($itemData['po_item'])) {
                 $poItem = PoItems::find($itemData['po_item']);
                 $poQty = $poItem->qty - $poItem->cancelled_qty;
@@ -322,7 +321,7 @@ class InvoiceController extends Controller
                 if ($itemQuantities['po_item'][$itemData['po_item']] > $pendingQty) {
                     $sku = $poItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PO.']
+                        "items.$index.qty" => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PO.']
                     ]);
                 }
 
@@ -334,7 +333,7 @@ class InvoiceController extends Controller
                 if ($itemPaidAmounts['po_item'][$itemData['po_item']] > $remainingDueAmount) {
                     $sku = $poItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items.*.paid_amount' => ['The paid amount of Item: ' . $sku . ' cannot exceed the due amount (' . $remainingDueAmount . ') in PO.']
+                        "items.$index.paid_amount" => ['The paid amount of Item: ' . $sku . ' cannot exceed the due amount (' . $remainingDueAmount . ') in PO.']
                     ]);
                 }
             }
@@ -350,7 +349,7 @@ class InvoiceController extends Controller
                 if ($itemQuantities['pr_item'][$itemData['pr_item']] > $pendingQty) {
                     $sku = $prItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items.*.qty' => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PR.']
+                        "items.$index.qty" => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PR.']
                     ]);
                 }
             }
