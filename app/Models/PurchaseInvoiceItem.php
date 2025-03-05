@@ -38,7 +38,7 @@ class PurchaseInvoiceItem extends Model
         'retention',
         'total_usd',
         'total_khr',
-        'due_amount',
+        // 'due_amount',
         'paid_amount',
         'requested_by',
         'campus',

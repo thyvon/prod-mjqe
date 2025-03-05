@@ -104,7 +104,7 @@ onMounted(() => {
       { data: 'vat', render: (data) => formatNumber(data, 4) },
       { data: 'return', render: (data) => formatNumber(data, 4) },
       { data: 'retention', render: (data) => formatNumber(data, 4) },
-      { data: 'due_amount', render: (data) => formatNumber(data, 4) },
+      // { data: 'due_amount', render: (data) => formatNumber(data, 4) },
       { data: 'paid_amount', render: (data) => formatNumber(data, 4) },
       { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
       { data: 'currency_rate', render: (data) => formatNumber(data, 4) },

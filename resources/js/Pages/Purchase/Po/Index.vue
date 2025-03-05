@@ -162,7 +162,7 @@ const initializeSupplierSelect = () => {
   $('#supplier_id').select2({
     data: props.suppliers.map(supplier => ({ id: supplier.id, text: supplier.name })),
     dropdownParent: $('#supplier_id').parent(),
-    placeholder: 'Select Supplier',
+    placeholder: 'Select Supplier', // Ensure placeholder is set
     allowClear: true,
     width: 'resolve',
     ajax: {
@@ -213,6 +213,7 @@ const openCreatePage = () => {
 
   nextTick(() => {
     initializeSupplierSelect(); // Re-initialize Select2 when opening the create form
+    $('#supplier_id').val('').trigger('change'); // Ensure the select2 component is cleared
     $('#date').datepicker({
       todayHighlight: true,
       autoclose: true,
