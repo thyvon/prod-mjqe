@@ -28,3 +28,24 @@ body {
     font-size: 12px;
     font-family: 'TW Cen MT','Khmer OS Content','Poppins', 'Montserrat', sans-serif;
 }
+
+#demo-upload {
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+}
+
+.attachment-thumbnail {
+  position: relative;
+}
+
+.attachment-thumbnail .btn-danger {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  padding: 2px 5px;
+  border-radius: 50%;
+  font-size: 8px;
+}

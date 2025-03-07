@@ -13,6 +13,6 @@ class InvoiceAttachment extends Model
 
     public function invoice()
     {
-        return $this->belongsTo(PurchaseInvoice::class);
+        return $this->belongsTo(PurchaseInvoice::class, 'purchase_invoice_id');
     }
 }

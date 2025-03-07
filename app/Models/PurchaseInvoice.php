@@ -80,6 +80,6 @@ class PurchaseInvoice extends Model
 
     public function attachments()
     {
-        return $this->hasMany(InvoiceAttachment::class);
+        return $this->hasMany(InvoiceAttachment::class, 'purchase_invoice_id');
     }
 }

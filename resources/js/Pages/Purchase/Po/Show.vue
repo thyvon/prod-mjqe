@@ -236,6 +236,7 @@ const initializeDataTable = (selector, options) => {
 const fetchInvoiceItems = async () => {
   try {
     const response = await axios.get(`/purchase-invoice-items/${props.purchaseOrder.id}`);
+    console.log('Invoice items response:', response.data); // Debug log
     invoiceItems.value = response.data;
 
     poItemsTableInstance.value = initializeDataTable('#po-items-table', {
@@ -273,11 +274,17 @@ const fetchInvoiceItems = async () => {
       data: invoiceItems.value,
       columns: [
         { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'invoice_date', render: (data) => moment(data).format('MMM DD, YYYY') },
+        { data: 'invoice.pi_number' },
+        { data: 'invoice_no' },
+        { data: 'supplier.name' },
+        { data: 'product.sku' },
         { data: 'description' },
         { data: 'qty' },
+        { data: 'uom' },
         { data: 'unit_price' },
         { data: 'total_price' },
-        { data: 'supplier.name' },
+        { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
         { data: 'purchased_by.name' },
       ],
     });
@@ -362,9 +369,9 @@ onMounted(() => {
                 <th>Discount</th>
                 <th>VAT%</th>
                 <th>Total Price</th>
-                <th class="no-print">Status</th>
-                <th v-if="hasCancelledItems" class="no-print">Reason</th>
-                <th class="no-print">Actions</th>
+                <th>Status</th>
+                <th>Reason</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -421,12 +428,18 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total Price</th>
+                <th>Date</th>
+                <th>PI Number</th>
+                <th>Invoice Number</th>
                 <th>Supplier</th>
-                <th>Purchased By</th>
+                <th>Product Code</th>
+                <th>Product Description</th>
+                <th>Qty</th>
+                <th>UOM</th>
+                <th>Price</th>
+                <th>Total Price</th>
+                <th>Currency</th>
+                <th>Purchaser</th>
               </tr>
             </thead>
             <tbody>

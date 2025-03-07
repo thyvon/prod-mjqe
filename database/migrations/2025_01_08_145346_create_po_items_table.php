@@ -32,7 +32,6 @@ return new class extends Migration
             $table->decimal('vat', 15, 4)->nullable();
             $table->decimal('total_usd', 15, 4);
             $table->decimal('total_khr', 15, 4);
-            $table->decimal('deposit_amount', 15, 4);
             $table->decimal('paid_amount', 15, 4)->default(0);
             $table->decimal('due_amount', 15, 4)->default(0);
             $table->decimal('received_qty', 10, 4)->default(0);

@@ -832,7 +832,7 @@ onMounted(() => {
                 <div class="row mb-1">
                   <label for="supplier_id" class="col-sm-4 col-form-label">Supplier</label>
                   <div class="col-sm-8">
-                    <select v-model="purchaseOrderForm.supplier_id" class="form-select" id="supplier_id">
+                    <select v-model="purchaseOrderForm.supplier_id" class="form-select" id="supplier_id" style="width: 100%;">
                       <option v-for="supplier in props.suppliers" :key="supplier.id" :value="supplier.id">
                         {{ supplier.name }}
                       </option>
