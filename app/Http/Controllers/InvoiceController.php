@@ -257,7 +257,8 @@ class InvoiceController extends Controller
             $invoice = PurchaseInvoice::findOrFail($id);
             $file = $request->file('file');
             $localFileService = new LocalFileService();
-            $fileUrl = $localFileService->uploadFile($file);
+            $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
+            $fileUrl = $localFileService->uploadFile($file, $invoice->pi_number, $fileIndex);
 
             if (!$fileUrl) {
                 throw new \Exception('File upload failed, no URL returned.');

@@ -6,7 +6,10 @@
 
 <script setup>
 const props = defineProps({
-  pdfUrl: String,
+  pdfUrl: {
+    type: String,
+    required: true,
+  },
 });
 </script>
 

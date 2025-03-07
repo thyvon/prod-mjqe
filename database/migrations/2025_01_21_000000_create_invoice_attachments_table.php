@@ -10,11 +10,9 @@ return new class extends Migration
     {
         Schema::create('invoice_attachments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('purchase_invoice_id');
+            $table->foreignId('purchase_invoice_id')->constrained('purchase_invoices')->onDelete('cascade');
             $table->string('file_url');
             $table->timestamps();
-
-            $table->foreign('purchase_invoice_id')->references('id')->on('purchase_invoices')->onDelete('cascade');
         });
     }
 

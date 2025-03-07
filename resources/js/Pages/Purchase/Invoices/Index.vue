@@ -6,8 +6,7 @@ import axios from 'axios';
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import SupplierFormModal from '@/Components/SupplierFormModal.vue';
-
-
+import PdfViewer from '@/Components/PdfViewer.vue';
 toastr.options = {
   progressBar: true,
   closeButton: true,
@@ -331,12 +330,18 @@ const createInvoice = async () => {
     }
 
     const response = await axios.post('/invoices', form);
+    const newInvoice = response.data;
+
+    // Handle file uploads after the invoice is created
+    if (form.attachments.length > 0) {
+      await Promise.all(form.attachments.map(file => attachFile(newInvoice.id, file)));
+    }
+
     toastr.success('Invoice submitted successfully.');
     clearForm();
     $('#nav-list-tab').tab('show');
 
-    const newInvoice = response.data;
-    invoiceListTableInstance.value.row.add({
+     invoiceListTableInstance.value.row.add({
       id: newInvoice.id,
       pi_number: newInvoice.pi_number || '',
       invoice_date: newInvoice.invoice_date || '',
@@ -1173,6 +1178,15 @@ const removeAttachment = async (attachmentId) => {
   form.attachments = form.attachments.filter(att => att.id !== attachmentId);
 };
 
+const getFileThumbnail = (fileUrl) => {
+  const fileExtension = fileUrl.split('.').pop().toLowerCase();
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+  if (imageExtensions.includes(fileExtension)) {
+    return fileUrl;
+  }
+  return '/images/default-file-icon.png'; // Ensure this path is correct and the file exists
+};
+
 onMounted(() => {
   initializeSupplierSelect();
   initializeCashRefSelect();
@@ -1479,7 +1493,6 @@ const formatCurrency = (value, currency) => {
   const symbol = currency === 1 ? '$' : '៛';
   return `${symbol} ${parseFloat(value).toFixed(2)}`;
 };
-
 const formattedTotalAmount = computed(() => formatCurrency(form.total_amount, form.currency));
 const formattedTotalDiscount = computed(() => formatCurrency(form.total_discount, form.currency));
 const formattedTotalServiceCharge = computed(() => formatCurrency(totalServiceCharge.value, form.currency));
@@ -1634,23 +1647,6 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                         <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
                       </div>
                     </div>
-                    <div class="row mb-1 align-items-center">
-                      <label for="fileUpload" class="col-sm-4 col-form-label">Attach File</label>
-                      <div class="col-sm-8">
-                        <input type="file" class="form-control" id="fileUpload" @change="handleFileUpload">
-                      </div>
-                    </div>
-                    <div class="row mb-1 align-items-center" v-if="form.attachments && form.attachments.length">
-                      <label class="col-sm-4 col-form-label">Attachments</label>
-                      <div class="col-sm-8">
-                        <ul class="list-group">
-                          <li v-for="attachment in form.attachments" :key="attachment.id" class="list-group-item d-flex justify-content-between align-items-center">
-                            <a :href="attachment.file_url" target="_blank">{{ attachment.file_url }}</a>
-                            <button type="button" class="btn btn-danger btn-sm" @click="removeAttachment(attachment.id)">Remove</button>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1777,14 +1773,15 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                   </form>
                 </div>
                 <div class="row mb-1 align-items-center" v-if="form.attachments && form.attachments.length">
-                  <label class="col-sm-4 col-form-label">Attachments</label>
                   <div class="col-sm-8">
-                    <ul class="list-group">
-                      <li v-for="attachment in form.attachments" :key="attachment.id" class="list-group-item d-flex justify-content-between align-items-center">
-                        <a :href="attachment.file_url" target="_blank">{{ attachment.file_url }}</a>
-                        <button type="button" class="btn btn-danger btn-sm" @click="removeAttachment(attachment.id)">Remove</button>
-                      </li>
-                    </ul>
+                    <div class="d-flex flex-wrap">
+                      <div v-for="attachment in form.attachments" :key="attachment.id" class="attachment-thumbnail position-relative me-3 mb-3">
+                        <img :src="getFileThumbnail(attachment.file_url)" @click="openPdfViewer(attachment.file_url)" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;" />
+                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 start-0 translate-middle p-1" @click="removeAttachment(attachment.id)" style="border-radius: 50%;">
+                          <i class="fa fa-times"></i>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

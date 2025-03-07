@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('via');
             $table->text('reason')->nullable();
             $table->text('remark')->nullable();
+            $table->tinyInteger('status')->default(0);
             $table->timestamps();
 
             // Foreign key constraint
