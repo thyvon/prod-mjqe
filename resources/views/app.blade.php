@@ -22,6 +22,7 @@
     <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/bootstrap-datepicker/dist/css/bootstrap-datepicker.css" rel="stylesheet" defer/>
     <link href="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" defer/>
+    <link href="/coloradmin/plugins/dropzone/dist/min/dropzone.min.css" rel="stylesheet" defer/>
     @inertiaHead
 </head>
 <body>
@@ -42,6 +43,7 @@
     <script src="/coloradmin/plugins/bootstrap-datepicker/dist/js/bootstrap-datepicker.js" defer></script>
     <script src="/coloradmin/plugins/moment/min/moment.min.js" defer></script>
     <script src="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.js" defer></script>
+    <script src="/coloradmin/plugins/dropzone/dist/min/dropzone.min.js" defer></script>
     @vite(['resources/js/app.js'])
     @routes
     @inertia

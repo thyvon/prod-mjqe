@@ -7,6 +7,7 @@ import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import SupplierFormModal from '@/Components/SupplierFormModal.vue';
 
+
 toastr.options = {
   progressBar: true,
   closeButton: true,
@@ -27,6 +28,7 @@ const props = defineProps({
 });
 
 const form = reactive({
+  id: null, // Add the id field here
   transaction_type: null,
   cash_ref: null,
   payment_type: 1,
@@ -44,6 +46,7 @@ const form = reactive({
   total_discount: 0,
   service_charge: 0,
   discount_total: 0,
+  attachments: [],
 });
 
 const calculateTotalDiscount = () => {
@@ -99,11 +102,25 @@ watch(() => form.items, () => {
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 }, { deep: true });
 
-watch(() => form.service_charge, calculateServiceChargeForItems);
+watch(() => form.service_charge, () => {
+  calculateServiceChargeForItems();
+  calculateTotalAmount();
+  calculateTotalPaidAmount();
+  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+});
+
 watch(() => form.discount_total, () => {
   calculateItemDiscounts();
   calculateTotalDiscount();
   calculateTotalAmount();
+  calculateTotalPaidAmount();
+  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+});
+
+watch(() => [form.service_charge, form.discount_total], () => {
+  form.items.forEach(item => {
+    item.paid_amount = calculateTotalPrice(item);
+  });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
 
@@ -149,15 +166,15 @@ const calculateGrandTotal = () => {
   } else {
     vatAmount = ((qty * unit_price - discount) * vat) / 100;
     editItemForm.total_price = (qty * unit_price);
-    editItemForm.paid_amount = (qty * unit_price) - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge);
+    editItemForm.paid_amount = (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
   }
 };
 
+watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat, editItemForm.service_charge, editItemForm.deposit], calculateGrandTotal);
+
 const grandTotal = computed(() => {
   const total = form.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
-  const serviceCharge = parseFloat(form.service_charge) || 0;
-  const discountTotal = parseFloat(form.discount_total) || 0;
-  const grandTotal = total + serviceCharge - discountTotal;
+  const grandTotal = total;
   return isNaN(grandTotal) ? '0.00' : grandTotal.toFixed(2);
 });
 
@@ -220,6 +237,7 @@ const isEditMode = ref(false);
 const clearForm = () => {
   isEditMode.value = false;
   Object.assign(form, {
+    id: null,
     transaction_type: null,
     cash_ref: null,
     payment_type: 1,
@@ -237,12 +255,14 @@ const clearForm = () => {
     total_discount: 0,
     service_charge: 0,
     discount_total: 0,
+    attachments: [],
   });
   invoiceItemsTableInstance.value.clear().draw();
   $('#supplier').val(null).trigger('change');
 };
 
 const submitForm = async () => {
+  form.cash_ref = $('#cash_ref').val(); // Ensure cash_ref is captured from select2
   form.items = prepareInvoiceItems(form.items);
   calculateTotalAmount();
   calculateServiceChargeForItems();
@@ -271,6 +291,7 @@ const createInvoice = async () => {
     form.currency = parseInt(form.currency);
     form.vat_rate = parseFloat(form.vat_rate);
     form.discount_total = parseFloat(form.discount_total);
+    form.cash_ref = form.cash_ref ? parseInt(form.cash_ref) : null; // Ensure cash_ref is captured
     if (form.transaction_type !== 2 && form.cash_ref !== null) form.cash_ref = parseInt(form.cash_ref);
     else form.cash_ref = null;
 
@@ -342,6 +363,7 @@ const updateInvoice = async () => {
     form.currency = parseInt(form.currency);
     form.vat_rate = parseFloat(form.vat_rate);
     form.discount_total = parseFloat(form.discount_total);
+    form.cash_ref = form.cash_ref ? parseInt(form.cash_ref) : null; // Ensure cash_ref is captured
     if (form.transaction_type !== 2 && form.cash_ref !== null) form.cash_ref = parseInt(form.cash_ref);
     else form.cash_ref = null;
 
@@ -729,7 +751,7 @@ const editInvoice = async (invoiceId) => {
     const invoice = response.data;
 
     Object.assign(form, {
-      id: invoice.id,
+      id: invoice.id, // Ensure the id is captured here
       transaction_type: invoice.transaction_type,
       cash_ref: invoice.cash_ref,
       payment_type: invoice.payment_type,
@@ -782,6 +804,7 @@ const editInvoice = async (invoiceId) => {
         deposit: formatNumber(item.deposit), // Ensure deposit is fetched correctly
         stop_purchase: item.stop_purchase || 0,
       }))),
+      attachments: invoice.attachments || [],
     });
 
     calculateTotalAmount();
@@ -1038,8 +1061,121 @@ const getPoNumberById = (id) => {
   return poItem ? poItem.purchase_order.po_number : '';
 };
 
+const filteredCashRequests = ref([]);
+
+watch(() => form.transaction_type, async (newTransactionType) => {
+  if (newTransactionType) {
+    try {
+      const response = await axios.get('/filter-cash-requests', {
+        params: { transaction_type: newTransactionType }
+      });
+      filteredCashRequests.value = response.data;
+      console.log('Filtered Cash Requests:', filteredCashRequests.value); // Log the data to verify
+      updateCashRefSelect();
+    } catch (error) {
+      console.error('Error fetching filtered cash requests:', error);
+    }
+  } else {
+    filteredCashRequests.value = [];
+    updateCashRefSelect();
+  }
+  form.cash_ref = null; // Ensure cash_ref is reset when transaction_type changes
+});
+
+const initializeCashRefSelect = () => {
+  $('#cash_ref').select2({
+    placeholder: 'Select Cash Reference',
+    allowClear: true,
+    width: 'resolve',
+    data: filteredCashRequests.value.map(request => ({ id: request.id, text: request.ref_no })),
+  }).on('select2:select', function (e) {
+    form.cash_ref = e.params.data.id;
+  }).on('select2:unselect', function () {
+    form.cash_ref = null;
+  });
+};
+
+const updateCashRefSelect = () => {
+  const data = filteredCashRequests.value.map(request => ({ id: request.id, text: request.ref_no }));
+  $('#cash_ref').empty().select2({
+    data: data,
+    placeholder: 'Select Cash Reference',
+    allowClear: true,
+    width: 'resolve',
+  }).val(form.cash_ref).trigger('change'); // Ensure the selected value is set correctly
+};
+
+const attachFile = async (invoiceId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`/invoices/${invoiceId}/attach-file`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    toastr.success('File attached successfully.');
+    return response.data.attachment;
+  } catch (error) {
+    toastr.error('Failed to attach file.');
+    console.error('Error:', error);
+  }
+};
+
+const deleteFile = async (attachmentId) => {
+  try {
+    await axios.delete(`/invoices/attachments/${attachmentId}`);
+    toastr.success('File deleted successfully.');
+  } catch (error) {
+    toastr.error('Failed to delete file.');
+    console.error('Error:', error);
+  }
+};
+
+const updateFile = async (attachmentId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`/invoices/attachments/${attachmentId}/update-file`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    toastr.success('File updated successfully.');
+    return response.data.attachment;
+  } catch (error) {
+    toastr.error('Failed to update file.');
+    console.error('Error:', error);
+  }
+};
+
+const handleFileUpload = async (file) => {
+  if (file && form.id) {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await axios.post(`/invoices/${form.id}/attach-file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toastr.success('File attached successfully.');
+      form.attachments.push(response.data.attachment);
+    } catch (error) {
+      toastr.error('Failed to attach file.');
+      console.error('Error:', error);
+    }
+  }
+};
+
+const removeAttachment = async (attachmentId) => {
+  await deleteFile(attachmentId);
+  form.attachments = form.attachments.filter(att => att.id !== attachmentId);
+};
+
 onMounted(() => {
   initializeSupplierSelect();
+  initializeCashRefSelect();
   watch(() => form.supplier, (newSupplierId) => {
     if (newSupplierId) {
     }
@@ -1112,14 +1248,14 @@ onMounted(() => {
       { data: 'vat' },
       { data: 'return' },
       { data: 'retention' },
-      { data: 'paid_amount' },
+      { data: 'paid_amount', render: (data) => formatNumber(data, 4) }, // Ensure grand total is displayed with 4 decimal places
       { data: 'campus' },
       { data: 'division' },
       { data: 'department' },
       { data: 'location' },
       { data: null, render: (data) => `<div>${data.purpose}</div>` },
       { data: 'deposit' }, // Ensure this line is included
-      { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>' }, // Ensure this line is included
+      { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No' }, // Ensure this line is included
       { data: null, render: (data, type, row, meta) => `
           <div class="dropdown">
             <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton${meta.row}" data-bs-toggle="dropdown" aria-expanded="false">
@@ -1268,6 +1404,26 @@ onMounted(() => {
   }).on('changeDate', function (e) {
     form.invoice_date = e.format('yyyy-mm-dd');
   });
+
+  const dropzoneElement = document.getElementById('demo-upload');
+  if (dropzoneElement) {
+    const dropzone = new Dropzone(dropzoneElement, {
+      url: '/upload',
+      autoProcessQueue: false,
+      addRemoveLinks: true,
+      init: function () {
+        this.on('addedfile', function (file) {
+          handleFileUpload(file);
+        });
+        this.on('removedfile', function (file) {
+          const attachment = form.attachments.find(att => att.file_url === file.dataURL);
+          if (attachment) {
+            removeAttachment(attachment.id);
+          }
+        });
+      },
+    });
+  }
 });
 
 const DeleteInvoice = (invoiceId) => {
@@ -1390,8 +1546,9 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div v-if="form.transaction_type !== 2" class="row mb-1 align-items-center">
                       <label for="cash_ref" class="col-sm-4 col-form-label">Cash Reference</label>
                       <div class="col-sm-8">
-                        <select v-model="form.cash_ref" class="form-select" id="cash_ref">
-                          <option v-for="cashRequest in cashRequests" :key="cashRequest.id" :value="cashRequest.id">
+                        <select v-model="form.cash_ref" class="form-select" id="cash_ref" style="width: 100%;">
+                          <option value="" disabled>Select Cash Reference</option>
+                          <option v-for="cashRequest in filteredCashRequests" :key="cashRequest.id" :value="cashRequest.id">
                             {{ cashRequest.ref_no }}
                           </option>
                         </select>
@@ -1431,7 +1588,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                         <input type="number" v-model="form.vat_rate" class="form-control" id="vat_rate"/>
                         <div v-if="formErrors.vat_rate" class="text-danger">{{ formErrors.vat_rate }}</div>
                       </div>
-                    </div>
+                  </div>
                   </div>
                   <div class="col-md-6">
                     <div class="row mb-1 align-items-center">
@@ -1475,6 +1632,23 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                           <label class="form-check-label" for="payment_type_deposit">Deposit</label>
                         </div>
                         <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
+                      </div>
+                    </div>
+                    <div class="row mb-1 align-items-center">
+                      <label for="fileUpload" class="col-sm-4 col-form-label">Attach File</label>
+                      <div class="col-sm-8">
+                        <input type="file" class="form-control" id="fileUpload" @change="handleFileUpload">
+                      </div>
+                    </div>
+                    <div class="row mb-1 align-items-center" v-if="form.attachments && form.attachments.length">
+                      <label class="col-sm-4 col-form-label">Attachments</label>
+                      <div class="col-sm-8">
+                        <ul class="list-group">
+                          <li v-for="attachment in form.attachments" :key="attachment.id" class="list-group-item d-flex justify-content-between align-items-center">
+                            <a :href="attachment.file_url" target="_blank">{{ attachment.file_url }}</a>
+                            <button type="button" class="btn btn-danger btn-sm" @click="removeAttachment(attachment.id)">Remove</button>
+                          </li>
+                        </ul>
                       </div>
                     </div>
                   </div>
@@ -1579,6 +1753,38 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                         <div v-if="formErrors.paid_amount" class="text-danger">{{ formErrors.paid_amount }}</div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel panel-inverse border rounded-0 mt-4">
+              <div class="panel-heading rounded-0">
+                <h4 class="panel-title">Attachments</h4>
+                <div class="panel-heading-btn">
+                  <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+                  <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="dropzone">
+                  <form action="/upload" class="dropzone needsclick" id="demo-upload">
+                    <div class="dz-message needsclick">
+                      Drop files <b>here</b> or <b>click</b> to upload.<br />
+                      <span class="dz-note needsclick">
+                        (This is just a demo dropzone. Selected files are <strong>not</strong> actually uploaded.)
+                      </span>
+                    </div>
+                  </form>
+                </div>
+                <div class="row mb-1 align-items-center" v-if="form.attachments && form.attachments.length">
+                  <label class="col-sm-4 col-form-label">Attachments</label>
+                  <div class="col-sm-8">
+                    <ul class="list-group">
+                      <li v-for="attachment in form.attachments" :key="attachment.id" class="list-group-item d-flex justify-content-between align-items-center">
+                        <a :href="attachment.file_url" target="_blank">{{ attachment.file_url }}</a>
+                        <button type="button" class="btn btn-danger btn-sm" @click="removeAttachment(attachment.id)">Remove</button>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -1706,7 +1912,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                   <div class="row mb-2 align-items-center">
                     <label for="editServiceCharge" class="col-sm-4 col-form-label">Service Charge</label>
                     <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.service_charge" class="form-control" id="editServiceCharge" step="0.00000001" :disabled="form.service_charge !== 0 && form.service_charge !== '' && editItemForm.service_charge !== 0 && !editItemForm.service_charge_overwritten">
+                      <input type="number" v-model="editItemForm.service_charge" class="form-control" id="editServiceCharge" step="0.0001">
                       <div v-if="editItemFormErrors.service_charge" class="text-danger">{{ editItemFormErrors.service_charge }}</div>
                     </div>
                   </div>

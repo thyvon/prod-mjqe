@@ -310,7 +310,7 @@ onMounted(() => {
                 <ul class="dropdown-menu dropdown-menu-end">
                   ${data.status !== 'Void' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
-                  <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> View</a></li>
+                  <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> Detail</a></li>
                 </ul>
               </div>
             `,

@@ -82,16 +82,6 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
-const printInvoice = () => {
-  const printContents = document.querySelector('.invoice').innerHTML;
-  const originalContents = document.body.innerHTML;
-
-  document.body.innerHTML = printContents;
-  window.print();
-  document.body.innerHTML = originalContents;
-  window.location.reload();
-};
-
 const calculateSubTotal = () => {
   return form.value.po_items.reduce((total, item) => total + parseFloat(item.unit_price * item.qty || 0), 0);
 };
@@ -231,6 +221,72 @@ const hasCancelledItems = computed(() => {
   return form.value.po_items.some(item => item.cancelled_qty > 0);
 });
 
+const invoiceItems = ref([]);
+const poItemsTableInstance = ref(null);
+const invoiceItemsTableInstance = ref(null);
+
+const initializeDataTable = (selector, options) => {
+  const table = $(selector);
+  if ($.fn.DataTable.isDataTable(table)) {
+    table.DataTable().clear().destroy();
+  }
+  return table.DataTable(options);
+};
+
+const fetchInvoiceItems = async () => {
+  try {
+    const response = await axios.get(`/purchase-invoice-items/${props.purchaseOrder.id}`);
+    invoiceItems.value = response.data;
+
+    poItemsTableInstance.value = initializeDataTable('#po-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: form.value.po_items,
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'pr_item.purchase_request.pr_number' },
+        { data: 'pr_item.product.sku' },
+        { data: 'concatenated_description' },
+        { data: 'qty' },
+        { data: 'uom' },
+        { data: 'campus' },
+        { data: 'division' },
+        { data: 'department' },
+        { data: 'location' },
+        { data: 'unit_price' },
+        { data: 'discount' },
+        { data: 'vat' },
+        { data: 'total_usd' },
+        { data: 'status', render: (data) => `<span class="${getItemStatusBadgeClass(data)}">${data}</span>` },
+        { data: 'cancelled_reason', visible: hasCancelledItems.value },
+        { data: null, render: (data) => `<button type="button" class="btn btn-sm btn-warning" @click="cancelPoItem(${data.id})" :disabled="${data.status === 'Cancelled'}"><i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i></button>` },
+      ],
+    });
+
+    invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: invoiceItems.value,
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'description' },
+        { data: 'qty' },
+        { data: 'unit_price' },
+        { data: 'total_price' },
+        { data: 'supplier.name' },
+        { data: 'purchased_by.name' },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching invoice items:', error);
+    toastr.error('Failed to fetch invoice items. Please try again.', 'Error!');
+  }
+};
+
 onMounted(() => {
   // Check if the flag is set in localStorage and show the alert
   if (localStorage.getItem('showCancelAlert') === 'true') {
@@ -242,6 +298,7 @@ onMounted(() => {
     toastr.success("You have cancelled successfully!", "Success!");
     localStorage.removeItem('showCancelItemAlert');
   }
+  fetchInvoiceItems();
 });
 </script>
 
@@ -256,7 +313,7 @@ onMounted(() => {
       <!-- Invoice Company -->
       <div class="invoice-company">
         <span class="float-end hidden-print">
-          <a href="javascript:;" class="btn btn-sm btn-white mb-10px" @click="printInvoice">
+          <a href="javascript:;" class="btn btn-sm btn-white mb-10px">
             <i class="fa fa-print t-plus-1 fa-fw fa-lg"></i> Print
           </a>
         </span>
@@ -288,7 +345,7 @@ onMounted(() => {
       <div class="invoice-content">
         <!-- PO Items Section -->
         <div class="table-responsive">
-          <table class="table table-invoice table-sm">
+          <table id="po-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
             <thead class="text-center">
               <tr>
                 <th>#</th>
@@ -311,29 +368,6 @@ onMounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, index) in form.po_items" :key="index">
-                <td>{{ index + 1 }}</td>
-                <td>{{ item.pr_item.purchase_request.pr_number }}</td>
-                <td>{{ item.pr_item.product.sku }}</td>
-                <td>{{ item.concatenated_description }}</td>
-                <td class="text-center">{{ item.qty }}</td>
-                <td class="text-center">{{ item.uom }}</td>
-                <td class="text-center">{{ item.campus }}</td>
-                <td class="text-center">{{ item.division }}</td>
-                <td class="text-center">{{ item.department }}</td>
-                <td class="text-center">{{ item.location }}</td>
-                <td class="text-center">{{ item.unit_price }}</td>
-                <td class="text-center">{{ item.discount }}</td>
-                <td class="text-center">{{ item.vat }}</td>
-                <td class="text-center">{{ item.total_usd }}</td>
-                <td class="text-center no-print"><span :class="getItemStatusBadgeClass(item.status)">{{ item.status }}</span></td>
-                <td v-if="hasCancelledItems" class="text-center no-print">{{ item.cancelled_reason }}</td>
-                <td class="text-center no-print">
-                  <button type="button" class="btn btn-sm btn-warning" @click="cancelPoItem(item.id)" :disabled="item.status === 'Cancelled'">
-                    <i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i>
-                  </button>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -379,6 +413,26 @@ onMounted(() => {
           <span class="me-10px"><i class="fa fa-fw fa-lg fa-envelope"></i> <a href="mailto:vun.thy@mjqeducation.edu.kh">vun.thy@mjqeducation.edu.kh</a></span>
         </p>
       </div>
+
+        <!-- Invoice Items Section -->
+        <div class="table-responsive mt-3">
+          <h5>Invoice Items</h5>
+          <table id="invoice-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Price</th>
+                <th>Supplier</th>
+                <th>Purchased By</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
     </div>
 
     <!-- Modal for Cancel Reason -->
@@ -448,7 +502,7 @@ onMounted(() => {
   </Main>
 </template>
 
-<style scoped>
+<style>
 .invoice-company {
   font-size: 1.25rem;
   font-weight: bold;
@@ -458,97 +512,5 @@ onMounted(() => {
 .invoice-logo {
   max-width: 150px;
   margin-bottom: 1rem;
-}
-
-.invoice-header {
-  margin-bottom: 1.5rem;
-}
-
-.invoice-header .invoice-from address {
-  font-size: 0.875rem;
-}
-
-.invoice-header .invoice-date .invoice-detail {
-  font-size: 0.875rem;
-}
-
-.table-invoice {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.875rem;
-}
-
-.table-invoice th, .table-invoice td {
-  border: 1px solid #dee2e6;
-  padding: 0.75rem;
-}
-
-.table-invoice th {
-  background-color: #0e5aa7;
-}
-
-.table-bordered {
-  border: 1px solid #dee2e6;
-}
-
-.table-bordered td {
-  border: 1px solid #dee2e6;
-  padding: 0.5rem;
-}
-
-.table-sm td {
-  padding: 0.3rem;
-}
-
-.table-responsive.mt-3 {
-  width: 20%; /* Adjusted from 30% to 20% */
-  float: right;
-}
-
-@media print {
-  .hidden-print {
-    display: none !important;
-  }
-  .print-only {
-    display: table-row !important;
-  }
-  .invoice {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .invoice-header, .invoice-content {
-    page-break-inside: avoid;
-  }
-  .invoice-header .col-md-6, .invoice-date .col-md-6 {
-    width: 50%;
-    float: left;
-  }
-  .invoice-header .text-end {
-    text-align: right;
-  }
-  .invoice-header .text-start {
-    text-align: left;
-  }
-  .table-invoice {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 10px;
-  }
-  .table-invoice th, .table-invoice td {
-    border: 1px solid #000;
-    padding: 8px;
-  }
-  .table-invoice tfoot td {
-    border-top: none;
-  }
-  .invoice-footer-fixed {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-  }
-  .no-print {
-    display: none !important;
-  }
 }
 </style>

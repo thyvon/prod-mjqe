@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use App\Models\PrItem;
 use App\Models\Product;
+use App\Models\PurchaseInvoiceItem;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
@@ -83,6 +84,19 @@ class PurchaseRequestController extends Controller
             'products' => Product::all(),
             'users' => User::all()
         ]);
+    }
+
+    public function getInvoiceItems($prNumber)
+    {
+        try {
+            $invoiceItems = PurchaseInvoiceItem::with('product', 'invoice', 'supplier', 'purchasedBy')
+                ->where('pr_number', $prNumber)
+                ->get();
+            return response()->json($invoiceItems);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching invoice items:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Error fetching invoice items.'], 500);
+        }
     }
 
     public function update(Request $request, $id)

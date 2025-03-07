@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Supplier;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseInvoiceItem;
 use App\Models\PrItem;
 use App\Models\PurchaseRequest;
 use Illuminate\Http\Request;
@@ -220,6 +221,19 @@ class PurchaseOrderController extends Controller
             'users' => $users,
             'currentUser' => auth()->user(),
         ]);
+    }
+
+    public function getInvoiceItems($poNumber)
+    {
+        try {
+            $invoiceItems = PurchaseInvoiceItem::with('product', 'invoice', 'supplier', 'purchasedBy')
+                ->where('po_number', $poNumber)
+                ->get();
+            return response()->json($invoiceItems);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching invoice items:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Error fetching invoice items.'], 500);
+        }
     }
 
     // Show the form to edit an existing purchase order

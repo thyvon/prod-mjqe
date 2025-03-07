@@ -77,4 +77,9 @@ class PurchaseInvoice extends Model
     {
         return $this->hasMany(PurchaseInvoiceItem::class, 'pi_number');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(InvoiceAttachment::class);
+    }
 }
