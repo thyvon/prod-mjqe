@@ -2,6 +2,8 @@
 import { defineProps, ref } from 'vue';
 import Main from '@/Layouts/Main.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
   purchaseRequest: Object, // The Purchase Request data passed to the component
@@ -48,16 +50,6 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
-const printInvoice = () => {
-  const printContents = document.querySelector('.invoice').innerHTML;
-  const originalContents = document.body.innerHTML;
-
-  document.body.innerHTML = printContents;
-  window.print();
-  document.body.innerHTML = originalContents;
-  window.location.reload();
-};
-
 const calculateTotalAmount = () => {
   return form.value.pr_items.reduce((total, item) => total + parseFloat(item.total_price || 0), 0);
 };
@@ -71,6 +63,72 @@ const getItemStatusBadgeClass = (status) => {
     default: return 'badge bg-info';
   }
 };
+
+const invoiceItems = ref([]);
+const prItemsTableInstance = ref(null);
+const invoiceItemsTableInstance = ref(null);
+
+const initializeDataTable = (selector, options) => {
+  const table = $(selector);
+  if ($.fn.DataTable.isDataTable(table)) {
+    table.DataTable().clear().destroy();
+  }
+  return table.DataTable(options);
+};
+
+onMounted(async () => {
+  try {
+    const response = await axios.get(`/purchase-invoice-items/${props.purchaseRequest.id}`);
+    invoiceItems.value = response.data;
+
+    prItemsTableInstance.value = initializeDataTable('#pr-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: form.value.pr_items,
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'product_id', render: (data) => props.products.find(p => p.id === data)?.sku || 'N/A' },
+        { data: 'product_id', render: (data) => props.products.find(p => p.id === data)?.product_description || 'N/A' },
+        { data: 'remark' },
+        { data: 'campus' },
+        { data: 'division' },
+        { data: 'department' },
+        { data: 'qty' },
+        { data: 'uom' },
+        { data: 'unit_price' },
+        { data: 'total_price' },
+        { data: 'status', render: (data) => `<span class="${getItemStatusBadgeClass(data)}">${data}</span>` },
+      ],
+    });
+
+    invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: invoiceItems.value,
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'invoice_date', render: (data) => moment(data).format('MMM DD, YYYY') },
+        { data: 'invoice.pi_number' },
+        { data: 'invoice_no' },
+        { data: 'supplier.name' },
+        { data: 'product.sku' },
+        { data: 'description' },
+        { data: 'qty' },
+        { data: 'uom' },
+        { data: 'unit_price' },
+        { data: 'total_price' },
+        { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
+        { data: 'purchased_by.name' },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching invoice items:', error);
+  }
+});
 </script>
 
 <template>
@@ -79,147 +137,117 @@ const getItemStatusBadgeClass = (status) => {
     <div class="mb-3">
       <Link href="/purchase-requests" class="btn btn-primary"><i class="fa-solid fa-arrow-left-long"></i> Back</Link>
     </div>
-    <div class="invoice" ref="invoiceContent">
-      <!-- Invoice Company -->
-      <div class="invoice-company">
-        <span class="float-end hidden-print">
-          <a href="javascript:;" class="btn btn-sm btn-white mb-10px" @click="printInvoice">
-            <i class="fa fa-print t-plus-1 fa-fw fa-lg"></i> Print
-          </a>
-        </span>
-        {{ form.pr_number }}
-      </div>
-
-      <!-- Invoice Header -->
-      <div class="invoice-header row">
-        <div class="invoice-from col-md-6">
-          <address class="mt-5px mb-5px">
-            <strong class="text-dark">Requester: {{ form.request_by }}</strong><br />
-            Card ID: {{ userDetails.card_id }}<br />
-            Position: {{ userDetails.position }}<br />
-            Phone: {{ userDetails.phone }}<br />
-            Extension: {{ userDetails.extension }}<br />
-            Purpose: {{ form.purpose }}<br />
-          </address>
+    <div class="panel panel-inverse">
+      <div class="panel-heading">
+        <h4 class="panel-title">Purchase Request Details</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
         </div>
+      </div>
+      <div class="panel-body">
+        <div class="invoice">
+          <!-- Invoice Company -->
+          <div class="invoice-company">
+            {{ form.pr_number }}
+          </div>
 
-        <div class="invoice-date col-md-6 text-end">
-          <div class="invoice-detail text-start" style="float: right;">
-            <div class="date text-dark mt-5px">{{ format(form.request_date, 'date') }}</div>
-            Status: <span :class="getStatusBadgeClass(form.status)">{{ form.status }}</span><br />
-            Campus: {{ form.campus }}<br />
-            Division: {{ form.division }}<br />
-            Department: {{ form.department }}<br />
-            Urgent: <span :class="form.is_urgent ? 'badge bg-primary' : 'badge bg-danger'">{{ form.is_urgent ? 'Yes' : 'No' }}</span>
+          <!-- Invoice Header -->
+          <div class="invoice-header row">
+            <div class="invoice-from col-md-6">
+              <address class="mt-5px mb-5px">
+                <strong class="text-dark">Requester: {{ form.request_by }}</strong><br />
+                Card ID: {{ userDetails.card_id }}<br />
+                Position: {{ userDetails.position }}<br />
+                Phone: {{ userDetails.phone }}<br />
+                Extension: {{ userDetails.extension }}<br />
+                Purpose: {{ form.purpose }}<br />
+              </address>
+            </div>
+
+            <div class="invoice-date col-md-6 text-end">
+              <div class="invoice-detail text-start" style="float: right;">
+                <div class="date text-dark mt-5px">{{ format(form.request_date, 'date') }}</div>
+                Status: <span :class="getStatusBadgeClass(form.status)">{{ form.status }}</span><br />
+                Campus: {{ form.campus }}<br />
+                Division: {{ form.division }}<br />
+                Department: {{ form.department }}<br />
+                Urgent: <span :class="form.is_urgent ? 'badge bg-primary' : 'badge bg-danger'">{{ form.is_urgent ? 'Yes' : 'No' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invoice Content -->
+          <div class="invoice-content">
+            <!-- PR Items Section -->
+            <div class="table-responsive">
+              <table id="pr-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+                <thead class="text-center">
+                  <tr>
+                    <th>#</th>
+                    <th>Product Code</th>
+                    <th>Product Description</th>
+                    <th>Remark</th>
+                    <th>Campus</th>
+                    <th>Division</th>
+                    <th>Department</th>
+                    <th>Qty</th>
+                    <th>UOM</th>
+                    <th>Price</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Invoice Content -->
-      <div class="invoice-content">
-        <!-- PR Items Section -->
+    <div class="panel panel-inverse mt-2">
+      <div class="panel-heading">
+        <h4 class="panel-title">Purchased Item</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
+        </div>
+      </div>
+      <div class="panel-body">
         <div class="table-responsive">
-          <table class="table table-invoice">
-            <thead class="text-center">
+          <table id="invoice-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+            <thead>
               <tr>
                 <th>#</th>
+                <th>Date</th>
+                <th>PI Number</th>
+                <th>Invoice Number</th>
+                <th>Supplier</th>
                 <th>Product Code</th>
                 <th>Product Description</th>
-                <th>Remark</th>
-                <th>Campus</th>
-                <th>Division</th>
-                <th>Department</th>
                 <th>Qty</th>
                 <th>UOM</th>
                 <th>Price</th>
                 <th>Total Price</th>
-                <th class="hidden-print">Status</th>
+                <th>Currency</th>
+                <th>Purchaser</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, index) in form.pr_items" :key="index">
-                <td>{{ index + 1 }}</td>
-                <td>{{ products.find(p => p.id === item.product_id)?.sku || 'N/A' }}</td>
-                <td>{{ products.find(p => p.id === item.product_id)?.product_description || 'N/A' }}</td>
-                <td>{{ item.remark }}</td>
-                <td class="text-center">{{ item.campus }}</td>
-                <td class="text-center">{{ item.division }}</td>
-                <td class="text-center">{{ item.department }}</td>
-                <td class="text-center">{{ item.qty }}</td>
-                <td class="text-center">{{ item.uom }}</td>
-                <td class="text-center">{{ item.price }}</td>
-                <td class="text-center">{{ item.total_price }}</td>
-                <td class="hidden-print">
-                  <span :class="getItemStatusBadgeClass(item.status)">{{ item.status }}</span>
-                </td>
-              </tr>
-              <tr class="print-only">
-                <td colspan="10" class="text-end"><strong>Total Amount:</strong></td>
-                <td><strong>${{ calculateTotalAmount().toFixed(2) }}</strong></td>
-                <td class="hidden-print"></td>
-              </tr>
             </tbody>
           </table>
         </div>
-      </div>
-
-      <!-- Invoice Note -->
-      <!-- <div class="invoice-note">
-        * Urgent: <span :class="form.is_urgent ? 'badge bg-primary' : 'badge bg-danger'">{{ form.is_urgent ? 'Yes' : 'No' }}</span>
-      </div> -->
-
-      <!-- Invoice Footer -->
-      <div class="invoice-footer">
-        <p class="text-center mb-5px fw-bold">
-          THANK YOU FOR YOUR BUSINESS
-        </p>
-        <p class="text-center">
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-globe"></i> mjqeducation.edu.kh</span>
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-phone-volume"></i> T:096-3612146</span>
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-envelope"></i> <a href="mailto:vun.thy@mjqeducation.edu.kh">vun.thy@mjqeducation.edu.kh</a></span>
-        </p>
       </div>
     </div>
   </Main>
 </template>
 
 <style scoped>
-@media print {
-  .hidden-print {
-    display: none !important;
-  }
-  .print-only {
-    display: table-row !important;
-  }
-  .invoice {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .invoice-header, .invoice-content, .invoice-footer {
-    page-break-inside: avoid;
-  }
-  .invoice-header .col-md-6, .invoice-date .col-md-6 {
-    width: 50%;
-    float: left;
-  }
-  .invoice-header .text-end {
-    text-align: right;
-  }
-  .invoice-header .text-start {
-    text-align: left;
-  }
-  .table-invoice {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 10px; /* Smaller font size */
-  }
-  .table-invoice th, .table-invoice td {
-    border: 1px solid #000;
-    padding: 8px;
-  }
-  .table-invoice tfoot td {
-    border-top: 1px solid #000;
-  }
-}
+/* Removed print-related styles */
 </style>

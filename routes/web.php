@@ -12,7 +12,8 @@ use App\Http\Controllers\{
     PurchaseRequestController,
     PurchaseOrderController,
     InvoiceController,
-    UserController
+    UserController,
+    InvoiceAttachmentController
 };
 
 /*
@@ -70,6 +71,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoice-items', [InvoiceController::class, 'itemList'])->name('invoice.items');
     Route::post('/invoices/{id}/force-close', [InvoiceController::class, 'forceClose']);
     Route::post('/invoices/filter', [InvoiceController::class, 'filterInvoiceItems']);
+    Route::get('/purchase-invoice-items/{prNumber}', [PurchaseRequestController::class, 'getInvoiceItems']);
+    Route::get('/purchase-invoice-items/{poNumber}', [PurchaseOrderController::class, 'getInvoiceItems']);
+    Route::get('/filter-cash-requests', [InvoiceController::class, 'filterCashRequests']);
+    Route::post('/invoices/{id}/attach-file', [InvoiceController::class, 'attachFile'])->name('invoices.attachFile');
+    Route::delete('/invoices/attachments/{id}', [InvoiceController::class, 'deleteFile'])->name('invoices.deleteFile');
+    Route::post('/invoices/attachments/{id}/update-file', [InvoiceController::class, 'updateFile'])->name('invoices.updateFile');
 });
 
 require __DIR__.'/auth.php';

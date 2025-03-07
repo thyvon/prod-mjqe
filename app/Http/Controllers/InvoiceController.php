@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, CashRequest, PurchaseRequest, PurchaseOrder, Supplier};
+use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, CashRequest, PurchaseRequest, PurchaseOrder, Supplier, InvoiceAttachment};
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
 {
@@ -61,13 +62,20 @@ class InvoiceController extends Controller
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
 
-            // Recalculate quantities and amounts for PO items
+            // Recalculate quantities and amounts for PO and PR items
             foreach ($validatedData['items'] as $itemData) {
                 if (isset($itemData['po_item'])) {
                     $poItem = PoItems::find($itemData['po_item']);
                     if ($poItem) {
                         $poItem->recalculateReceivedQty();
                         $poItem->recalculatePaidAmount();
+                    }
+                }
+
+                if (isset($itemData['pr_item'])) {
+                    $prItem = PrItem::find($itemData['pr_item']);
+                    if ($prItem) {
+                        $prItem->recalculateQtyPurchase();
                     }
                 }
             }
@@ -98,9 +106,8 @@ class InvoiceController extends Controller
 
     public function show($id)
     {
-        return response()->json(
-            PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id)
-        );
+        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
+        return response()->json($invoice);
     }
 
     public function update(Request $request, $id)
@@ -230,6 +237,76 @@ class InvoiceController extends Controller
         $query = $request->input('q');
         $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
         return response()->json($suppliers);
+    }
+
+    public function filterCashRequests(Request $request)
+    {
+        $transactionType = $request->input('transaction_type');
+        $cashRequests = CashRequest::where('request_type', $transactionType)
+                                   ->where('status', 0)
+                                   ->get();
+        
+        Log::info('Filtered Cash Requests:', ['transaction_type' => $transactionType, 'cashRequests' => $cashRequests]);
+
+        return response()->json($cashRequests);
+    }
+
+    public function attachFile(Request $request, $id)
+    {
+        try {
+            $invoice = PurchaseInvoice::findOrFail($id);
+            $file = $request->file('file');
+            $localFileService = new LocalFileService();
+            $fileUrl = $localFileService->uploadFile($file);
+
+            if (!$fileUrl) {
+                throw new \Exception('File upload failed, no URL returned.');
+            }
+
+            $attachment = new InvoiceAttachment();
+            $attachment->purchase_invoice_id = $invoice->id; // Ensure the correct column name is used
+            $attachment->file_url = $fileUrl;
+            $attachment->save();
+
+            return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
+        } catch (\Exception $e) {
+            Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
+        }
+    }
+
+    public function deleteFile($id)
+    {
+        try {
+            $attachment = InvoiceAttachment::findOrFail($id);
+            $localFileService = new LocalFileService();
+            $localFileService->deleteFile($attachment->file_url);
+            $attachment->delete();
+
+            return response()->json(['message' => 'File deleted successfully'], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting file', ['exception' => $e, 'stack_trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
+        }
+    }
+
+    public function updateFile(Request $request, $id)
+    {
+        try {
+            $attachment = InvoiceAttachment::findOrFail($id);
+            $file = $request->file('file');
+            $localFileService = new LocalFileService();
+            $localFileService->deleteFile($attachment->file_url);
+            $fileUrl = $localFileService->uploadFile($file);
+
+            $attachment->file_url = $fileUrl;
+            $attachment->save();
+
+            return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
+        }
     }
 
     private function getValidationRules($transactionType)

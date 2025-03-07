@@ -107,6 +107,16 @@ class PrItem extends Model
         $this->isCalculating = false;
     }
 
+    public function recalculateQtyPurchase()
+    {
+        $this->calculateQtyPurchase();
+        if ($this->qty_purchase > ($this->qty - $this->qty_cancel)) {
+            throw new \Exception('Received quantity cannot exceed the remaining quantity.');
+        }
+        $this->calculateStatus();
+        $this->save();
+    }
+
     public function calculateStatus()
     {
         if ($this->force_close == 1) {
@@ -122,16 +132,6 @@ class PrItem extends Model
         }
     }
 
-    public function recalculateQtyPurchase()
-    {
-        $this->calculateQtyPurchase();
-        if ($this->qty_purchase > ($this->qty - $this->qty_cancel)) {
-            throw new \Exception('Received quantity cannot exceed the remaining quantity.');
-        }
-        $this->calculateStatus();
-        $this->save();
-    }
-
     public function performCalculations()
     {
         if ($this->isCalculating) {
@@ -142,8 +142,8 @@ class PrItem extends Model
 
         $this->calculateQtyPurchase();
         $this->calculatePending();
-        $this->calculateStatus();
         $this->recalculateQtyPurchase();
+        $this->calculateStatus();
 
         $this->isCalculating = false;
         $this->save();

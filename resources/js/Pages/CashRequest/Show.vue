@@ -16,7 +16,7 @@
               <i class="fa fa-edit t-plus-1 fa-fw fa-lg"></i> Edit
             </a>
           </span>
-            {{ form.request_type }} Request
+            {{ requestTypeLabel }} Request
         </div>
         <!-- Invoice Header -->
         <div class="invoice-header">
@@ -231,7 +231,7 @@
   </template>
 
   <script setup>
-  import { ref, onMounted, nextTick } from 'vue';
+  import { ref, onMounted, nextTick, computed } from 'vue';
   import { Head } from '@inertiajs/vue3';
   import Main from '@/Layouts/Main.vue';
   import { usePage } from '@inertiajs/vue3';
@@ -281,6 +281,10 @@
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', options);
 };
+
+  const requestTypeLabel = computed(() => {
+    return form.value.request_type == '1' ? 'Petty Cash' : form.value.request_type == '2' ? 'Advance' : form.value.request_type;
+  });
 
   // Handlers
   const goBack = () => {
