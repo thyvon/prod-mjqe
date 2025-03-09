@@ -171,6 +171,14 @@ class InvoiceController extends Controller
             }
         }
 
+        // Delete associated attachments
+        $attachments = $invoice->attachments;
+        foreach ($attachments as $attachment) {
+            $localFileService = new LocalFileService();
+            $localFileService->deleteFile($attachment->file_url);
+            $attachment->delete();
+        }
+
         $invoice->items()->delete();
         $invoice->delete();
 
