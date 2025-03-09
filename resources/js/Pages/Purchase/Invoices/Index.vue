@@ -1187,6 +1187,29 @@ const getFileThumbnail = (fileUrl) => {
   return '/images/default-file-icon.png'; // Ensure this path is correct and the file exists
 };
 
+const initializeDropzone = () => {
+  const dropzoneElement = document.getElementById('demo-upload');
+  if (dropzoneElement && !Dropzone.instances.length) { // Check if Dropzone is already initialized
+    const dropzone = new Dropzone(dropzoneElement, {
+      url: '/upload',
+      autoProcessQueue: false,
+      addRemoveLinks: true,
+      clickable: true, // Ensure the dropzone is clickable
+      init: function () {
+        this.on('addedfile', function (file) {
+          handleFileUpload(file);
+        });
+        this.on('removedfile', function (file) {
+          const attachment = form.attachments.find(att => att.file_url === file.dataURL);
+          if (attachment) {
+            removeAttachment(attachment.id);
+          }
+        });
+      },
+    });
+  }
+};
+
 onMounted(() => {
   initializeSupplierSelect();
   initializeCashRefSelect();
@@ -1419,24 +1442,12 @@ onMounted(() => {
     form.invoice_date = e.format('yyyy-mm-dd');
   });
 
-  const dropzoneElement = document.getElementById('demo-upload');
-  if (dropzoneElement) {
-    const dropzone = new Dropzone(dropzoneElement, {
-      url: '/upload',
-      autoProcessQueue: false,
-      addRemoveLinks: true,
-      init: function () {
-        this.on('addedfile', function (file) {
-          handleFileUpload(file);
-        });
-        this.on('removedfile', function (file) {
-          const attachment = form.attachments.find(att => att.file_url === file.dataURL);
-          if (attachment) {
-            removeAttachment(attachment.id);
-          }
-        });
-      },
-    });
+  initializeDropzone();
+});
+
+watch(isEditMode, (newValue) => {
+  if (newValue) {
+    initializeDropzone();
   }
 });
 
@@ -1753,7 +1764,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 </div>
               </div>
             </div>
-            <div class="panel panel-inverse border rounded-0 mt-4">
+            <div v-show="isEditMode" class="panel panel-inverse border rounded-0 mt-4">
               <div class="panel-heading rounded-0">
                 <h4 class="panel-title">Attachments</h4>
                 <div class="panel-heading-btn">
@@ -1767,7 +1778,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div class="dz-message needsclick">
                       Drop files <b>here</b> or <b>click</b> to upload.<br />
                       <span class="dz-note needsclick">
-                        (This is just a demo dropzone. Selected files are <strong>not</strong> actually uploaded.)
+                        (For <strong class="text-danger">IMPORTANT</strong> documents only.)
                       </span>
                     </div>
                   </form>
@@ -2024,7 +2035,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
       <div class="modal-dialog modal-xl">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="pdfViewerModalLabel">Invoice PDF</h5>
+            <h5 class="modal-title" id="pdfViewerModalLabel">Invoice Attachment</h5>
             <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">

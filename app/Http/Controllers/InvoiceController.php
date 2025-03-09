@@ -69,6 +69,7 @@ class InvoiceController extends Controller
                     if ($poItem) {
                         $poItem->recalculateReceivedQty();
                         $poItem->recalculatePaidAmount();
+                        $poItem->calculateForceClose();
                     }
                 }
 
@@ -76,6 +77,7 @@ class InvoiceController extends Controller
                     $prItem = PrItem::find($itemData['pr_item']);
                     if ($prItem) {
                         $prItem->recalculateQtyPurchase();
+                        $prItem->calculateForceClose();
                     }
                 }
             }
@@ -156,6 +158,15 @@ class InvoiceController extends Controller
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
                     $poItem->recalculatePaidAmount();
+                    $poItem->calculateForceClose();
+                }
+            }
+
+            if ($item->pr_item) {
+                $prItem = PrItem::find($item->pr_item);
+                if ($prItem) {
+                    $prItem->recalculateQtyPurchase();
+                    $prItem->calculateForceClose();
                 }
             }
         }
@@ -169,6 +180,15 @@ class InvoiceController extends Controller
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
                     $poItem->recalculatePaidAmount();
+                    $poItem->calculateForceClose();
+                }
+            }
+
+            if ($item->pr_item) {
+                $prItem = PrItem::find($item->pr_item);
+                if ($prItem) {
+                    $prItem->recalculateQtyPurchase();
+                    $prItem->calculateForceClose();
                 }
             }
         }
@@ -196,6 +216,20 @@ class InvoiceController extends Controller
         $invoiceItem = PurchaseInvoiceItem::findOrFail($id); // Fix class reference
         $invoiceItem->stop_purchase = 1;
         $invoiceItem->save();
+
+        if ($invoiceItem->po_item) {
+            $poItem = PoItems::find($invoiceItem->po_item);
+            if ($poItem) {
+                $poItem->calculateForceClose();
+            }
+        }
+
+        if ($invoiceItem->pr_item) {
+            $prItem = PrItem::find($invoiceItem->pr_item);
+            if ($prItem) {
+                $prItem->calculateForceClose();
+            }
+        }
 
         return response()->json(['message' => 'Invoice item force closed successfully.']);
     }
@@ -536,6 +570,7 @@ class InvoiceController extends Controller
             if ($poItem) {
                 $poItem->recalculateReceivedQty();
                 $poItem->recalculatePaidAmount();
+                $poItem->calculateForceClose();
             }
         }
 
@@ -543,6 +578,7 @@ class InvoiceController extends Controller
             $prItem = PrItem::find($prItemId);
             if ($prItem) {
                 $prItem->recalculateQtyPurchase();
+                $prItem->calculateForceClose();
             }
         }
     }
@@ -555,6 +591,7 @@ class InvoiceController extends Controller
                 if ($poItem) {
                     $poItem->recalculateReceivedQty();
                     $poItem->recalculatePaidAmount();
+                    $poItem->calculateForceClose();
                 }
             }
 
@@ -562,6 +599,7 @@ class InvoiceController extends Controller
                 $prItem = PrItem::find($itemData['pr_item']);
                 if ($prItem) {
                     $prItem->recalculateQtyPurchase();
+                    $prItem->calculateForceClose();
                 }
             }
         }

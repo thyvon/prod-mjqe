@@ -72,6 +72,11 @@ const forceClose = async (id, isChecked) => {
         toastr.error('Failed to force close the invoice item.');
         swal('Error!', 'Failed to force close the invoice item. Please try again.', 'error');
       }
+    } else {
+      // Revert the checkbox state if the user cancels the confirmation
+      const item = props.invoiceItems.find(item => item.id === id);
+      item.stop_purchase = !isChecked ? 1 : 0;
+      invoiceItemsTableInstance.value.row(item).invalidate().draw();
     }
   });
 };
@@ -221,7 +226,6 @@ onMounted(() => {
                 <th>VAT(%)</th>
                 <th>Return</th>
                 <th>Retention</th>
-                <th>Due Amount</th>
                 <th>Grand Total</th>
                 <th>Currency</th>
                 <th>Currency Rate</th>

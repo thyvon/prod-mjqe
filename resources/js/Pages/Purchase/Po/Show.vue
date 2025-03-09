@@ -26,31 +26,20 @@ toastr.options = {
 
 const props = defineProps({
   purchaseOrder: { type: Object, required: true },
-  currentUser: Object,
-  suppliers: Array,
-  prItems: Array,
-  purchaseRequests: Array,
-  users: Array,
 });
 
-const getUserDetails = (userId) => {
-  const user = props.users.find(user => user.id === userId);
-  return user ? user : { name: 'Unknown User', card_id: '', position: '', phone: '', extension: '' };
-};
-
-const userDetails = getUserDetails(props.purchaseOrder?.user_id);
 
 const form = ref({
   id: props.purchaseOrder?.id || '',
   po_number: props.purchaseOrder?.po_number || '',
   date: props.purchaseOrder?.date ? props.purchaseOrder.date.split('T')[0] : '',
-  user_id: userDetails.name || '',
   supplier: props.purchaseOrder?.supplier?.name || '',
   supplier_phone: props.purchaseOrder?.supplier?.number || '',
   supplier_address: props.purchaseOrder?.supplier?.address || '',
   payment_term: props.purchaseOrder?.payment_term || '',
   purpose: props.purchaseOrder?.purpose || '',
   status: props.purchaseOrder?.status || '',
+  purchaser: props.purchaseOrder?.purchaser?.name || '',
   cancelled_reason: props.purchaseOrder?.cancelled_reason || '',
   po_items: props.purchaseOrder?.po_items?.map(item => ({
     ...item,
@@ -145,7 +134,7 @@ const confirmCancel = async () => {
 const cancelPoItem = async (poItemId) => {
   currentItemId.value = poItemId;
   const item = form.value.po_items.find(item => item.id === poItemId);
-  remainingQty.value = item.qty - item.cancelled_qty;
+  remainingQty.value = item.qty - item.cancelled_qty - item.received_qty;
 
   const modalElement = document.getElementById('cancelItemReasonModal');
   const modal = new bootstrap.Modal(modalElement);
@@ -233,10 +222,13 @@ const initializeDataTable = (selector, options) => {
   return table.DataTable(options);
 };
 
+const isButtonDisabled = (status) => {
+  return status === 'Cancelled' || status === 'Closed';
+};
+
 const fetchInvoiceItems = async () => {
   try {
-    const response = await axios.get(`/purchase-invoice-items/${props.purchaseOrder.id}`);
-    console.log('Invoice items response:', response.data); // Debug log
+    const response = await axios.get(`/purchase-invoice-itemspo/${props.purchaseOrder.id}`);
     invoiceItems.value = response.data;
 
     poItemsTableInstance.value = initializeDataTable('#po-items-table', {
@@ -259,10 +251,10 @@ const fetchInvoiceItems = async () => {
         { data: 'unit_price' },
         { data: 'discount' },
         { data: 'vat' },
-        { data: 'total_usd' },
+        { data: 'total_usd', render: (data) => parseFloat(data).toFixed(4) },
         { data: 'status', render: (data) => `<span class="${getItemStatusBadgeClass(data)}">${data}</span>` },
         { data: 'cancelled_reason', visible: hasCancelledItems.value },
-        { data: null, render: (data) => `<button type="button" class="btn btn-sm btn-warning" @click="cancelPoItem(${data.id})" :disabled="${data.status === 'Cancelled'}"><i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i></button>` },
+        { data: null, render: (data) => `<button type="button" class="btn btn-sm btn-warning" onclick="cancelPoItem(${data.id})" ${isButtonDisabled(data.status) ? 'disabled' : ''}><i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i></button>` },
       ],
     });
 
@@ -271,7 +263,7 @@ const fetchInvoiceItems = async () => {
       autoWidth: false,
       scrollX: false,
       select: true,
-      data: invoiceItems.value,
+      data: invoiceItems.value, // Ensure data is set correctly
       columns: [
         { data: null, render: (data, type, row, meta) => meta.row + 1 },
         { data: 'invoice_date', render: (data) => moment(data).format('MMM DD, YYYY') },
@@ -283,9 +275,10 @@ const fetchInvoiceItems = async () => {
         { data: 'qty' },
         { data: 'uom' },
         { data: 'unit_price' },
-        { data: 'total_price' },
+        { data: 'total_price', render: (data) => parseFloat(data).toFixed(4) },
         { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
         { data: 'purchased_by.name' },
+        { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-danger"><i class="fa fa-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="fa fa-times-circle"></i> No</span>' },
       ],
     });
   } catch (error) {
@@ -293,6 +286,8 @@ const fetchInvoiceItems = async () => {
     toastr.error('Failed to fetch invoice items. Please try again.', 'Error!');
   }
 };
+
+window.cancelPoItem = cancelPoItem;
 
 onMounted(() => {
   // Check if the flag is set in localStorage and show the alert
@@ -314,116 +309,118 @@ onMounted(() => {
     <Head title="Purchase Order Details" />
     <div class="mb-3">
       <Link href="/purchase-orders" class="btn btn-primary"><i class="fa-solid fa-arrow-left-long"></i> Back</Link>
-      <button class="btn btn-danger ms-2" @click="cancelPurchaseOrder" :disabled="form.status === 'Cancelled'"><i class="fas fa-ban"></i> Cancel PO</button>
+      <button class="btn btn-danger ms-2" @click="cancelPurchaseOrder" :disabled="form.status === 'Cancelled' || form.status === 'Closed'"><i class="fas fa-ban"></i> Cancel PO</button>
     </div>
-    <div class="invoice" ref="invoiceContent">
-      <!-- Invoice Company -->
-      <div class="invoice-company">
-        <span class="float-end hidden-print">
-          <a href="javascript:;" class="btn btn-sm btn-white mb-10px">
-            <i class="fa fa-print t-plus-1 fa-fw fa-lg"></i> Print
-          </a>
-        </span>
-        <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Company Logo" class="invoice-logo" />
-      </div>
-
-      <!-- Invoice Header -->
-      <div class="invoice-header row">
-        <div class="invoice-from col-md-6">
-          <address class="mt-5px mb-5px">
-            <strong class="text-dark">Purchaser: {{ form.user_id }}</strong><br />
-            Supplier: {{ form.supplier }}<br />
-            Phone: {{ form.supplier_phone }}<br />
-            Address: {{ form.supplier_address }}<br />
-            Payment Term: {{ form.payment_term }}<br />
-          </address>
+    <div class="panel panel-inverse">
+      <div class="panel-heading">
+        <h4 class="panel-title">Purchase Order Details</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
         </div>
+      </div>
+      <div class="panel-body">
+        <div class="invoice">
+          <!-- Invoice Company -->
+          <div class="invoice-company">
+            {{ form.po_number }}
+          </div>
 
-        <div class="invoice-date col-md-6 text-end">
-          <div class="invoice-detail text-start" style="float: right;">
-            <div class="date text-dark mt-5px">{{ format(form.date, 'date') }}</div><br />
-            {{ form.po_number }}<br />
-            Status: <span :class="getStatusBadgeClass(form.status)">{{ form.status }}</span><br />
+          <!-- Invoice Header -->
+          <div class="invoice-header row">
+            <div class="invoice-from col-md-6">
+              <address class="mt-5px mb-5px">
+                <strong class="text-dark">Purchaser: {{ form.purchaser }}</strong><br />
+                Supplier: {{ form.supplier }}<br />
+                Phone: {{ form.supplier_phone }}<br />
+                Address: {{ form.supplier_address }}<br />
+                Payment Term: {{ form.payment_term }}<br />
+                Purpose: {{ form.purpose }}<br/>
+                Cancell Reason: {{ form.cancelled_reason }}
+              </address>
+            </div>
+
+            <div class="invoice-date col-md-6 text-end">
+              <div class="invoice-detail text-start" style="float: right;">
+                <div class="date text-dark mt-5px">{{ format(form.date, 'date') }}</div>
+                Status: <span :class="getStatusBadgeClass(form.status)">{{ form.status }}</span><br />
+              </div>
+            </div>
+          </div>
+
+          <!-- Invoice Content -->
+          <div class="invoice-content">
+            <!-- PO Items Section -->
+            <div class="table-responsive">
+              <table id="po-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+                <thead class="text-center">
+                  <tr>
+                    <th>#</th>
+                    <th>PR Number</th>
+                    <th>Item Code</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>UOM</th>
+                    <th>Campus</th>
+                    <th>Division</th>
+                    <th>Department</th>
+                    <th>Location</th>
+                    <th>Unit Price</th>
+                    <th>Discount</th>
+                    <th>VAT%</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                </tbody>
+              </table>
+            </div>
+            <!-- Summary Table Section -->
+            <div class="table-responsive mt-0" style="width: 20%; float: right;">
+              <table class="table table-sm">
+                <tbody>
+                  <tr>
+                    <td class="text-start"><strong>Sub Total:</strong></td>
+                    <td class="text-end"><strong>${{ calculateSubTotal().toFixed(2) }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td class="text-start"><strong>Total Discount:</strong></td>
+                    <td class="text-end"><strong>${{ calculateTotalDiscount().toFixed(2) }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td class="text-start"><strong>Total VAT:</strong></td>
+                    <td class="text-end"><strong>${{ calculateTotalVAT().toFixed(2) }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td class="text-start"><strong>Grand Total:</strong></td>
+                    <td class="text-end"><strong>${{ calculateGrandTotal().toFixed(2) }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Invoice Content -->
-      <div class="invoice-content">
-        <!-- PO Items Section -->
+    <!-- New Panel for Invoice Items -->
+    <div class="panel panel-inverse mt-2">
+      <div class="panel-heading">
+        <h4 class="panel-title">Purchased Items</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
+        </div>
+      </div>
+      <div class="panel-body">
         <div class="table-responsive">
-          <table id="po-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
-            <thead class="text-center">
-              <tr>
-                <th>#</th>
-                <th>PR Number</th>
-                <th>Item Code</th>
-                <th>Description</th>
-                <th>Qty</th>
-                <th>UOM</th>
-                <th>Campus</th>
-                <th>Division</th>
-                <th>Department</th>
-                <th>Location</th>
-                <th>Unit Price</th>
-                <th>Discount</th>
-                <th>VAT%</th>
-                <th>Total Price</th>
-                <th>Status</th>
-                <th>Reason</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-            </tbody>
-          </table>
-        </div>
-        <!-- Summary Table Section -->
-        <div class="table-responsive mt-0" style="width: 20%; float: right;">
-          <table class="table table-sm">
-            <tbody>
-              <tr>
-                <td class="text-start"><strong>Sub Total:</strong></td>
-                <td class="text-end"><strong>${{ calculateSubTotal().toFixed(2) }}</strong></td>
-              </tr>
-              <tr>
-                <td class="text-start"><strong>Total Discount:</strong></td>
-                <td class="text-end"><strong>${{ calculateTotalDiscount().toFixed(2) }}</strong></td>
-              </tr>
-              <tr>
-                <td class="text-start"><strong>Total VAT:</strong></td>
-                <td class="text-end"><strong>${{ calculateTotalVAT().toFixed(2) }}</strong></td>
-              </tr>
-              <tr>
-                <td class="text-start"><strong>Grand Total:</strong></td>
-                <td class="text-end"><strong>${{ calculateGrandTotal().toFixed(2) }}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <!-- Purpose Section -->
-        <div class="mt-3">
-          <strong>Purpose:</strong> {{ form.purpose }}
-        </div>
-        <div v-if="form.status === 'Cancelled'">
-          <strong>Reason:</strong> <p class="text-danger">{{ form.cancelled_reason }}</p>
-        </div>
-      </div>
-      <!-- Invoice Footer -->
-      <div class="invoice-footer-fixed mt-5">
-        <p class="text-center mb-5px fw-bold">
-          THANK YOU FOR YOUR BUSINESS
-        </p>
-        <p class="text-center">
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-globe"></i> mjqeducation.edu.kh</span>
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-phone-volume"></i> T:096-3612146</span>
-          <span class="me-10px"><i class="fa fa-fw fa-lg fa-envelope"></i> <a href="mailto:vun.thy@mjqeducation.edu.kh">vun.thy@mjqeducation.edu.kh</a></span>
-        </p>
-      </div>
-
-        <!-- Invoice Items Section -->
-        <div class="table-responsive mt-3">
-          <h5>Invoice Items</h5>
           <table id="invoice-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
             <thead>
               <tr>
@@ -440,12 +437,14 @@ onMounted(() => {
                 <th>Total Price</th>
                 <th>Currency</th>
                 <th>Purchaser</th>
+                <th>Force Close?</th>
               </tr>
             </thead>
             <tbody>
             </tbody>
           </table>
         </div>
+      </div>
     </div>
 
     <!-- Modal for Cancel Reason -->

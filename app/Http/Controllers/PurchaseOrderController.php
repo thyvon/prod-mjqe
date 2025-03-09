@@ -83,6 +83,7 @@ class PurchaseOrderController extends Controller
             'payment_term' => 'required|string',
             'purpose' => 'required|string',
             'user_id' => 'required|exists:users,id',
+            'purchased_by' => 'required|exists:users,id',
             'supplier_id' => 'required|exists:suppliers,id',
             // 'status' => 'required|string|in:Pending,Approved,Rejected,Cancelled',
             'items' => 'required|array',
@@ -188,38 +189,8 @@ class PurchaseOrderController extends Controller
     // Display a specific purchase order
     public function show($id)
     {
-        // Fetch the Purchase Order by ID, including its related PO items
-        $purchaseOrder = PurchaseOrder::with('poItems.prItem.product', 'poItems.prItem.purchaseRequest', 'user', 'supplier')->findOrFail($id);
-
-        // Log the purchase order and its items
-        \Log::info('Purchase Order:', $purchaseOrder->toArray());
-        \Log::info('PO Items:', $purchaseOrder->poItems->toArray());
-
-        // Get all available suppliers to display in the frontend
-        $suppliers = Supplier::all();
-
-        // Get all PR items to display in the frontend
-        $prItems = PrItem::with('product', 'purchaseRequest')->get();
-
-        // Get all purchase requests to display in the frontend
-        $purchaseRequests = PurchaseRequest::all();
-
-        // Get all users to display in the frontend
-        $users = User::all();
-
-        // Calculate remaining quantity for each PO item
-        $purchaseOrder->poItems->each(function ($item) {
-            $item->remaining_qty = $item->qty - $item->cancelled_qty - $item->received_qty;
-        });
-
-        // Return the view with the PO data, associated suppliers, PR items, purchase requests, and users
         return Inertia::render('Purchase/Po/Show', [
-            'purchaseOrder' => $purchaseOrder,
-            'suppliers' => $suppliers,
-            'prItems' => $prItems,
-            'purchaseRequests' => $purchaseRequests,
-            'users' => $users,
-            'currentUser' => auth()->user(),
+            'purchaseOrder' => PurchaseOrder::with('poItems.prItem.purchaseRequest', 'poItems.prItem.product','supplier','purchaser')->findOrFail($id),
         ]);
     }
 
@@ -229,12 +200,29 @@ class PurchaseOrderController extends Controller
             $invoiceItems = PurchaseInvoiceItem::with('product', 'invoice', 'supplier', 'purchasedBy')
                 ->where('po_number', $poNumber)
                 ->get();
+            \Log::info('Invoice items fetched successfully:', ['invoice_items' => $invoiceItems->toArray()]);
             return response()->json($invoiceItems);
         } catch (\Exception $e) {
-            \Log::error('Error fetching invoice items:', ['message' => $e->getMessage()]);
+            \Log::error('Error fetching invoice items:', ['message' => $e->getMessage(), 'stack' => $e->getTraceAsString()]);
             return response()->json(['error' => 'Error fetching invoice items.'], 500);
         }
     }
+
+    // private function getPurchaseOrderWithRelations($id)
+    // {
+    //     $purchaseOrder = PurchaseOrder::with([
+    //         'poItems.prItem.product',
+    //         'poItems.prItem.purchaseRequest',
+    //         'user',
+    //         'supplier'
+    //     ])->findOrFail($id);
+
+    //     $purchaseOrder->poItems->each(function ($item) {
+    //         $item->remaining_qty = $item->qty - $item->cancelled_qty - $item->received_qty;
+    //     });
+
+    //     return $purchaseOrder;
+    // }
 
     // Show the form to edit an existing purchase order
     public function edit($id)
@@ -260,7 +248,6 @@ class PurchaseOrderController extends Controller
             'payment_term' => 'sometimes|required|string',
             'purpose' => 'sometimes|required|string',
             'po_number' => 'sometimes|required|string|unique:purchase_orders,po_number,' . $id,
-            'user_id' => 'sometimes|required|exists:users,id',
             'supplier_id' => 'sometimes|required|exists:suppliers,id',
             // 'status' => 'sometimes|required|string|in:Pending,Approved,Rejected,Cancelled',
             'items' => 'sometimes|required|array',

@@ -17,7 +17,7 @@ class PurchaseInvoiceItem extends Model
         'payment_type',
         'invoice_no',
         'pr_number',
-        'po_number',
+        'po_number', // Ensure this column stores the purchase order ID
         'pr_item',
         'po_item',
         'supplier',

@@ -71,8 +71,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/invoice-items', [InvoiceController::class, 'itemList'])->name('invoice.items');
     Route::post('/invoices/{id}/force-close', [InvoiceController::class, 'forceClose']);
     Route::post('/invoices/filter', [InvoiceController::class, 'filterInvoiceItems']);
-    Route::get('/purchase-invoice-items/{prNumber}', [PurchaseRequestController::class, 'getInvoiceItems']);
-    Route::get('/purchase-invoice-items/{poNumber}', [PurchaseOrderController::class, 'getInvoiceItems']);
+    Route::get('/purchase-invoice-itemspr/{prNumber}', [PurchaseRequestController::class, 'getInvoiceItems']);
+    Route::get('/purchase-invoice-itemspo/{poNumber}', [PurchaseOrderController::class, 'getInvoiceItems']);
     Route::get('/filter-cash-requests', [InvoiceController::class, 'filterCashRequests']);
     Route::post('/invoices/{id}/attach-file', [InvoiceController::class, 'attachFile'])->name('invoices.attachFile');
     Route::delete('/invoices/attachments/{id}', [InvoiceController::class, 'deleteFile'])->name('invoices.deleteFile');
