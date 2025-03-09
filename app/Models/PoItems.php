@@ -44,6 +44,7 @@ class PoItems extends Model
         'pending',
         'purchaser_id',
         'is_cancelled',
+        'force_close',
         'cancelled_reason',
         'status'
     ];
@@ -175,10 +176,24 @@ class PoItems extends Model
         $this->isCalculating = false;
     }
 
+    public function calculateForceClose()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+        $this->isCalculating = true;
+        $this->force_close = PurchaseInvoiceItem::where('po_item', $this->id)->sum('stop_purchase') > 0 ? 1 : 0;
+        $this->isCalculating = false;
+        $this->save();
+        $this->calculateStatus(); // Ensure status is recalculated after setting force_close
+    }
+
     public function calculateStatus()
     {
         if ($this->is_cancelled) {
             $this->status = 'Void';
+        } elseif ($this->force_close == 1) {
+            $this->status = 'Closed';
         } elseif ($this->received_qty == ($this->qty - $this->cancelled_qty)) {
             $this->status = 'Closed';
         } elseif ($this->received_qty < ($this->qty - $this->cancelled_qty)) {

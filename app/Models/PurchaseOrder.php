@@ -50,6 +50,11 @@ class PurchaseOrder extends Model
         return $this->hasMany(PoItems::class, 'po_id');
     }
 
+    public function purchaser()
+    {
+        return $this->belongsTo(User::class, 'purchased_by');
+    }
+
     public function cancel($cancelled_reason)
     {
         $this->status = 'Cancelled';

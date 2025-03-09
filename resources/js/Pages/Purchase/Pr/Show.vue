@@ -78,7 +78,7 @@ const initializeDataTable = (selector, options) => {
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`/purchase-invoice-items/${props.purchaseRequest.id}`);
+    const response = await axios.get(`/purchase-invoice-itemspr/${props.purchaseRequest.id}`);
     invoiceItems.value = response.data;
 
     prItemsTableInstance.value = initializeDataTable('#pr-items-table', {
@@ -123,6 +123,7 @@ onMounted(async () => {
         { data: 'total_price' },
         { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
         { data: 'purchased_by.name' },
+        { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-danger"><i class="fa fa-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="fa fa-times-circle"></i> No</span>' },
       ],
     });
   } catch (error) {
@@ -237,6 +238,7 @@ onMounted(async () => {
                 <th>Total Price</th>
                 <th>Currency</th>
                 <th>Purchaser</th>
+                <th>Force Close?</th>
               </tr>
             </thead>
             <tbody>

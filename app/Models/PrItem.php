@@ -107,6 +107,34 @@ class PrItem extends Model
         $this->isCalculating = false;
     }
 
+    public function calculateForceClose()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+        $this->isCalculating = true;
+        $this->force_close = PurchaseInvoiceItem::where('pr_item', $this->id)->sum('stop_purchase') > 0 ? 1 : 0;
+        $this->isCalculating = false;
+        $this->save();
+        $this->calculateStatus(); // Ensure status is recalculated after setting force_close
+    }
+
+    public function calculateStatus()
+    {
+        if ($this->force_close == 1) {
+            $this->status = 'Closed';
+        } elseif ($this->is_cancel == 1) {
+            $this->status = 'Void';
+        } elseif ($this->qty_purchase == ($this->qty - $this->qty_cancel)) {
+            $this->status = 'Closed';
+        } elseif ($this->qty_purchase < ($this->qty - $this->qty_cancel)) {
+            $this->status = 'Partial';
+        } else {
+            $this->status = 'Pending';
+        }
+        $this->save();
+    }
+
     public function recalculateQtyPurchase()
     {
         $this->calculateQtyPurchase();
@@ -115,21 +143,6 @@ class PrItem extends Model
         }
         $this->calculateStatus();
         $this->save();
-    }
-
-    public function calculateStatus()
-    {
-        if ($this->force_close == 1) {
-            $this->status = "Closed";
-        } elseif ($this->is_cancel == 1) {
-            $this->status = "Void";
-        } elseif ($this->qty_purchase == ($this->qty - $this->qty_cancel)) {
-            $this->status = "Closed";
-        } elseif ($this->qty_purchase < ($this->qty - $this->qty_cancel)) {
-            $this->status = "Partial";
-        } else {
-            $this->status = "Pending";
-        }
     }
 
     public function performCalculations()
