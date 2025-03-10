@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 import axios from 'axios';
 import toastr from 'toastr';
@@ -1427,6 +1427,7 @@ onMounted(() => {
                 <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
                 <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                 <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
+                <li><a class="dropdown-item btn-show"><i class="fas fa-eye"></i> Show</a></li>
               </ul>
             </div>
           `, className: 'text-center'
@@ -1451,6 +1452,12 @@ onMounted(() => {
         if (rowData && rowData.pdf_url) {
           openPdfViewer(rowData.pdf_url);
         }
+      })
+      .on('click', '.btn-show', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.id) {
+          window.location.href = `/invoices/${rowData.id}`;
+        }
       });
 
     $('#invoice-list-table').on('click', '.dtr-details .btn-edit', function () {
@@ -1473,6 +1480,14 @@ onMounted(() => {
       const rowData = invoiceListTableInstance.value.row(tr).data();
       if (rowData && rowData.pdf_url) {
         openPdfViewer(rowData.pdf_url);
+      }
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-show', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
+      if (rowData && rowData.id) {
+        window.location.href = `/invoices/${rowData.id}`;
       }
     });
 

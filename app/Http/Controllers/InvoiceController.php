@@ -108,8 +108,15 @@ class InvoiceController extends Controller
 
     public function show($id)
     {
-        $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
-        return response()->json($invoice);
+        try {
+            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
+            return Inertia::render('Purchase/Invoices/Show', [
+                'invoice' => $invoice,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in show method:', ['message' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Error fetching invoice details.');
+        }
     }
 
     public function update(Request $request, $id)
