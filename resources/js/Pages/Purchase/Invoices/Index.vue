@@ -1806,11 +1806,12 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <div class="row mb-1 align-items-center" v-if="form.attachments && form.attachments.length">
                   <div class="col-sm-8">
                     <div class="d-flex flex-wrap">
-                      <div v-for="attachment in form.attachments" :key="attachment.id" class="attachment-thumbnail position-relative me-3 mb-3">
+                      <div v-for="(attachment, index) in form.attachments" :key="attachment.id" class="attachment-thumbnail position-relative me-3 mb-3">
                         <img :src="getFileThumbnail(attachment.file_url)" @click="openPdfViewer(attachment.file_url)" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;" />
                         <button type="button" class="btn btn-danger btn-sm position-absolute top-0 start-0 translate-middle p-1" @click="removeAttachment(attachment.id)" style="border-radius: 50%;">
                           <i class="fa fa-times"></i>
                         </button>
+                        <div class="position-absolute bottom-0 start-50 translate-middle-x bg-light px-2 py-1 rounded">{{ index + 1 }}</div>
                       </div>
                     </div>
                   </div>
