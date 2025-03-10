@@ -83,7 +83,7 @@ class PurchaseOrderController extends Controller
             'payment_term' => 'required|string',
             'purpose' => 'required|string',
             'user_id' => 'required|exists:users,id',
-            'purchased_by' => 'required|exists:users,id',
+            'purchased_by' => 'nullable|exists:users,id',
             'supplier_id' => 'required|exists:suppliers,id',
             // 'status' => 'required|string|in:Pending,Approved,Rejected,Cancelled',
             'items' => 'required|array',

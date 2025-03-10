@@ -683,6 +683,16 @@ const initializeSupplierSelect = () => {
   });
 };
 
+watch(() => form.supplier, (newSupplierId) => {
+  if (newSupplierId) {
+    // Enable the buttons when a supplier is selected
+    document.querySelectorAll('.btn-select-item').forEach(button => button.disabled = false);
+  } else {
+    // Disable the buttons when no supplier is selected
+    document.querySelectorAll('.btn-select-item').forEach(button => button.disabled = true);
+  }
+});
+
 const addSupplier = (newSupplier) => {
   props.suppliers.push(newSupplier);
   form.supplier = newSupplier.id;
@@ -1095,8 +1105,12 @@ const initializeCashRefSelect = () => {
     data: filteredCashRequests.value.map(request => ({ id: request.id, text: request.ref_no })),
   }).on('select2:select', function (e) {
     form.cash_ref = e.params.data.id;
+    // Reinitialize invoice_date after Cash Reference is selected
+    $('#invoice_date').datepicker('update', form.invoice_date);
   }).on('select2:unselect', function () {
     form.cash_ref = null;
+    // Reinitialize invoice_date after Cash Reference is unselected
+    $('#invoice_date').datepicker('update', form.invoice_date);
   });
 };
 
@@ -1165,17 +1179,23 @@ const handleFileUpload = async (file) => {
         },
       });
       toastr.success('File attached successfully.');
-      form.attachments.push(response.data.attachment);
+      form.attachments.push(response.data.attachment); // Ensure reactivity
     } catch (error) {
       toastr.error('Failed to attach file.');
-      console.error('Error:', error);
+      console.error('Error during file upload:', error);
     }
   }
 };
 
 const removeAttachment = async (attachmentId) => {
-  await deleteFile(attachmentId);
-  form.attachments = form.attachments.filter(att => att.id !== attachmentId);
+  try {
+    await deleteFile(attachmentId);
+    form.attachments = form.attachments.filter(att => att.id !== attachmentId); // Ensure reactivity
+    toastr.success('Attachment removed successfully.');
+  } catch (error) {
+    toastr.error('Failed to remove attachment.');
+    console.error('Error during attachment removal:', error);
+  }
 };
 
 const getFileThumbnail = (fileUrl) => {
@@ -1196,253 +1216,279 @@ const initializeDropzone = () => {
       addRemoveLinks: true,
       clickable: true, // Ensure the dropzone is clickable
       init: function () {
-        this.on('addedfile', function (file) {
-          handleFileUpload(file);
+        this.on('addedfile', async function (file) {
+          try {
+            await handleFileUpload(file);
+            this.removeFile(file); // Remove the file from Dropzone after upload
+          } catch (error) {
+            console.error('Error during file upload:', error);
+          }
         });
         this.on('removedfile', function (file) {
-          const attachment = form.attachments.find(att => att.file_url === file.dataURL);
-          if (attachment) {
-            removeAttachment(attachment.id);
+          try {
+            const attachment = form.attachments.find(att => att.file_name === file.name);
+            if (attachment) {
+              removeAttachment(attachment.id);
+            }
+          } catch (error) {
+            console.error('Error during file removal:', error);
           }
         });
       },
+      error: function (file, errorMessage) {
+        console.error('Dropzone error:', errorMessage);
+        toastr.error('Error during file upload.');
+      },
+    });
+
+    // Load existing attachments into Dropzone
+    form.attachments.forEach(attachment => {
+      const mockFile = { name: attachment.file_name, size: attachment.file_size, dataURL: attachment.file_url };
+      dropzone.emit('addedfile', mockFile);
+      dropzone.emit('thumbnail', mockFile, attachment.file_url);
+      dropzone.emit('complete', mockFile);
     });
   }
 };
 
+const initializeDataTable = (selector, options) => {
+  const table = $(selector);
+  if ($.fn.DataTable.isDataTable(table)) {
+    table.DataTable().clear().destroy();
+  }
+  return table.DataTable(options);
+};
+
 onMounted(() => {
-  initializeSupplierSelect();
-  initializeCashRefSelect();
-  watch(() => form.supplier, (newSupplierId) => {
-    if (newSupplierId) {
-    }
-  });
+  try {
+    initializeSupplierSelect();
+    initializeCashRefSelect();
+    watch(() => form.supplier, (newSupplierId) => {
+      if (newSupplierId) {
+      }
+    });
 
-  $('#nav-create-tab').on('click', () => {
-    clearForm();
-  });
+    $('#nav-create-tab').on('click', () => {
+      clearForm();
+    });
 
-  const initializeDataTable = (selector, options) => {
-    const table = $(selector);
-    if ($.fn.DataTable.isDataTable(table)) {
-      table.DataTable().clear().destroy();
-    }
-    return table.DataTable(options);
-  };
-
-  prItemsTableInstance.value = initializeDataTable('#pr-items-table', {
-    responsive: true,
-    autoWidth: false,
-    scrollX: false,
-    select: true,
-    data: [],
-    columns: [
-      { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'product.sku' },
-      { data: 'purchase_request.pr_number' },
-      { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.remark || ''}</div>`},
-      { data: 'qty_pending' },
-      { data: 'uom' },
-      { data: 'unit_price' },
-      { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
-      { data: null, render: (data, type, row, meta) => `
-          <button type="button" class="btn btn-sm btn-primary" @click="selectPrItem(data)">
-            <i class="fa fa-plus"></i> Select
-          </button>
-        `, className: 'text-center'
-      },
-    ],
-  });
-
-  $('#pr-items-table').on('click', '.btn-primary', function () {
-    const rowData = prItemsTableInstance.value.row($(this).closest('tr')).data();
-    selectPrItem(rowData);
-  });
-
-  $('#pr-items-search').on('keyup', function () {
-    prItemsTableInstance.value.search(this.value).draw();
-  });
-
-  invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
-    responsive: true,
-    autoWidth: false,
-    scrollX: false,
-    select: true,
-    data: prepareInvoiceItems(form.items),
-    columns: [
-      { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'pr_item', render: (data) => getPrNumberById(data) },
-      { data: 'po_item', render: (data) => getPoNumberById(data) },
-      { data: 'item_code' },
-      { data: null, render: (data) => `<div>${data.description}</div>` },
-      { data: 'remark', render: (data) => `<div>${data}</div>` },
-      { data: 'qty' },
-      { data: 'uom' },
-      { data: 'unit_price' },
-      { data: null, render: (data) => (data.qty * data.unit_price).toFixed(4) },
-      { data: 'discount', render: (data) => formatNumber(data, 4) }, // Ensure discount is displayed with 4 decimal places
-      { data: 'service_charge', render: (data) => formatNumber(data, 4) }, // Ensure service charge is displayed with 4 decimal places
-      { data: 'vat' },
-      { data: 'return' },
-      { data: 'retention' },
-      { data: 'paid_amount', render: (data) => formatNumber(data, 4) }, // Ensure grand total is displayed with 4 decimal places
-      { data: 'campus' },
-      { data: 'division' },
-      { data: 'department' },
-      { data: 'location' },
-      { data: null, render: (data) => `<div>${data.purpose}</div>` },
-      { data: 'deposit' }, // Ensure this line is included
-      { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No' }, // Ensure this line is included
-      { data: null, render: (data, type, row, meta) => `
-          <div class="dropdown">
-            <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton${meta.row}" data-bs-toggle="dropdown" aria-expanded="false">
-              ...
+    prItemsTableInstance.value = initializeDataTable('#pr-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: [],
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'product.sku' },
+        { data: 'purchase_request.pr_number' },
+        { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.remark || ''}</div>`},
+        { data: 'qty_pending' },
+        { data: 'uom' },
+        { data: 'unit_price' },
+        { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
+        { data: null, render: (data, type, row, meta) => `
+            <button type="button" class="btn btn-sm btn-primary" @click="selectPrItem(data)">
+              <i class="fa fa-plus"></i> Select
             </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${meta.row}">
-              <li><a class="dropdown-item text-primary" href="#" @click="editItem(${meta.row})"><i class="fa fa-edit"></i> Edit</a></li>
-              <li><a class="dropdown-item text-danger" href="#" @click="removeItem(${meta.row})"><i class="fa fa-trash"></i> Delete</a></li>
-              <li><a class="dropdown-item" href="#" @click="duplicateItem(${meta.row})"><i class="fa fa-copy"></i> Duplicate</a></li>
-            </ul>
-          </div>
-        `, className: 'text-center'
-      },
-    ],
-  });
+          `, className: 'text-center'
+        },
+      ],
+    });
 
-  $('#invoice-items-table').on('click', '.dropdown-item', function (e) {
-    e.preventDefault();
-    const action = $(this).text().trim();
-    const rowIndex = invoiceItemsTableInstance.value.row($(this).closest('tr')).index();
-    if (action.includes('Edit')) {
-      editItem(rowIndex);
-    } else if (action.includes('Delete')) {
-      removeItem(rowIndex);
-    } else if (action.includes('Duplicate')) {
-      duplicateItem(rowIndex);
-    }
-  });
+    $('#pr-items-table').on('click', '.btn-primary', function () {
+      const rowData = prItemsTableInstance.value.row($(this).closest('tr')).data();
+      selectPrItem(rowData);
+    });
 
-  poItemsTableInstance.value = initializeDataTable('#po-items-table', {
-    responsive: true,
-    autoWidth: false,
-    scrollX: false,
-    select: true,
-    data: [],
-    columns: [
-      { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'product.sku' },
-      { data: 'purchase_order.po_number' },
-      { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.description || ''}</div>`},
-      { data: 'pending' },
-      { data: 'uom' },
-      { data: 'unit_price' },
-      { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
-      { data: null, render: (data, type, row, meta) => `
-          <button type="button" class="btn btn-sm btn-primary" @click="selectPoItem(data)">
-            <i class="fa fa-plus"></i> Select
-          </button>
-        `, className: 'text-center'
-      },
-    ],
-  });
+    $('#pr-items-search').on('keyup', function () {
+      prItemsTableInstance.value.search(this.value).draw();
+    });
 
-  $('#po-items-table').on('click', '.btn-primary', function () {
-    const rowData = poItemsTableInstance.value.row($(this).closest('tr')).data();
-    selectPoItem(rowData);
-  });
+    invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: prepareInvoiceItems(form.items),
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'pr_item', render: (data) => getPrNumberById(data) },
+        { data: 'po_item', render: (data) => getPoNumberById(data) },
+        { data: 'item_code' },
+        { data: null, render: (data) => `<div>${data.description}</div>` },
+        { data: 'remark', render: (data) => `<div>${data}</div>` },
+        { data: 'qty' },
+        { data: 'uom' },
+        { data: 'unit_price' },
+        { data: null, render: (data) => (data.qty * data.unit_price).toFixed(4) },
+        { data: 'discount', render: (data) => formatNumber(data, 4) }, // Ensure discount is displayed with 4 decimal places
+        { data: 'service_charge', render: (data) => formatNumber(data, 4) }, // Ensure service charge is displayed with 4 decimal places
+        { data: 'vat' },
+        { data: 'return' },
+        { data: 'retention' },
+        { data: 'paid_amount', render: (data) => formatNumber(data, 4) }, // Ensure grand total is displayed with 4 decimal places
+        { data: 'campus' },
+        { data: 'division' },
+        { data: 'department' },
+        { data: 'location' },
+        { data: null, render: (data) => `<div>${data.purpose}</div>` },
+        { data: 'deposit' }, // Ensure this line is included
+        { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No' }, // Ensure this line is included
+        { data: null, render: (data, type, row, meta) => `
+            <div class="dropdown">
+              <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton${meta.row}" data-bs-toggle="dropdown" aria-expanded="false">
+                ...
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${meta.row}">
+                <li><a class="dropdown-item text-primary" href="#" @click="editItem(${meta.row})"><i class="fa fa-edit"></i> Edit</a></li>
+                <li><a class="dropdown-item text-danger" href="#" @click="removeItem(${meta.row})"><i class="fa fa-trash"></i> Delete</a></li>
+                <li><a class="dropdown-item" href="#" @click="duplicateItem(${meta.row})"><i class="fa fa-copy"></i> Duplicate</a></li>
+              </ul>
+            </div>
+          `, className: 'text-center'
+        },
+      ],
+    });
 
-  $('#po-items-search').on('keyup', function () {
-    poItemsTableInstance.value.search(this.value).draw();
-  });
+    $('#invoice-items-table').on('click', '.dropdown-item', function (e) {
+      e.preventDefault();
+      const action = $(this).text().trim();
+      const rowIndex = invoiceItemsTableInstance.value.row($(this).closest('tr')).index();
+      if (action.includes('Edit')) {
+        editItem(rowIndex);
+      } else if (action.includes('Delete')) {
+        removeItem(rowIndex);
+      } else if (action.includes('Duplicate')) {
+        duplicateItem(rowIndex);
+      }
+    });
 
-  invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
-    responsive: true,
-    autoWidth: true,
-    data: props.purchaseInvoices.map(invoice => ({
-      id: invoice.id,
-      pi_number: invoice.pi_number || '',
-      invoice_date: invoice.invoice_date || '',
-      supplier_name: invoice.supplier ? invoice.supplier.name : '',
-      total_amount: invoice.total_amount || 0,
-      paid_amount: invoice.paid_amount || 0,
-      transaction_type: invoice.transaction_type || 0,
-      payment_type: invoice.payment_type || 0,
-    })),
-    columns: [
-      { data: null, render: (data, type, row, meta) => meta.row + 1 },
-      { data: 'pi_number' },
-      { data: 'invoice_date', render: (data) => format(data, 'date') },
-      { data: 'supplier_name' },
-      { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
-      { data: 'paid_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
-      { data: 'transaction_type', render: (data) => getTransactionType(data) },
-      { data: 'payment_type', render: (data) => getPaymentType(data) },
-      { data: null, render: (data) => `
-          <div class="btn-group">
-            <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-              <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
-              <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
-              <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
-            </ul>
-          </div>
-        `, className: 'text-center'
-      },
-    ],
-  });
+    poItemsTableInstance.value = initializeDataTable('#po-items-table', {
+      responsive: true,
+      autoWidth: false,
+      scrollX: false,
+      select: true,
+      data: [],
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'product.sku' },
+        { data: 'purchase_order.po_number' },
+        { data: null, render: (data) => `<div class="wrap-cell">${data.product?.product_description || ''} | ${data.description || ''}</div>`},
+        { data: 'pending' },
+        { data: 'uom' },
+        { data: 'unit_price' },
+        { data: null, render: (data) => (data.qty * data.unit_price).toFixed(2) },
+        { data: null, render: (data, type, row, meta) => `
+            <button type="button" class="btn btn-sm btn-primary" @click="selectPoItem(data)">
+              <i class="fa fa-plus"></i> Select
+            </button>
+          `, className: 'text-center'
+        },
+      ],
+    });
 
-  $('#invoice-list-table')
-    .on('click', '.btn-edit', function () {
-      const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+    $('#po-items-table').on('click', '.btn-primary', function () {
+      const rowData = poItemsTableInstance.value.row($(this).closest('tr')).data();
+      selectPoItem(rowData);
+    });
+
+    $('#po-items-search').on('keyup', function () {
+      poItemsTableInstance.value.search(this.value).draw();
+    });
+
+    invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
+      responsive: true,
+      autoWidth: true,
+      data: props.purchaseInvoices.map(invoice => ({
+        id: invoice.id,
+        pi_number: invoice.pi_number || '',
+        invoice_date: invoice.invoice_date || '',
+        supplier_name: invoice.supplier ? invoice.supplier.name : '',
+        total_amount: invoice.total_amount || 0,
+        paid_amount: invoice.paid_amount || 0,
+        transaction_type: invoice.transaction_type || 0,
+        payment_type: invoice.payment_type || 0,
+      })),
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'pi_number' },
+        { data: 'invoice_date', render: (data) => format(data, 'date') },
+        { data: 'supplier_name' },
+        { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'paid_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'transaction_type', render: (data) => getTransactionType(data) },
+        { data: 'payment_type', render: (data) => getPaymentType(data) },
+        { data: null, render: (data) => `
+            <div class="btn-group">
+              <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
+                <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
+              </ul>
+            </div>
+          `, className: 'text-center'
+        },
+      ],
+    });
+
+    $('#invoice-list-table')
+      .on('click', '.btn-edit', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.id) {
+          editInvoice(rowData.id);
+          $('#nav-create-tab').tab('show');
+        }
+      })
+      .on('click', '.btn-delete', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData) deleteInvoice(rowData.id);
+      })
+      .on('click', '.btn-view-pdf', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.pdf_url) {
+          openPdfViewer(rowData.pdf_url);
+        }
+      });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-edit', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
       if (rowData && rowData.id) {
         editInvoice(rowData.id);
         $('#nav-create-tab').tab('show');
       }
-    })
-    .on('click', '.btn-delete', function () {
-      const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-delete', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
       if (rowData) deleteInvoice(rowData.id);
-    })
-    .on('click', '.btn-view-pdf', function () {
-      const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-view-pdf', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
       if (rowData && rowData.pdf_url) {
         openPdfViewer(rowData.pdf_url);
       }
     });
 
-  $('#invoice-list-table').on('click', '.dtr-details .btn-edit', function () {
-    const tr = $(this).closest('tr').prev();
-    const rowData = invoiceListTableInstance.value.row(tr).data();
-    if (rowData && rowData.id) {
-      editInvoice(rowData.id);
-      $('#nav-create-tab').tab('show');
-    }
-  });
+    $('#invoice_date').datepicker({
+      todayHighlight: true,
+      autoclose: true,
+      format: 'yyyy-mm-dd' // Ensure the date format is correct
+    }).on('changeDate', function (e) {
+      form.invoice_date = e.format('yyyy-mm-dd');
+    });
 
-  $('#invoice-list-table').on('click', '.dtr-details .btn-delete', function () {
-    const tr = $(this).closest('tr').prev();
-    const rowData = invoiceListTableInstance.value.row(tr).data();
-    if (rowData) deleteInvoice(rowData.id);
-  });
-
-  $('#invoice-list-table').on('click', '.dtr-details .btn-view-pdf', function () {
-    const tr = $(this).closest('tr').prev();
-    const rowData = invoiceListTableInstance.value.row(tr).data();
-    if (rowData && rowData.pdf_url) {
-      openPdfViewer(rowData.pdf_url);
-    }
-  });
-
-  $('#invoice_date').datepicker({
-    todayHighlight: true,
-    autoclose: true
-  }).on('changeDate', function (e) {
-    form.invoice_date = e.format('yyyy-mm-dd');
-  });
-
-  initializeDropzone();
+    initializeDropzone();
+  } catch (error) {
+    console.error('Error during onMounted:', error);
+  }
 });
 
 watch(isEditMode, (newValue) => {
@@ -1485,9 +1531,7 @@ const openPdfViewer = (url) => {
     toastr.error('No PDF URL provided');
     return;
   }
-  pdfUrl.value = url;
-  const modalInstance = new bootstrap.Modal(document.getElementById('pdfViewerModal'));
-  modalInstance.show();
+  window.open(url, '_blank');
 };
 
 const totalVat = computed(() => {
@@ -1663,8 +1707,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
               </div>
             </div>
             <div class="d-flex justify-content-between mb-3">
-              <button type="button" class="btn btn-primary" @click="openPrItemsModal" :disabled="!form.supplier">Select PR Item</button>
-              <button type="button" class="btn btn-secondary" @click="openPoItemsModal" :disabled="!form.supplier">Select PO Item</button>
+              <button type="button" class="btn btn-primary btn-select-item" @click="openPrItemsModal" :disabled="!form.supplier">Select PR Item</button>
+              <button type="button" class="btn btn-secondary btn-select-item" @click="openPoItemsModal" :disabled="!form.supplier">Select PO Item</button>
             </div>
             <div class="panel panel-inverse border rounded-0">
               <div class="panel-heading rounded-0">
@@ -2027,22 +2071,6 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <button type="submit" class="btn btn-primary">Save changes</button>
               </div>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal fade" id="pdfViewerModal" tabindex="-1" aria-labelledby="pdfViewerModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="pdfViewerModalLabel">Invoice Attachment</h5>
-            <button type="button" class="btn-close btn-danger" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <PdfViewer :pdfUrl="pdfUrl" />
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>

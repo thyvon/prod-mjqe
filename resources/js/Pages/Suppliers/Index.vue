@@ -194,7 +194,7 @@ onMounted(() => {
         </div>
       </div>
       <div class="panel-body">
-        <button @click="openCreateModal" class="btn btn-primary mb-4">Add New Supplier</button>
+        <button @click="openCreateModal" class="btn btn-primary btn-sm mb-4">Add New Supplier</button>
 
         <!-- Supplier Table -->
         <table id="supplier-table" class="table table-bordered align-middle text-nowrap" width="100%">

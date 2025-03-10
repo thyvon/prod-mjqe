@@ -309,6 +309,8 @@ class InvoiceController extends Controller
             $attachment = new InvoiceAttachment();
             $attachment->purchase_invoice_id = $invoice->id; // Ensure the correct column name is used
             $attachment->file_url = $fileUrl;
+            //$attachment->file_name = $file->getClientOriginalName(); // Ensure file name is saved
+            //$attachment->file_size = $file->getSize(); // Ensure file size is saved
             $attachment->save();
 
             return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
