@@ -1144,7 +1144,6 @@ const attachFile = async (invoiceId, file) => {
 const deleteFile = async (attachmentId) => {
   try {
     await axios.delete(`/invoices/attachments/${attachmentId}`);
-    toastr.success('File deleted successfully.');
   } catch (error) {
     toastr.error('Failed to delete file.');
     console.error('Error:', error);
