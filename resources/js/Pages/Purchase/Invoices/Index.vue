@@ -7,6 +7,8 @@ import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import SupplierFormModal from '@/Components/SupplierFormModal.vue';
 import PdfViewer from '@/Components/PdfViewer.vue';
+import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer } from './helpers.js'; // Import helper functions
+
 toastr.options = {
   progressBar: true,
   closeButton: true,
@@ -698,23 +700,6 @@ const addSupplier = (newSupplier) => {
   form.supplier = newSupplier.id;
 };
 
-const getPaymentType = (type) => {
-  switch (type) {
-    case 1: return 'Final';
-    case 2: return 'Deposit';
-    default: return 'Unknown';
-  }
-};
-
-const getTransactionType = (type) => {
-  switch (type) {
-    case 1: return 'Petty Cash';
-    case 2: return 'Credit';
-    case 3: return 'Advance';
-    default: return 'Unknown';
-  }
-};
-
 const refreshInvoiceList = async () => {
   try {
     const response = await axios.get('/invoices');
@@ -762,8 +747,12 @@ const deleteInvoice = async (invoiceId) => {
 const editInvoice = async (invoiceId) => {
   try {
     isEditMode.value = true;
-    const response = await axios.get(`/invoices/${invoiceId}`);
-    const invoice = response.data;
+    const response = await axios.get(`/invoices/${invoiceId}/edit`);
+    const invoice = response.data.invoice; // Ensure the correct data is accessed
+
+    if (!invoice) {
+      throw new Error('Invoice data not found');
+    }
 
     Object.assign(form, {
       id: invoice.id, // Ensure the id is captured here
@@ -1197,15 +1186,6 @@ const removeAttachment = async (attachmentId) => {
   }
 };
 
-const getFileThumbnail = (fileUrl) => {
-  const fileExtension = fileUrl.split('.').pop().toLowerCase();
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-  if (imageExtensions.includes(fileExtension)) {
-    return fileUrl;
-  }
-  return '/images/default-file-icon.png'; // Ensure this path is correct and the file exists
-};
-
 const initializeDropzone = () => {
   const dropzoneElement = document.getElementById('demo-upload');
   if (dropzoneElement && !Dropzone.instances.length) { // Check if Dropzone is already initialized
@@ -1532,21 +1512,7 @@ const formattedInvoiceDate = computed({
   }
 });
 
-const formatDate = (date) => {
-  if (!date) return '';
-  const formattedDate = new Date(date);
-  return formattedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
-};
-
 const pdfUrl = ref('');
-
-const openPdfViewer = (url) => {
-  if (!url) {
-    toastr.error('No PDF URL provided');
-    return;
-  }
-  window.open(url, '_blank');
-};
 
 const totalVat = computed(() => {
   const vatRate = form.vat_rate / 100;
@@ -1558,10 +1524,6 @@ const totalVat = computed(() => {
   }
 });
 
-const formatCurrency = (value, currency) => {
-  const symbol = currency === 1 ? '$' : '៛';
-  return `${symbol} ${parseFloat(value).toFixed(2)}`;
-};
 const formattedTotalAmount = computed(() => formatCurrency(form.total_amount, form.currency));
 const formattedTotalDiscount = computed(() => formatCurrency(form.total_discount, form.currency));
 const formattedTotalServiceCharge = computed(() => formatCurrency(totalServiceCharge.value, form.currency));

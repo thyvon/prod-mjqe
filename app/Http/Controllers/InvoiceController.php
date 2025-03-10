@@ -95,7 +95,7 @@ class InvoiceController extends Controller
     public function edit($id)
     {
         try {
-            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier'])->findOrFail($id);
+            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
             return response()->json([
                 'invoice' => $invoice,
                 'vat_rate' => $invoice->vat_rate,
