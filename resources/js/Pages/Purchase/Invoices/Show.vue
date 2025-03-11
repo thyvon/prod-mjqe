@@ -116,6 +116,7 @@
         </div>
         <div class="mt-3">
           <button class="btn btn-secondary" @click="goBack">Back</button>
+          <button class="btn btn-primary" @click="navigateToPrint">Print</button> <!-- Add Print button -->
         </div>
       </div>
     </div>
@@ -124,7 +125,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { usePage, Head } from '@inertiajs/vue3';
+import { usePage, Head, router } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer } from '@/Pages/Purchase/Invoices/helpers';
 
@@ -135,6 +136,10 @@ console.log('Fetched invoice:', invoice.value); // Add logging to see the fetche
 
 const goBack = () => {
   window.history.back();
+};
+
+const navigateToPrint = () => {
+  router.visit(`/purchase/invoices/${invoice.value.id}/print`); // Update route to navigate to Print page
 };
 
 const initializeDataTable = (selector) => {

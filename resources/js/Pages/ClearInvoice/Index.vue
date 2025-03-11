@@ -1,0 +1,423 @@
+<script setup>
+import { ref, reactive, onMounted, nextTick, watch } from 'vue';
+import axios from 'axios';
+import { Head } from '@inertiajs/vue3';
+import Main from '@/Layouts/Main.vue';
+
+// Define the props using defineProps()
+const props = defineProps({
+  clearInvoices: {
+    type: Array,
+    required: true,
+  },
+  cashRequests: {
+    type: Array,
+    required: true,
+  },
+  users: Array,
+  currentUser: {
+    type: Object,
+    required: true,
+  },
+});
+
+// Local state for clear invoices
+const isEdit = ref(false);
+const clearInvoiceForm = reactive({
+  id: null,
+  clear_type: '',
+  clear_date: '',
+  cash_id: null,
+  clear_by: '',
+  description: '',
+  status: '',
+});
+
+const validationErrors = ref({});
+let dataTableInstance;
+
+const filteredCashRequests = ref([]);
+
+const filterCashRequests = () => {
+  if (clearInvoiceForm.clear_type === '1') {
+    filteredCashRequests.value = props.cashRequests.filter(request => request.request_type === 1);
+  } else if (clearInvoiceForm.clear_type === '2') {
+    filteredCashRequests.value = props.cashRequests.filter(request => request.request_type === 2);
+  } else {
+    filteredCashRequests.value = props.cashRequests;
+  }
+};
+
+watch(() => clearInvoiceForm.clear_type, filterCashRequests);
+
+// Functions
+const openCreateModal = () => {
+  isEdit.value = false;
+  Object.assign(clearInvoiceForm, {
+    id: null,
+    clear_type: '',
+    clear_date: new Date().toISOString().split('T')[0],
+    cash_id: '',
+    clear_by: props.currentUser.id, // Set clear_by to current user
+    description: '',
+    status: 'pending',
+  });
+  filterCashRequests(); // Filter cash requests based on clear type
+  const modalElement = document.getElementById('clearInvoiceModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+  nextTick(() => {
+    initializeSelect2();
+  });
+};
+
+const openEditModal = (clearInvoice) => {
+  isEdit.value = true;
+  Object.assign(clearInvoiceForm, clearInvoice);
+  clearInvoiceForm.clear_date = new Date(clearInvoiceForm.clear_date).toISOString().split('T')[0]; // Ensure date format is "yyyy-MM-dd"
+  filterCashRequests(); // Filter cash requests based on clear type
+  const modalElement = document.getElementById('clearInvoiceModal');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+  nextTick(() => {
+    initializeSelect2();
+    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change'); // Set the value of the Select2 component
+  });
+};
+
+const saveClearInvoice = async () => {
+  try {
+    if (isEdit.value) {
+      const response = await axios.put(`/clear-invoice/${clearInvoiceForm.id}`, clearInvoiceForm);
+      const updatedInvoice = response.data;
+      const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedInvoice.id).index();
+      dataTableInstance.row(rowIndex).data(updatedInvoice).draw(false); // Redraw the table without resetting the paging
+      swal('Success!', 'Clear invoice updated successfully!', 'success', { timer: 2000 });
+    } else {
+      const response = await axios.post('/clear-invoice', clearInvoiceForm);
+      dataTableInstance.row.add(response.data).draw(false); // Redraw the table without resetting the paging
+      swal('Success!', 'Clear invoice created successfully!', 'success', { timer: 2000 });
+    }
+    const modalElement = document.getElementById('clearInvoiceModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
+  } catch (error) {
+    if (error.response && error.response.status === 422) {
+      validationErrors.value = error.response.data.errors;
+      if (validationErrors.value.cash_id) {
+        swal('Error!', validationErrors.value.cash_id[0], 'error'); // Show alert for duplicate cash_id
+      }
+    } else {
+      swal('Error!', 'Failed to save clear invoice. Please try again.', 'error');
+    }
+  }
+};
+
+const deleteClearInvoice = async (clearInvoiceId) => {
+  swal({
+    title: 'Are you sure?',
+    text: 'You will not be able to recover this clear invoice!',
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, delete it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-danger',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  }).then(async (result) => {
+    if (result) {
+      try {
+        await axios.delete(`/clear-invoice/${clearInvoiceId}`);
+        dataTableInstance.row((idx, data) => data.id === clearInvoiceId).remove().draw();
+        swal('Deleted!', 'Clear invoice has been deleted.', 'success', { timer: 2000 });
+      } catch (error) {
+        swal('Error!', 'Failed to delete clear invoice. Please try again.', 'error');
+      }
+    }
+  });
+};
+
+const approveClearInvoice = async (clearInvoiceId) => {
+  swal({
+    title: 'Are you sure?',
+    text: 'Do you want to approve this clear invoice?',
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, approve it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-success',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  }).then(async (result) => {
+    if (result) {
+      try {
+        const response = await axios.put(`/clear-invoice/${clearInvoiceId}/approve`);
+        const updatedInvoice = response.data;
+        const rowIndex = dataTableInstance.row((idx, data) => data.id === clearInvoiceId).index();
+        dataTableInstance.row(rowIndex).data(updatedInvoice).draw(false); // Redraw the table without resetting the paging
+        swal('Success!', 'Clear invoice approved successfully!', 'success', { timer: 2000 });
+      } catch (error) {
+        swal('Error!', 'Failed to approve clear invoice. Please try again.', 'error');
+      }
+    }
+  });
+};
+
+const clearForm = () => {
+  Object.assign(clearInvoiceForm, {
+    id: null,
+    clear_type: '',
+    clear_date: new Date().toISOString().split('T')[0], // Ensure date format is "yyyy-MM-dd"
+    cash_id: '',
+    clear_by: '',
+    description: '',
+    status: 'pending',
+  });
+  validationErrors.value = {};
+};
+
+const initializeSelect2 = () => {
+  $('#clearInvoiceModal .select2').select2({
+    dropdownParent: $('#clearInvoiceModal')
+  }).on('change', function () {
+    const field = $(this).attr('id');
+    clearInvoiceForm[field] = $(this).val();
+  });
+};
+
+// Helper function to format dates
+const format = (value, type) => {
+  if (type === 'date') {
+    const options = { year: 'numeric', month: 'short', day: '2-digit' };
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', options);
+  }
+};
+
+// Initialize DataTable
+onMounted(() => {
+  nextTick(() => {
+    const table = $('#clear-invoice');
+    if (table.length) {
+      console.log('Initializing DataTable');
+      dataTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: props.clearInvoices,
+        columns: [
+          { data: null, render: (data, type, row, meta) => meta.row + 1 },
+          { data: 'ref_no' }, // Ensure 'ref_no' exists in clearInvoices data
+          { data: 'cash_id', render: (data) => props.cashRequests.find(request => request.id === data)?.ref_no || 'Unknown' }, // Render cash request ref_no
+          { data: 'description' },
+          { data: 'clear_type', render: (data) => data === 1 ? 'Petty Cash' : 'Advance' }, // Render clear type
+          { data: 'clear_by', render: (data) => props.users.find(user => user.id === data)?.name || 'Unknown' }, // Render user's name
+          { data: 'status', render: (data) => data === 1 ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-warning">Pending</span>' }, // Render status with badge
+          { data: 'clear_date', render: (data) => format(data, 'date') },
+          {
+            data: null,
+            render: (data) => `
+              <div class="btn-group">
+                <a href="#" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
+                  <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                  <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> View</a></li>
+                  ${data.status === 0 ? '<li><a class="dropdown-item btn-approve text-success"><i class="fas fa-check"></i> Approve</a></li>' : ''}
+                </ul>
+              </div>
+            `,
+          },
+        ],
+      });
+
+      // Attach event listeners to the main table
+      $('#clear-invoice')
+        .on('click', '.btn-edit', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) openEditModal(rowData);
+        })
+        .on('click', '.btn-delete', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) deleteClearInvoice(rowData.id);
+        })
+        .on('click', '.btn-show', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) {
+            window.location.href = `/clear-invoice/${rowData.id}`;
+          }
+        })
+        .on('click', '.btn-approve', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) approveClearInvoice(rowData.id);
+        });
+
+      // Handle actions inside child rows (responsive details)
+      $('#clear-invoice').on('click', '.dtr-details .btn-edit', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) openEditModal(rowData);
+      });
+
+      $('#clear-invoice').on('click', '.dtr-details .btn-delete', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) deleteClearInvoice(rowData.id);
+      });
+
+      $('#clear-invoice').on('click', '.dtr-details .btn-show', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) {
+          window.location.href = `/clear-invoice/${rowData.id}`;
+        }
+      });
+
+      $('#clear-invoice').on('click', '.dtr-details .btn-approve', function () {
+        const tr = $(this).closest('tr').prev(); // Get the parent row of the child
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) approveClearInvoice(rowData.id);
+      });
+    }
+  });
+});
+</script>
+
+<template>
+  <Main>
+    <Head :title="'Clear Invoice'" />
+    <div class="panel panel-inverse">
+      <div class="panel-heading">
+        <h4 class="panel-title">Clear Invoice</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
+        </div>
+      </div>
+      <div class="panel-body">
+        <!-- Create New Clear Invoice Button -->
+        <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Create New</button>
+
+        <!-- Clear Invoice Table -->
+        <table id="clear-invoice" class="table table-bordered align-middle text-nowrap" width="100%">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Ref No.</th>
+              <th>Cash No.</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Clear By</th>
+              <th>Status</th>
+              <th>Clear Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+        </table>
+
+        <!-- Modal for Create/Edit Clear Invoice -->
+        <div class="modal fade" id="clearInvoiceModal" tabindex="-1" aria-labelledby="clearInvoiceModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="clearInvoiceModalLabel">{{ isEdit ? 'Edit Clear Invoice' : 'Create Clear Invoice' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form @submit.prevent="saveClearInvoice">
+                  <div class="row">
+                    <!-- Left side for clear invoice information -->
+                    <div class="col-md-6">
+                      <div class="mb-3 row">
+                        <label for="clear_type" class="col-sm-4 col-form-label">Clear Type</label>
+                        <div class="col-sm-8">
+                          <select v-model="clearInvoiceForm.clear_type" class="form-select select2" id="clear_type" required>
+                            <option value="1">Petty Cash</option>
+                            <option value="2">Advance</option>
+                          </select>
+                          <div v-if="validationErrors.clear_type" class="text-danger">{{ validationErrors.clear_type[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="clear_date" class="col-sm-4 col-form-label">Clear Date</label>
+                        <div class="col-sm-8">
+                          <input v-model="clearInvoiceForm.clear_date" type="date" class="form-control" id="clear_date" required />
+                          <div v-if="validationErrors.clear_date" class="text-danger">{{ validationErrors.clear_date[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="cash_id" class="col-sm-4 col-form-label">Cash Request</label>
+                        <div class="col-sm-8">
+                          <select v-model="clearInvoiceForm.cash_id" class="form-select select2" id="cash_id" required>
+                            <option v-for="cashRequest in filteredCashRequests" :key="cashRequest.id" :value="cashRequest.id">{{ cashRequest.ref_no }}</option>
+                          </select>
+                          <div v-if="validationErrors.cash_id" class="text-danger">{{ validationErrors.cash_id[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="clear_by" class="col-sm-4 col-form-label">Clear By</label>
+                        <div class="col-sm-8">
+                          <input v-model="props.currentUser.name" type="text" class="form-control" id="clear_by" readonly />
+                          <div v-if="validationErrors.clear_by" class="text-danger">{{ validationErrors.clear_by[0] }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Right side for other information -->
+                    <div class="col-md-6">
+                      <div class="mb-3 row">
+                        <label for="status" class="col-sm-4 col-form-label">Status</label>
+                        <div class="col-sm-8">
+                          <select v-model="clearInvoiceForm.status" class="form-select select2" id="status" required>
+                            <option value="0">Pending</option>
+                            <option value="1">Approved</option>
+                          </select>
+                          <div v-if="validationErrors.status" class="text-danger">{{ validationErrors.status[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="description" class="col-sm-4 col-form-label">Description</label>
+                        <div class="col-sm-8">
+                          <textarea v-model="clearInvoiceForm.description" class="form-control" id="description"></textarea>
+                          <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Create' }}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Main>
+</template>

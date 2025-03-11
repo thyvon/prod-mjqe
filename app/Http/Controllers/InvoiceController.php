@@ -621,4 +621,11 @@ class InvoiceController extends Controller
             }
         }
     }
+
+    public function print(PurchaseInvoice $invoice) // Fix class reference
+    {
+        return Inertia::render('Purchase/Invoices/Print', [
+            'invoice' => $invoice->load('items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'),
+        ]);
+    }
 }

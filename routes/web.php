@@ -9,6 +9,7 @@ use App\Http\Controllers\{
     CategoryController,
     SupplierController,
     CashRequestController,
+    ClearInvoiceController,
     PurchaseRequestController,
     PurchaseOrderController,
     InvoiceController,
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function () {
         'products' => ProductController::class,
         'categories' => CategoryController::class,
         'cash-request' => CashRequestController::class,
+        'clear-invoice' => ClearInvoiceController::class,
         'purchase-requests' => PurchaseRequestController::class,
         'purchase-orders' => PurchaseOrderController::class,
         'invoices' => InvoiceController::class,
@@ -62,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/purchase-requests/{id}/cancel-items', [PurchaseRequestController::class, 'cancelItems'])->name('purchase-requests.cancel-items');
     Route::put('/purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
     Route::put('/purchase-orders/items/{id}/cancel', [PurchaseOrderController::class, 'cancelItem'])->name('purchase-orders.items.cancel');
+    Route::put('/clear-invoice/{id}/approve', [ClearInvoiceController::class, 'approve'])->name('clear-invoice.approve');
     
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
@@ -77,6 +80,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoices/{id}/attach-file', [InvoiceController::class, 'attachFile'])->name('invoices.attachFile');
     Route::delete('/invoices/attachments/{id}', [InvoiceController::class, 'deleteFile'])->name('invoices.deleteFile');
     Route::post('/invoices/attachments/{id}/update-file', [InvoiceController::class, 'updateFile'])->name('invoices.updateFile');
+    Route::get('/purchase/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
 });
 
 require __DIR__.'/auth.php';
