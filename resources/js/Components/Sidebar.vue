@@ -82,7 +82,7 @@ const isActive = (targetRoute) => {
                 </div>
             </div>
 
-            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices') || isActive('/invoice-items')}">
+            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices') || isActive('/invoice-items') || isActive('/clear-invoice')}">
                 <a href="javascript:;" class="menu-link">
                     <div class="menu-icon">
                         <i class="fa fa-money-check-dollar"></i>
@@ -124,6 +124,13 @@ const isActive = (targetRoute) => {
                             </div>
                         </div>
                     </div>
+
+                    <div class="menu-item" :class="{'active': isActive('/clear-invoice')}">
+                        <Link href="/clear-invoice" class="menu-link">
+                            <div class="menu-text">Clear Invoice</div>
+                        </Link>
+                    </div>
+
                 </div>
             </div>
 

@@ -29,6 +29,7 @@ class CashRequest extends Model
         'via',
         'reason',
         'remark',
+        'status',
     ];
 
     protected $casts = [
@@ -40,6 +41,11 @@ class CashRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function clearInvoice()
+    {
+        return $this->hasOne(ClearInvoice::class);
     }
 
     public static function generateRefNo($requestType)
@@ -75,5 +81,11 @@ class CashRequest extends Model
         }
 
         return $refNo;
+    }
+
+    public function approve()
+    {
+        $this->status = 1;
+        $this->save();
     }
 }
