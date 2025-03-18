@@ -1060,20 +1060,13 @@ const getPoNumberById = (id) => {
 const filteredCashRequests = ref([]);
 
 watch(() => form.transaction_type, async (newTransactionType) => {
-  if (newTransactionType) {
-    try {
-      const response = await axios.get('/filter-cash-requests', {
-        params: { transaction_type: newTransactionType }
-      });
-      filteredCashRequests.value = response.data;
-      console.log('Filtered Cash Requests:', filteredCashRequests.value); // Log the data to verify
-    } catch (error) {
-      console.error('Error fetching filtered cash requests:', error);
-    }
-  } else {
-    filteredCashRequests.value = [];
+  try {
+    const response = await axios.get('/filter-cash-requests');
+    filteredCashRequests.value = response.data;
+    console.log('Filtered Cash Requests:', filteredCashRequests.value); // Log the data to verify
+  } catch (error) {
+    console.error('Error fetching filtered cash requests:', error);
   }
-  form.cash_ref = null; // Ensure cash_ref is reset when transaction_type changes
 });
 
 const attachFile = async (invoiceId, file) => {
