@@ -28,14 +28,16 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', options);
 };
 
-// Computed property to calculate the total actual expense
+// Computed property to calculate the total actual expense (sum of the "paid_amount" column) with 4 decimal places
 const actualExpense = computed(() => {
-  return purchaseInvoiceItems.value.reduce((sum, item) => sum + (item.paid_amount || 0), 0);
+  const total = purchaseInvoiceItems.value.reduce((sum, item) => sum + (item.paid_amount || 0), 0);
+  return total.toFixed(4);
 });
 
-// Computed property to calculate the balance
+// Computed property to calculate the balance with 4 decimal places
 const balance = computed(() => {
-  return (clearInvoice.cash_request?.amount || 0) - actualExpense.value;
+  const result = (clearInvoice.cash_request?.amount || 0) - parseFloat(actualExpense.value);
+  return result.toFixed(4);
 });
 
 </script>
