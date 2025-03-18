@@ -10,43 +10,18 @@ use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        if ($request->ajax()) {
-            try {
-                $purchaseInvoices = PurchaseInvoice::with(['supplier:id,name'])
-                    ->select('id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type')
-                    ->get();
-
-                $data = $purchaseInvoices->map(function ($invoice) {
-                    return [
-                        'id' => $invoice->id,
-                        'pi_number' => $invoice->pi_number,
-                        'invoice_date' => $invoice->invoice_date,
-                        'supplier_name' => $invoice->supplier->name ?? 'Unknown',
-                        'total_amount' => $invoice->total_amount,
-                        'paid_amount' => $invoice->paid_amount,
-                        'transaction_type' => $invoice->transaction_type,
-                        'payment_type' => $invoice->payment_type,
-                    ];
-                });
-
-                return response()->json($data);
-            } catch (\Exception $e) {
-                Log::error('Error fetching invoices for DataTable', ['exception' => $e->getMessage()]);
-                return response()->json(['error' => 'Failed to fetch invoices'], 500);
-            }
-        }
-
-        // Render the page with initial data
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
-            'suppliers' => Supplier::select('id', 'name')->get(),
-            'users' => User::select('id', 'name')->get(),
-            'currentUser' => auth()->user()->only(['id', 'name']),
+            'users' => User::all(),
             'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
             'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
-            'cashRequests' => CashRequest::select('id', 'ref_no', 'request_type', 'status', 'user_id', 'request_date', 'amount')->get(),
+            'cashRequests' => CashRequest::all(),
+            'purchaseRequests' => PurchaseRequest::all(),
+            'purchaseOrders' => PurchaseOrder::all(),
+            'suppliers' => Supplier::all(),
+            'currentUser' => auth()->user(),
         ]);
     }
 
@@ -81,12 +56,6 @@ class InvoiceController extends Controller
 
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null;
-            }
-
-            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
-
-            foreach ($validatedData['items'] as &$item) {
-                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
             }
 
             $invoice = PurchaseInvoice::create($validatedData);
@@ -155,13 +124,7 @@ class InvoiceController extends Controller
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
             } else {
-                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref only if explicitly set
-            }
-
-            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
-
-            foreach ($validatedData['items'] as &$item) {
-                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
+                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
             }
 
             $invoice->update($validatedData);
@@ -185,44 +148,59 @@ class InvoiceController extends Controller
 
     public function destroy($id)
     {
-        try {
-            $invoice = PurchaseInvoice::findOrFail($id);
-            $invoiceItems = $invoice->items;
+        $invoice = PurchaseInvoice::findOrFail($id);
+        $invoiceItems = $invoice->items;
 
-            foreach ($invoiceItems as $item) {
-                if ($item->po_item) {
-                    $poItem = PoItems::find($item->po_item);
-                    if ($poItem) {
-                        $poItem->recalculateReceivedQty();
-                        $poItem->recalculatePaidAmount();
-                        $poItem->calculateForceClose();
-                    }
-                }
-
-                if ($item->pr_item) {
-                    $prItem = PrItem::find($item->pr_item);
-                    if ($prItem) {
-                        $prItem->recalculateQtyPurchase();
-                        $prItem->calculateForceClose();
-                    }
+        foreach ($invoiceItems as $item) {
+            if ($item->po_item) {
+                $poItem = PoItems::find($item->po_item);
+                if ($poItem) {
+                    $poItem->recalculateReceivedQty();
+                    $poItem->recalculatePaidAmount();
+                    $poItem->calculateForceClose();
                 }
             }
 
-            // Delete associated attachments
-            $attachments = $invoice->attachments;
-            foreach ($attachments as $attachment) {
-                $localFileService = new LocalFileService();
-                $localFileService->deleteFile($attachment->file_url);
-                $attachment->delete();
+            if ($item->pr_item) {
+                $prItem = PrItem::find($item->pr_item);
+                if ($prItem) {
+                    $prItem->recalculateQtyPurchase();
+                    $prItem->calculateForceClose();
+                }
             }
-
-            $invoice->items()->delete();
-            $invoice->delete();
-
-            return response()->json(['message' => 'Invoice deleted successfully.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Internal Server Error'], 500);
         }
+
+        // Delete associated attachments
+        $attachments = $invoice->attachments;
+        foreach ($attachments as $attachment) {
+            $localFileService = new LocalFileService();
+            $localFileService->deleteFile($attachment->file_url);
+            $attachment->delete();
+        }
+
+        $invoice->items()->delete();
+        $invoice->delete();
+
+        foreach ($invoiceItems as $item) {
+            if ($item->po_item) {
+                $poItem = PoItems::find($item->po_item);
+                if ($poItem) {
+                    $poItem->recalculateReceivedQty();
+                    $poItem->recalculatePaidAmount();
+                    $poItem->calculateForceClose();
+                }
+            }
+
+            if ($item->pr_item) {
+                $prItem = PrItem::find($item->pr_item);
+                if ($prItem) {
+                    $prItem->recalculateQtyPurchase();
+                    $prItem->calculateForceClose();
+                }
+            }
+        }
+
+        return response()->json(null, 204);
     }
 
     public function itemList()
@@ -307,7 +285,7 @@ class InvoiceController extends Controller
         $transactionType = $request->input('transaction_type');
 
         if (!in_array($transactionType, [1, 2, 3])) {
-            return response()->json(['error' => 'Invalid transaction type'], 400); // Return a clear error message
+            return response()->json(['error' => 'Invalid transaction type'], 400);
         }
 
         $cashRequests = CashRequest::when($transactionType == 1, function ($query) {
@@ -321,7 +299,9 @@ class InvoiceController extends Controller
             })
             ->get();
 
-        return response()->json($cashRequests); // Return the filtered cash requests
+        Log::info('Filtered Cash Requests:', ['transaction_type' => $transactionType, 'cashRequests' => $cashRequests]);
+
+        return response()->json($cashRequests); // Always return a valid JSON response
     }
 
     public function attachFile(Request $request, $id)
@@ -404,6 +384,7 @@ class InvoiceController extends Controller
             'service_charge' => 'nullable|numeric',
             'total_amount' => 'nullable|numeric',
             'paid_amount' => 'required|numeric',
+            'created_by' => 'required|integer|exists:users,id',
             'items' => 'required|array',
             'items.*.pr_item' => 'required|integer|exists:pr_items,id',
             'items.*.po_item' => 'nullable|integer|exists:po_items,id',
@@ -426,6 +407,7 @@ class InvoiceController extends Controller
             'items.*.division' => 'required|string',
             'items.*.department' => 'required|string',
             'items.*.location' => 'required|string',
+            'items.*.purchased_by' => 'required|integer|exists:users,id',
             'items.*.purpose' => 'required|string',
             'items.*.payment_term' => 'required|integer',
             'items.*.cash_ref' => 'nullable|integer|exists:cash_requests,id',
