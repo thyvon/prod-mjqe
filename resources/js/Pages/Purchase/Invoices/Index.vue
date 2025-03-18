@@ -747,7 +747,7 @@ const editInvoice = async (invoiceId) => {
     Object.assign(form, {
       id: invoice.id, // Ensure the id is captured here
       transaction_type: invoice.transaction_type,
-      cash_ref: invoice.cash_ref,
+      cash_ref: invoice.cash_ref, // Retain the old cash_ref value
       payment_type: invoice.payment_type,
       invoice_date: invoice.invoice_date,
       invoice_no: invoice.invoice_no,
@@ -782,7 +782,7 @@ const editInvoice = async (invoiceId) => {
         po_number: item.purchase_order?.po_number || '',
         item_code: item.product?.sku || '',
         requested_by: item.requested_by,
-        cash_ref: item.cash_ref,
+        cash_ref: item.cash_ref, // Ensure cash_ref is retained for each item
         transaction_type: item.transaction_type,
         payment_term: item.payment_term,
         purchased_by: item.purchased_by,
@@ -819,13 +819,15 @@ const isCreditTransaction = computed(() => form.transaction_type == 2);
 watch(() => form.transaction_type, (newTransactionType) => {
   console.log('Transaction type selected:', newTransactionType);
   if (!isEditMode.value) { // Prevent resetting cash_ref in edit mode
-    if (newTransactionType == 2) {
-      form.cash_ref = null;
+    if (newTransactionType === 2) {
+      form.cash_ref = null; // Clear cash_ref for Credit transactions
+    } else if (newTransactionType === 1 || newTransactionType === 3) {
+      form.cash_ref = null; // Ensure cash_ref is not auto-selected
     }
   }
-  if (newTransactionType == 1) {
+  if (newTransactionType === 1) {
     form.payment_term = 4;
-  } else if (form.payment_term == 4) {
+  } else if (form.payment_term === 4) {
     form.payment_term = null;
   }
 });

@@ -130,7 +130,7 @@ class InvoiceController extends Controller
             if ($validatedData['transaction_type'] == 2) {
                 $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
             } else {
-                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
+                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref only if explicitly set
             }
 
             $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
