@@ -1061,11 +1061,20 @@ const filteredCashRequests = ref([]);
 
 watch(() => form.transaction_type, async (newTransactionType) => {
   try {
-    const response = await axios.get('/filter-cash-requests');
+    if (!newTransactionType) {
+      filteredCashRequests.value = []; // Clear the list if transaction_type is not set
+      return;
+    }
+
+    const response = await axios.get('/filter-cash-requests', {
+      params: { transaction_type: newTransactionType }, // Ensure transaction_type is sent as a parameter
+    });
+
     filteredCashRequests.value = response.data;
     console.log('Filtered Cash Requests:', filteredCashRequests.value); // Log the data to verify
   } catch (error) {
     console.error('Error fetching filtered cash requests:', error);
+    toastr.error('Failed to fetch filtered cash requests.');
   }
 });
 
