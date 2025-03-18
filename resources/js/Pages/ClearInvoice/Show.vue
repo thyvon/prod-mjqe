@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 
@@ -28,6 +28,16 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', options);
 };
 
+// Computed property to calculate the total actual expense
+const actualExpense = computed(() => {
+  return purchaseInvoiceItems.value.reduce((sum, item) => sum + (item.paid_amount || 0), 0);
+});
+
+// Computed property to calculate the balance
+const balance = computed(() => {
+  return (clearInvoice.cash_request?.amount || 0) - actualExpense.value;
+});
+
 </script>
 
 <template>
@@ -46,7 +56,7 @@ const formatDate = (dateString) => {
             </div>
             <div class="row mb-3 "> <!-- Add border class -->
                 <div class="col-3 "></div> <!-- Empty column to balance the layout and add border class -->
-              <div class="col-6 d-flex align-items-center justify-content-center border mb-0"> <!-- Add border class -->
+              <div class="col-6 d-flex align-items-center justify-content-center mb-0"> <!-- Add border class -->
                 <h2 class="text-uppercase m-0">{{ getClearTypeHeading(clearInvoice.clear_type) }}</h2>
               </div>
               <div class="col-12 col-sm-6 col-md-5 "> <!-- Add border class -->
@@ -89,7 +99,7 @@ const formatDate = (dateString) => {
                         <th scope="col" class="text-uppercase">Item Code</th>
                         <th scope="col" class="text-uppercase">Description</th>
                         <th scope="col" class="text-uppercase text-end">Quantity</th>
-                        <th scope="col" class="text-uppercase text-end">Unit Price</th>
+                        <!-- <th scope="col" class="text-uppercase text-end">Unit Price</th> -->
                         <th scope="col" class="text-uppercase text-end">Total Price</th>
                       </tr>
                     </thead>
@@ -98,20 +108,20 @@ const formatDate = (dateString) => {
                         <td>{{ item.product?.sku }}</td>
                         <td>{{ item.description }}</td>
                         <td class="text-end">{{ item.qty }}</td>
-                        <td class="text-end">{{ item.unit_price }}</td>
-                        <td class="text-end">{{ item.total_price }}</td>
+                        <!-- <td class="text-end">{{ item.unit_price }}</td> -->
+                        <td class="text-end">{{ item.paid_amount }}</td>
                       </tr>
                       <tr >
                         <td colspan="4" class="text-end">Request Amount</td>
                         <td class="text-end">{{ clearInvoice.cash_request?.amount }}</td>
                       </tr>
                       <tr>
-                        <td colspan="4" class="text-end">Actual Expense {{ clearInvoice.vat_rate }}</td>
-                        <td class="text-end">{{ clearInvoice.vat_amount }}</td>
+                        <td colspan="4" class="text-end">Actual Expense</td>
+                        <td class="text-end">{{ actualExpense }}</td>
                       </tr>
                       <tr>
                         <th scope="row" colspan="4" class="text-uppercase text-end">Balance</th>
-                        <td class="text-end">{{ clearInvoice.total_amount }}</td>
+                        <td class="text-end">{{ balance }}</td>
                       </tr>
                     </tbody>
                   </table>
