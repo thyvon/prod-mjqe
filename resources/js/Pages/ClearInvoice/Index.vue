@@ -48,7 +48,12 @@ const filterCashRequests = () => {
   }
 };
 
-watch(() => clearInvoiceForm.clear_type, filterCashRequests);
+watch(() => clearInvoiceForm.clear_type, () => {
+  filterCashRequests();
+  nextTick(() => {
+    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change'); // Update Select2 component after filtering
+  });
+});
 
 // Functions
 const openCreateModal = () => {
@@ -76,10 +81,10 @@ const openEditModal = (clearInvoice) => {
   Object.assign(clearInvoiceForm, clearInvoice);
   clearInvoiceForm.clear_date = new Date(clearInvoiceForm.clear_date).toISOString().split('T')[0]; // Ensure date format is "yyyy-MM-dd"
   filterCashRequests(); // Filter cash requests based on clear type
-  const modalElement = document.getElementById('clearInvoiceModal');
-  const modal = new bootstrap.Modal(modalElement);
-  modal.show();
   nextTick(() => {
+    const modalElement = document.getElementById('clearInvoiceModal');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
     initializeSelect2();
     $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change'); // Set the value of the Select2 component
   });
@@ -101,6 +106,7 @@ const saveClearInvoice = async () => {
     const modalElement = document.getElementById('clearInvoiceModal');
     const modal = bootstrap.Modal.getInstance(modalElement);
     modal.hide();
+    dataTableInstance.ajax.reload(null, false); // Reload the DataTable without resetting the paging
   } catch (error) {
     if (error.response && error.response.status === 422) {
       validationErrors.value = error.response.data.errors;
@@ -185,17 +191,8 @@ const approveClearInvoice = async (clearInvoiceId) => {
   });
 };
 
-const clearForm = () => {
-  Object.assign(clearInvoiceForm, {
-    id: null,
-    clear_type: '',
-    clear_date: new Date().toISOString().split('T')[0], // Ensure date format is "yyyy-MM-dd"
-    cash_id: '',
-    clear_by: '',
-    description: '',
-    status: 'pending',
-  });
-  validationErrors.value = {};
+const viewClearInvoice = (clearInvoiceId) => {
+  window.location.href = `/clear-invoice/${clearInvoiceId}`;
 };
 
 const initializeSelect2 = () => {
@@ -221,11 +218,14 @@ onMounted(() => {
   nextTick(() => {
     const table = $('#clear-invoice');
     if (table.length) {
-      console.log('Initializing DataTable');
+      // console.log('Initializing DataTable');
       dataTableInstance = table.DataTable({
         responsive: true,
         autoWidth: true,
-        data: props.clearInvoices,
+        ajax: {
+          url: '/clear-invoices', // Ensure this URL returns the correct JSON structure
+          dataSrc: ''
+        },
         columns: [
           { data: null, render: (data, type, row, meta) => meta.row + 1 },
           { data: 'ref_no' }, // Ensure 'ref_no' exists in clearInvoices data
@@ -267,7 +267,7 @@ onMounted(() => {
         .on('click', '.btn-show', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
           if (rowData) {
-            window.location.href = `/clear-invoice/${rowData.id}`;
+            viewClearInvoice(rowData.id); // Navigate to the Show page
           }
         })
         .on('click', '.btn-approve', function () {
@@ -292,7 +292,7 @@ onMounted(() => {
         const tr = $(this).closest('tr').prev(); // Get the parent row of the child
         const rowData = dataTableInstance.row(tr).data();
         if (rowData) {
-          window.location.href = `/clear-invoice/${rowData.id}`;
+          viewClearInvoice(rowData.id);
         }
       });
 
@@ -324,7 +324,7 @@ onMounted(() => {
         <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Create New</button>
 
         <!-- Clear Invoice Table -->
-        <table id="clear-invoice" class="table table-bordered align-middle text-nowrap" width="100%">
+        <table id="clear-invoice" class="table table-bordered align-middle text-wrap" width="100%">
           <thead>
             <tr>
               <th>#</th>

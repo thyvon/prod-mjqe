@@ -47,6 +47,7 @@ class InvoiceController extends Controller
     {
         try {
             Log::info('Store method called', ['request_data' => $request->all()]);
+            Log::info('Cash Reference ID:', ['cash_ref' => $request->input('cash_ref')]); // Log the cash_ref value
 
             $rules = $this->getValidationRules($request->transaction_type);
             $validatedData = $request->validate($rules);
@@ -62,27 +63,11 @@ class InvoiceController extends Controller
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
 
-            // Recalculate quantities and amounts for PO and PR items
-            foreach ($validatedData['items'] as $itemData) {
-                if (isset($itemData['po_item'])) {
-                    $poItem = PoItems::find($itemData['po_item']);
-                    if ($poItem) {
-                        $poItem->recalculateReceivedQty();
-                        $poItem->recalculatePaidAmount();
-                        $poItem->calculateForceClose();
-                    }
-                }
-
-                if (isset($itemData['pr_item'])) {
-                    $prItem = PrItem::find($itemData['pr_item']);
-                    if ($prItem) {
-                        $prItem->recalculateQtyPurchase();
-                        $prItem->calculateForceClose();
-                    }
-                }
-            }
-
-            return response()->json($invoice->load('items', 'supplier'), 201);
+            // Return the invoice with related data for consistency
+            return response()->json([
+                'message' => 'Invoice created successfully.',
+                'invoice' => $invoice->load(['items', 'supplier']), // Ensure related data is loaded
+            ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
             return response()->json(['error' => 'Validation Error', 'messages' => $e->errors()], 422);
@@ -96,8 +81,12 @@ class InvoiceController extends Controller
     {
         try {
             $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
+
+            // Ensure cash_ref is included in the response
             return response()->json([
                 'invoice' => $invoice,
+                'transaction_type' => $invoice->transaction_type,
+                'cash_ref' => $invoice->cash_ref, // Include cash_ref explicitly
                 'vat_rate' => $invoice->vat_rate,
             ]);
         } catch (\Exception $e) {
@@ -133,7 +122,9 @@ class InvoiceController extends Controller
             $this->validateItemQuantities($validatedData['items'], $invoice->id);
 
             if ($validatedData['transaction_type'] == 2) {
-                $validatedData['cash_ref'] = null;
+                $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
+            } else {
+                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
             }
 
             $invoice->update($validatedData);
@@ -144,6 +135,7 @@ class InvoiceController extends Controller
 
             $this->recalculateItemQuantities($validatedData['items']);
 
+            // Ensure cash_ref is included in the response
             return response()->json($invoice->load('items', 'supplier'));
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
@@ -291,13 +283,25 @@ class InvoiceController extends Controller
     public function filterCashRequests(Request $request)
     {
         $transactionType = $request->input('transaction_type');
-        $cashRequests = CashRequest::where('request_type', $transactionType)
-                                   ->where('status', 0)
-                                   ->get();
-        
+
+        if (!in_array($transactionType, [1, 2, 3])) {
+            return response()->json(['error' => 'Invalid transaction type'], 400);
+        }
+
+        $cashRequests = CashRequest::when($transactionType == 1, function ($query) {
+                return $query->where('request_type', 1);
+            })
+            ->when($transactionType == 3, function ($query) {
+                return $query->where('request_type', 2);
+            })
+            ->when($transactionType == 2, function ($query) {
+                return $query->whereNull('request_type'); // Ensure no cash requests are returned
+            })
+            ->get();
+
         Log::info('Filtered Cash Requests:', ['transaction_type' => $transactionType, 'cashRequests' => $cashRequests]);
 
-        return response()->json($cashRequests);
+        return response()->json($cashRequests); // Always return a valid JSON response
     }
 
     public function attachFile(Request $request, $id)
@@ -406,7 +410,6 @@ class InvoiceController extends Controller
             'items.*.purchased_by' => 'required|integer|exists:users,id',
             'items.*.purpose' => 'required|string',
             'items.*.payment_term' => 'required|integer',
-            'items.*.transaction_type' => 'required|integer',
             'items.*.cash_ref' => 'nullable|integer|exists:cash_requests,id',
             'items.*.stop_purchase' => 'nullable|boolean',
             'items.*.asset_type' => 'nullable|integer',
@@ -511,6 +514,7 @@ class InvoiceController extends Controller
                 }
             }
 
+            $itemData['transaction_type'] = $invoice->transaction_type; // Ensure transaction_type is copied from the invoice
             $itemData['invoice_date'] = $invoice->invoice_date;
             $itemData['payment_type'] = $invoice->payment_type;
             $itemData['invoice_no'] = $invoice->invoice_no;
@@ -520,6 +524,7 @@ class InvoiceController extends Controller
             $itemData['pi_number'] = $invoice->id;
             $itemData['requested_by'] = $invoice->created_by;
             $itemData['currency'] = $invoice->currency;
+            $itemData['cash_ref'] = $invoice->cash_ref; // Copy cash_ref from invoice to invoice item
 
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 

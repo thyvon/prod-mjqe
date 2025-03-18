@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id(); // Primary key with auto-increment
             $table->integer('request_type'); // Changed from string to integer
             $table->string('ref_no')->unique(); // Unique reference number
-            $table->dateTime('request_date');
+            $table->date('request_date');
             $table->unsignedBigInteger('user_id'); // User ID for relationship
             $table->string('request_by');
             $table->string('position');
