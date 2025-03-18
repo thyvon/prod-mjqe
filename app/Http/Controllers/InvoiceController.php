@@ -549,7 +549,6 @@ class InvoiceController extends Controller
 
             // Calculate VAT based on payment_type
             if ($invoice->payment_type == 2) {
-                $itemData['paid_amount'] += $itemData['paid_amount'] * ($invoice->vat_rate / 100);
                 $itemData['vat'] = $itemData['paid_amount'] * ($invoice->vat_rate / 100);
             } else {
                 $itemData['vat'] = ($itemData['total_price'] - $itemData['discount']) * ($invoice->vat_rate / 100);
