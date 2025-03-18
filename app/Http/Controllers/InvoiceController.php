@@ -548,6 +548,9 @@ class InvoiceController extends Controller
 
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 
+            // Calculate VAT based on the invoice's VAT rate
+            $itemData['vat'] = $itemData['total_price'] * ($invoice->vat_rate / 100);
+
             if ($itemData['currency'] == 1) {
                 $itemData['total_usd'] = $itemData['paid_amount'];
             } elseif ($itemData['currency'] == 2) {
