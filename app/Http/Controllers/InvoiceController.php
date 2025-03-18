@@ -534,7 +534,6 @@ class InvoiceController extends Controller
                 }
             }
 
-            $itemData['transaction_type'] = $invoice->transaction_type; // Ensure transaction_type is copied from the invoice
             $itemData['invoice_date'] = $invoice->invoice_date;
             $itemData['payment_type'] = $invoice->payment_type;
             $itemData['invoice_no'] = $invoice->invoice_no;
@@ -548,8 +547,13 @@ class InvoiceController extends Controller
 
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 
-            // Calculate VAT based on the invoice's VAT rate
-            $itemData['vat'] = ($itemData['total_price']-$itemData['discount'])  * ($invoice->vat_rate / 100);
+            // Calculate VAT based on payment_type
+            if ($invoice->payment_type == 2) {
+                $itemData['paid_amount'] += $itemData['paid_amount'] * ($invoice->vat_rate / 100);
+                $itemData['vat'] = $itemData['paid_amount'] * ($invoice->vat_rate / 100);
+            } else {
+                $itemData['vat'] = ($itemData['total_price'] - $itemData['discount']) * ($invoice->vat_rate / 100);
+            }
 
             if ($itemData['currency'] == 1) {
                 $itemData['total_usd'] = $itemData['paid_amount'];
