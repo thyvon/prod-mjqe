@@ -58,6 +58,12 @@ class InvoiceController extends Controller
                 $validatedData['cash_ref'] = null;
             }
 
+            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
+
+            foreach ($validatedData['items'] as &$item) {
+                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
+            }
+
             $invoice = PurchaseInvoice::create($validatedData);
             Log::info('Invoice created', ['invoice' => $invoice->toArray()]);
 
@@ -125,6 +131,12 @@ class InvoiceController extends Controller
                 $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
             } else {
                 $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
+            }
+
+            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
+
+            foreach ($validatedData['items'] as &$item) {
+                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
             }
 
             $invoice->update($validatedData);
