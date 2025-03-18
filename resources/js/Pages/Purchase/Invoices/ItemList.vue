@@ -223,7 +223,7 @@ onMounted(() => {
                 <th>Discount</th>
                 <th>Service Charge</th>
                 <th>Deposit</th>
-                <th>VAT(%)</th>
+                <th>VAT</th>
                 <th>Return</th>
                 <th>Retention</th>
                 <th>Grand Total</th>
