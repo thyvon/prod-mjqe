@@ -269,25 +269,23 @@ const submitForm = async () => {
   calculateServiceChargeForItems();
   calculateItemDiscounts(); // Ensure discounts are calculated correctly before submitting
 
-  let success = false;
+  let response = null;
   if (isEditMode.value && form.id) {
-    success = await updateInvoice();
+    response = await updateInvoice();
   } else {
-    success = await createInvoice();
+    response = await createInvoice();
   }
 
-  if (success) {
+  if (response) {
     clearForm();
-    await fetchInvoices(); // Fetch updated invoices after saving
+    updateInvoiceListTable(response.purchaseInvoices); // Update the table with the new data
     $('#nav-list-tab').tab('show'); // Switch to the invoice list tab
   }
 };
 
-const fetchInvoices = async () => {
+const updateInvoiceListTable = (invoices) => {
   try {
-    const response = await axios.get('/invoices'); // Fetch updated invoices from the backend
-    const updatedInvoices = response.data.purchaseInvoices || [];
-    const invoices = updatedInvoices.map(invoice => ({
+    const formattedInvoices = invoices.map(invoice => ({
       id: invoice.id,
       pi_number: invoice.pi_number || '',
       invoice_date: invoice.invoice_date || '',
@@ -297,30 +295,10 @@ const fetchInvoices = async () => {
       transaction_type: invoice.transaction_type || 0,
       payment_type: invoice.payment_type || 0,
     }));
-    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Update the table
+    invoiceListTableInstance.value.clear().rows.add(formattedInvoices).draw(); // Update the table
   } catch (error) {
-    console.error('Error fetching updated invoices:', error);
-    toastr.error('Failed to fetch updated invoices.');
-  }
-};
-
-const refreshInvoiceListTable = () => {
-  try {
-    const invoices = props.purchaseInvoices.map(invoice => ({
-      id: invoice.id,
-      pi_number: invoice.pi_number || '',
-      invoice_date: invoice.invoice_date || '',
-      supplier_name: invoice.supplier ? invoice.supplier.name : '',
-      total_amount: invoice.total_amount || 0,
-      paid_amount: invoice.paid_amount || 0,
-      transaction_type: invoice.transaction_type || 0,
-      payment_type: invoice.payment_type || 0,
-    }));
-
-    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Update the table with data from props
-  } catch (error) {
-    console.error('Error refreshing invoice list:', error);
-    toastr.error('Failed to refresh invoice list.');
+    console.error('Error updating invoice list table:', error);
+    toastr.error('Failed to update invoice list table.');
   }
 };
 
@@ -363,32 +341,11 @@ const createInvoice = async () => {
     }
 
     const response = await axios.post('/invoices', form);
-    const newInvoice = response.data;
-
-    // Handle file uploads after the invoice is created
-    if (form.attachments.length > 0) {
-      await Promise.all(form.attachments.map(file => attachFile(newInvoice.id, file)));
-    }
-
     toastr.success('Invoice submitted successfully.');
-    clearForm();
-    $('#nav-list-tab').tab('show');
-
-     invoiceListTableInstance.value.row.add({
-      id: newInvoice.id,
-      pi_number: newInvoice.pi_number || '',
-      invoice_date: newInvoice.invoice_date || '',
-      supplier_name: newInvoice.supplier ? newInvoice.supplier.name : '',
-      total_amount: newInvoice.total_amount || 0,
-      paid_amount: newInvoice.paid_amount || 0,
-      transaction_type: newInvoice.transaction_type || 0,
-      payment_type: newInvoice.payment_type || 0,
-      actions: ''
-    }).draw(false);
-    return true;
+    return response.data; // Return the updated data
   } catch (error) {
     handleFormErrors(error);
-    return false;
+    return null;
   }
 };
 
@@ -434,25 +391,10 @@ const updateInvoice = async () => {
 
     const response = await axios.put(`/invoices/${form.id}`, form);
     toastr.success('Invoice updated successfully.');
-    $('#nav-list-tab').tab('show');
-
-    const updatedInvoice = response.data;
-    const rowIndex = invoiceListTableInstance.value.row((idx, data) => data.id === updatedInvoice.id).index();
-    invoiceListTableInstance.value.row(rowIndex).data({
-      id: updatedInvoice.id,
-      pi_number: updatedInvoice.pi_number || '',
-      invoice_date: updatedInvoice.invoice_date || '',
-      supplier_name: updatedInvoice.supplier ? updatedInvoice.supplier.name : '',
-      total_amount: updatedInvoice.total_amount || 0,
-      paid_amount: updatedInvoice.paid_amount || 0,
-      transaction_type: updatedInvoice.transaction_type || 0,
-      payment_type: updatedInvoice.payment_type || 0,
-      actions: ''
-    }).draw(false);
-    return true;
+    return response.data; // Return the updated data
   } catch (error) {
     handleFormErrors(error);
-    return false;
+    return null;
   }
 };
 
@@ -729,19 +671,6 @@ watch(() => form.supplier, (newSupplierId) => {
 const addSupplier = (newSupplier) => {
   props.suppliers.push(newSupplier);
   form.supplier = newSupplier.id;
-};
-
-const refreshInvoiceList = () => {
-  return props.purchaseInvoices.map(invoice => ({
-    id: invoice.id,
-    pi_number: invoice.pi_number || '',
-    invoice_date: invoice.invoice_date || '',
-    supplier_name: invoice.supplier ? invoice.supplier.name : '',
-    total_amount: invoice.total_amount || 0,
-    paid_amount: invoice.paid_amount || 0,
-    transaction_type: invoice.transaction_type || 0,
-    payment_type: invoice.payment_type || 0,
-  }));
 };
 
 const deleteInvoice = async (invoiceId) => {
