@@ -1217,6 +1217,112 @@ const initializeDataTable = (selector, options) => {
 
 onMounted(() => {
   try {
+    console.log('purchaseInvoices:', props.purchaseInvoices); // Debugging
+    const invoices = (props.purchaseInvoices || []).map(invoice => ({
+      id: invoice.id,
+      pi_number: invoice.pi_number || '',
+      invoice_date: invoice.invoice_date || '',
+      supplier_name: invoice.supplier ? invoice.supplier.name : '',
+      total_amount: invoice.total_amount || 0,
+      paid_amount: invoice.paid_amount || 0,
+      transaction_type: invoice.transaction_type || 0,
+      payment_type: invoice.payment_type || 0,
+    }));
+
+    invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
+      responsive: true,
+      autoWidth: true,
+      data: invoices, // Use the fallback-safe invoices array
+      columns: [
+        { data: null, render: (data, type, row, meta) => meta.row + 1 },
+        { data: 'pi_number' },
+        { data: 'invoice_date', render: (data) => format(data, 'date') },
+        { data: 'supplier_name' },
+        { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'paid_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'transaction_type', render: (data) => getTransactionType(data) },
+        { data: 'payment_type', render: (data) => getPaymentType(data) },
+        { data: null, render: (data) => `
+            <div class="btn-group">
+              <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
+                <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
+                <li><a class="dropdown-item btn-show"><i class="fas fa-eye"></i> Show</a></li>
+              </ul>
+            </div>
+          `, className: 'text-center'
+        },
+      ],
+    });
+
+    $('#invoice-list-table')
+      .on('click', '.btn-edit', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.id) {
+          editInvoice(rowData.id);
+          $('#nav-create-tab').tab('show');
+        }
+      })
+      .on('click', '.btn-delete', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData) deleteInvoice(rowData.id);
+      })
+      .on('click', '.btn-view-pdf', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.pdf_url) {
+          openPdfViewer(rowData.pdf_url);
+        }
+      })
+      .on('click', '.btn-show', function () {
+        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
+        if (rowData && rowData.id) {
+          window.location.href = `/invoices/${rowData.id}`;
+        }
+      });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-edit', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
+      if (rowData && rowData.id) {
+        editInvoice(rowData.id);
+        $('#nav-create-tab').tab('show');
+      }
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-delete', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
+      if (rowData) deleteInvoice(rowData.id);
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-view-pdf', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
+      if (rowData && rowData.pdf_url) {
+        openPdfViewer(rowData.pdf_url);
+      }
+    });
+
+    $('#invoice-list-table').on('click', '.dtr-details .btn-show', function () {
+      const tr = $(this).closest('tr').prev();
+      const rowData = invoiceListTableInstance.value.row(tr).data();
+      if (rowData && rowData.id) {
+        window.location.href = `/invoices/${rowData.id}`;
+      }
+    });
+
+    $('#invoice_date').datepicker({
+      todayHighlight: true,
+      autoclose: true,
+      format: 'yyyy-mm-dd' // Ensure the date format is correct
+    }).on('changeDate', function (e) {
+      form.invoice_date = e.format('yyyy-mm-dd');
+    });
+
     initializeSupplierSelect();
     watch(() => form.supplier, (newSupplierId) => {
       if (newSupplierId) {
@@ -1358,109 +1464,6 @@ onMounted(() => {
 
     $('#po-items-search').on('keyup', function () {
       poItemsTableInstance.value.search(this.value).draw();
-    });
-
-    invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
-      responsive: true,
-      autoWidth: true,
-      data: props.purchaseInvoices.map(invoice => ({
-        id: invoice.id,
-        pi_number: invoice.pi_number || '',
-        invoice_date: invoice.invoice_date || '',
-        supplier_name: invoice.supplier ? invoice.supplier.name : '',
-        total_amount: invoice.total_amount || 0,
-        paid_amount: invoice.paid_amount || 0,
-        transaction_type: invoice.transaction_type || 0,
-        payment_type: invoice.payment_type || 0,
-      })),
-      columns: [
-        { data: null, render: (data, type, row, meta) => meta.row + 1 },
-        { data: 'pi_number' },
-        { data: 'invoice_date', render: (data) => format(data, 'date') },
-        { data: 'supplier_name' },
-        { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
-        { data: 'paid_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
-        { data: 'transaction_type', render: (data) => getTransactionType(data) },
-        { data: 'payment_type', render: (data) => getPaymentType(data) },
-        { data: null, render: (data) => `
-            <div class="btn-group">
-              <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
-                <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
-                <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
-                <li><a class="dropdown-item btn-show"><i class="fas fa-eye"></i> Show</a></li>
-              </ul>
-            </div>
-          `, className: 'text-center'
-        },
-      ],
-    });
-
-    $('#invoice-list-table')
-      .on('click', '.btn-edit', function () {
-        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
-        if (rowData && rowData.id) {
-          editInvoice(rowData.id);
-          $('#nav-create-tab').tab('show');
-        }
-      })
-      .on('click', '.btn-delete', function () {
-        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
-        if (rowData) deleteInvoice(rowData.id);
-      })
-      .on('click', '.btn-view-pdf', function () {
-        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
-        if (rowData && rowData.pdf_url) {
-          openPdfViewer(rowData.pdf_url);
-        }
-      })
-      .on('click', '.btn-show', function () {
-        const rowData = invoiceListTableInstance.value.row($(this).closest('tr')).data();
-        if (rowData && rowData.id) {
-          window.location.href = `/invoices/${rowData.id}`;
-        }
-      });
-
-    $('#invoice-list-table').on('click', '.dtr-details .btn-edit', function () {
-      const tr = $(this).closest('tr').prev();
-      const rowData = invoiceListTableInstance.value.row(tr).data();
-      if (rowData && rowData.id) {
-        editInvoice(rowData.id);
-        $('#nav-create-tab').tab('show');
-      }
-    });
-
-    $('#invoice-list-table').on('click', '.dtr-details .btn-delete', function () {
-      const tr = $(this).closest('tr').prev();
-      const rowData = invoiceListTableInstance.value.row(tr).data();
-      if (rowData) deleteInvoice(rowData.id);
-    });
-
-    $('#invoice-list-table').on('click', '.dtr-details .btn-view-pdf', function () {
-      const tr = $(this).closest('tr').prev();
-      const rowData = invoiceListTableInstance.value.row(tr).data();
-      if (rowData && rowData.pdf_url) {
-        openPdfViewer(rowData.pdf_url);
-      }
-    });
-
-    $('#invoice-list-table').on('click', '.dtr-details .btn-show', function () {
-      const tr = $(this).closest('tr').prev();
-      const rowData = invoiceListTableInstance.value.row(tr).data();
-      if (rowData && rowData.id) {
-        window.location.href = `/invoices/${rowData.id}`;
-      }
-    });
-
-    $('#invoice_date').datepicker({
-      todayHighlight: true,
-      autoclose: true,
-      format: 'yyyy-mm-dd' // Ensure the date format is correct
-    }).on('changeDate', function (e) {
-      form.invoice_date = e.format('yyyy-mm-dd');
     });
 
     initializeDropzone();
