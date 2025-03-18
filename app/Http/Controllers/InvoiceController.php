@@ -12,17 +12,13 @@ class InvoiceController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
-            'users' => User::all(),
-            'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
-            'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
-            'cashRequests' => CashRequest::all(),
-            'purchaseRequests' => PurchaseRequest::all(),
-            'purchaseOrders' => PurchaseOrder::all(),
-            'suppliers' => Supplier::all(),
-            'currentUser' => auth()->user(),
-        ]);
+        try {
+            $invoices = PurchaseInvoice::with('supplier')->get(); // Adjust relationships as needed
+            return response()->json($invoices); // Ensure it returns a JSON response
+        } catch (\Exception $e) {
+            Log::error('Error fetching invoices', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch invoices'], 500);
+        }
     }
 
     public function getPrItems(Request $request)
@@ -287,9 +283,14 @@ class InvoiceController extends Controller
 
     public function searchSuppliers(Request $request)
     {
-        $query = $request->input('q');
-        $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
-        return response()->json($suppliers);
+        try {
+            $query = $request->input('q');
+            $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
+            return response()->json($suppliers);
+        } catch (\Exception $e) {
+            Log::error('Error searching suppliers', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to search suppliers.'], 500);
+        }
     }
 
     public function filterCashRequests(Request $request)
@@ -307,7 +308,7 @@ class InvoiceController extends Controller
                 return $query->where('request_type', 2);
             })
             ->when($transactionType == 2, function ($query) {
-                return $query->whereNull('request_type'); // Ensure no cash requests are returned
+                return $query->whereNull('request_type');
             })
             ->get();
 

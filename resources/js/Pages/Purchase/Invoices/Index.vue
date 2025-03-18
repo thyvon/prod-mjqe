@@ -285,7 +285,11 @@ const submitForm = async () => {
 
 const refreshInvoiceListTable = async () => {
   try {
-    const response = await axios.get('/invoices'); // Fetch updated invoices from the server
+    const response = await axios.get('/invoices', {
+      headers: {
+        'Accept': 'application/json', // Ensure JSON response
+      },
+    });
     console.log('API Response:', response.data); // Debugging: Log the API response
     const invoices = Array.isArray(response.data) 
       ? response.data 
