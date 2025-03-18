@@ -69,10 +69,13 @@ class InvoiceController extends Controller
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
 
+            // Fetch updated invoices
+            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
+
             // Return the invoice with related data for consistency
             return response()->json([
                 'message' => 'Invoice created successfully.',
-                'invoice' => $invoice->load(['items', 'supplier']), // Ensure related data is loaded
+                'purchaseInvoices' => $updatedInvoices, // Return updated invoices
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
@@ -147,8 +150,14 @@ class InvoiceController extends Controller
 
             $this->recalculateItemQuantities($validatedData['items']);
 
+            // Fetch updated invoices
+            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
+
             // Ensure cash_ref is included in the response
-            return response()->json($invoice->load('items', 'supplier'));
+            return response()->json([
+                'message' => 'Invoice updated successfully.',
+                'purchaseInvoices' => $updatedInvoices, // Return updated invoices
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
             return response()->json(['error' => 'Validation Error', 'messages' => $e->errors()], 422);
