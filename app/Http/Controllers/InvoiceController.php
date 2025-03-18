@@ -68,6 +68,7 @@ class InvoiceController extends Controller
             Log::info('Invoice created', ['invoice' => $invoice->toArray()]);
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
+            $this->recalculateItemQuantities($validatedData['items']); // Recalculate item quantities after creation
 
             // Fetch updated invoices
             $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
