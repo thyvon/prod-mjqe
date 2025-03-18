@@ -99,8 +99,8 @@ const balance = computed(() => {
                         <th scope="col" class="text-uppercase">Item Code</th>
                         <th scope="col" class="text-uppercase">Description</th>
                         <th scope="col" class="text-uppercase text-end">Quantity</th>
-                        <!-- <th scope="col" class="text-uppercase text-end">Unit Price</th> -->
-                        <th scope="col" class="text-uppercase text-end">Total Price</th>
+                        <th scope="col" class="text-uppercase text-end">Unit Price</th>
+                        <th scope="col" class="text-uppercase text-end">Grand Total</th>
                       </tr>
                     </thead>
                     <tbody class="table-group-divider">
@@ -108,7 +108,7 @@ const balance = computed(() => {
                         <td>{{ item.product?.sku }}</td>
                         <td>{{ item.description }}</td>
                         <td class="text-end">{{ item.qty }}</td>
-                        <!-- <td class="text-end">{{ item.unit_price }}</td> -->
+                        <td class="text-end">{{ item.unit_price }}</td>
                         <td class="text-end">{{ item.paid_amount }}</td>
                       </tr>
                       <tr >
