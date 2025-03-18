@@ -13,7 +13,7 @@ class InvoiceController extends Controller
     public function index()
     {
         $purchaseInvoices = PurchaseInvoice::with(['supplier:id,name', 'items'])
-            ->select('id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type')
+            ->select('id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type')
             ->get();
 
         $suppliers = Supplier::select('id', 'name')->get();
