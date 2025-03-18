@@ -127,7 +127,7 @@ class PrItem extends Model
             $this->status = 'Void';
         } elseif ($this->qty_purchase == ($this->qty - $this->qty_cancel)) {
             $this->status = 'Closed';
-        } elseif ($this->qty_purchase < ($this->qty - $this->qty_cancel)) {
+        } elseif ($this->qty_purchase < ($this->qty - $this->qty_cancel) && $this->qty_purchase != 0) {
             $this->status = 'Partial';
         } else {
             $this->status = 'Pending';

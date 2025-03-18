@@ -196,7 +196,7 @@ class PoItems extends Model
             $this->status = 'Closed';
         } elseif ($this->received_qty == ($this->qty - $this->cancelled_qty)) {
             $this->status = 'Closed';
-        } elseif ($this->received_qty < ($this->qty - $this->cancelled_qty)) {
+        } elseif ($this->received_qty < ($this->qty - $this->cancelled_qty) && $this->received_qty != 0) {
             $this->status = 'Partial';
         } else {
             $this->status = 'Pending';
