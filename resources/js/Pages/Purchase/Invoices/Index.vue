@@ -818,8 +818,10 @@ const isCreditTransaction = computed(() => form.transaction_type == 2);
 
 watch(() => form.transaction_type, (newTransactionType) => {
   console.log('Transaction type selected:', newTransactionType);
-  if (newTransactionType == 2) {
-    form.cash_ref = null;
+  if (!isEditMode.value) { // Prevent resetting cash_ref in edit mode
+    if (newTransactionType == 2) {
+      form.cash_ref = null;
+    }
   }
   if (newTransactionType == 1) {
     form.payment_term = 4;
