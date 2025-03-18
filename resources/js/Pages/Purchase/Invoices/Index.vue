@@ -1232,8 +1232,12 @@ onMounted(() => {
       responsive: true,
       autoWidth: true,
       ajax: {
-        url: '/invoices', // Ensure this URL returns the correct JSON structure
-        dataSrc: '',
+        url: '/invoices', // Ensure this URL matches the route in your Laravel application
+        dataSrc: '', // Ensure the response is an array of objects
+        error: function (xhr, error, thrown) {
+          console.error('DataTables AJAX error:', error, thrown);
+          toastr.error('Failed to load invoices. Please try again.');
+        },
       },
       columns: [
         { data: null, render: (data, type, row, meta) => meta.row + 1 }, // Row number

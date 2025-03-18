@@ -13,25 +13,30 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            // Fetch data for DataTable
-            $invoices = PurchaseInvoice::with(['supplier:id,name'])
-                ->select(['id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type'])
-                ->get();
+            try {
+                // Fetch data for DataTable
+                $invoices = PurchaseInvoice::with(['supplier:id,name'])
+                    ->select(['id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type'])
+                    ->get();
 
-            $data = $invoices->map(function ($invoice) {
-                return [
-                    'id' => $invoice->id,
-                    'pi_number' => $invoice->pi_number,
-                    'invoice_date' => $invoice->invoice_date,
-                    'supplier_name' => $invoice->supplier->name ?? 'Unknown',
-                    'total_amount' => $invoice->total_amount,
-                    'paid_amount' => $invoice->paid_amount,
-                    'transaction_type' => $invoice->transaction_type,
-                    'payment_type' => $invoice->payment_type,
-                ];
-            });
+                $data = $invoices->map(function ($invoice) {
+                    return [
+                        'id' => $invoice->id,
+                        'pi_number' => $invoice->pi_number,
+                        'invoice_date' => $invoice->invoice_date,
+                        'supplier_name' => $invoice->supplier->name ?? 'Unknown',
+                        'total_amount' => $invoice->total_amount,
+                        'paid_amount' => $invoice->paid_amount,
+                        'transaction_type' => $invoice->transaction_type,
+                        'payment_type' => $invoice->payment_type,
+                    ];
+                });
 
-            return response()->json($data);
+                return response()->json($data);
+            } catch (\Exception $e) {
+                Log::error('Error fetching invoices for DataTable', ['exception' => $e->getMessage()]);
+                return response()->json(['error' => 'Failed to fetch invoices'], 500);
+            }
         }
 
         // Render the page with initial data
