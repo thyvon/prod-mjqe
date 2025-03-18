@@ -57,7 +57,7 @@ Route::middleware('auth')->group(function () {
         'clear-invoice' => ClearInvoiceController::class,
         'purchase-requests' => PurchaseRequestController::class,
         'purchase-orders' => PurchaseOrderController::class,
-        'invoices' => InvoiceController::class,
+        'invoices' => InvoiceController::class, // This already includes all RESTful routes for invoices
     ]);
 
     Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');

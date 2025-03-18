@@ -14,10 +14,12 @@ class InvoiceController extends Controller
     {
         try {
             $invoices = PurchaseInvoice::with('supplier')->get(); // Adjust relationships as needed
-            return response()->json($invoices); // Ensure it returns a JSON response
+            return Inertia::render('Purchase/Invoices/Index', [
+                'invoices' => $invoices,
+            ]); // Render the index page with Inertia
         } catch (\Exception $e) {
             Log::error('Error fetching invoices', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'Failed to fetch invoices'], 500);
+            return redirect()->back()->with('error', 'Failed to fetch invoices.');
         }
     }
 
