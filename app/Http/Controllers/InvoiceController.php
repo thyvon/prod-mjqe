@@ -297,7 +297,7 @@ class InvoiceController extends Controller
         $transactionType = $request->input('transaction_type');
 
         if (!in_array($transactionType, [1, 2, 3])) {
-            return response()->json(['error' => 'Invalid transaction type'], 400);
+            return response()->json(['error' => 'Invalid transaction type'], 400); // Return a clear error message
         }
 
         $cashRequests = CashRequest::when($transactionType == 1, function ($query) {
@@ -311,9 +311,7 @@ class InvoiceController extends Controller
             })
             ->get();
 
-        Log::info('Filtered Cash Requests:', ['transaction_type' => $transactionType, 'cashRequests' => $cashRequests]);
-
-        return response()->json($cashRequests); // Always return a valid JSON response
+        return response()->json($cashRequests); // Return the filtered cash requests
     }
 
     public function attachFile(Request $request, $id)
