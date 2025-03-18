@@ -13,10 +13,10 @@ class InvoiceController extends Controller
     public function index()
     {
         try {
-            $invoices = PurchaseInvoice::with('supplier')->get(); // Adjust relationships as needed
+            $invoices = PurchaseInvoice::with(['supplier:id,name'])->get(); // Fetch invoices with supplier name
             return Inertia::render('Purchase/Invoices/Index', [
-                'invoices' => $invoices,
-            ]); // Render the index page with Inertia
+                'purchaseInvoices' => $invoices, // Pass the invoices to the Inertia view
+            ]);
         } catch (\Exception $e) {
             Log::error('Error fetching invoices', ['exception' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Failed to fetch invoices.');
