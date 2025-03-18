@@ -268,18 +268,39 @@ const submitForm = async () => {
   calculateTotalAmount();
   calculateServiceChargeForItems();
   calculateItemDiscounts(); // Ensure discounts are calculated correctly before submitting
+
+  let success = false;
   if (isEditMode.value && form.id) {
-    const success = await updateInvoice();
-    if (success) {
-      clearForm();
-      refreshInvoiceListTable(); // Refresh the invoice list table after updating
-    }
+    success = await updateInvoice();
   } else {
-    const success = await createInvoice();
-    if (success) {
-      clearForm();
-      refreshInvoiceListTable(); // Refresh the invoice list table after creating
-    }
+    success = await createInvoice();
+  }
+
+  if (success) {
+    clearForm();
+    await fetchInvoices(); // Fetch updated invoices after saving
+    $('#nav-list-tab').tab('show'); // Switch to the invoice list tab
+  }
+};
+
+const fetchInvoices = async () => {
+  try {
+    const response = await axios.get('/invoices'); // Fetch updated invoices from the backend
+    const updatedInvoices = response.data.purchaseInvoices || [];
+    const invoices = updatedInvoices.map(invoice => ({
+      id: invoice.id,
+      pi_number: invoice.pi_number || '',
+      invoice_date: invoice.invoice_date || '',
+      supplier_name: invoice.supplier ? invoice.supplier.name : '',
+      total_amount: invoice.total_amount || 0,
+      paid_amount: invoice.paid_amount || 0,
+      transaction_type: invoice.transaction_type || 0,
+      payment_type: invoice.payment_type || 0,
+    }));
+    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Update the table
+  } catch (error) {
+    console.error('Error fetching updated invoices:', error);
+    toastr.error('Failed to fetch updated invoices.');
   }
 };
 
