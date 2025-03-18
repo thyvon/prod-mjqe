@@ -10,8 +10,31 @@ use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        if ($request->ajax()) {
+            // Fetch data for DataTable
+            $invoices = PurchaseInvoice::with(['supplier:id,name'])
+                ->select(['id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type'])
+                ->get();
+
+            $data = $invoices->map(function ($invoice) {
+                return [
+                    'id' => $invoice->id,
+                    'pi_number' => $invoice->pi_number,
+                    'invoice_date' => $invoice->invoice_date,
+                    'supplier_name' => $invoice->supplier->name ?? 'Unknown',
+                    'total_amount' => $invoice->total_amount,
+                    'paid_amount' => $invoice->paid_amount,
+                    'transaction_type' => $invoice->transaction_type,
+                    'payment_type' => $invoice->payment_type,
+                ];
+            });
+
+            return response()->json($data);
+        }
+
+        // Render the page with initial data
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
             'users' => User::all(),
@@ -160,59 +183,44 @@ class InvoiceController extends Controller
 
     public function destroy($id)
     {
-        $invoice = PurchaseInvoice::findOrFail($id);
-        $invoiceItems = $invoice->items;
+        try {
+            $invoice = PurchaseInvoice::findOrFail($id);
+            $invoiceItems = $invoice->items;
 
-        foreach ($invoiceItems as $item) {
-            if ($item->po_item) {
-                $poItem = PoItems::find($item->po_item);
-                if ($poItem) {
-                    $poItem->recalculateReceivedQty();
-                    $poItem->recalculatePaidAmount();
-                    $poItem->calculateForceClose();
+            foreach ($invoiceItems as $item) {
+                if ($item->po_item) {
+                    $poItem = PoItems::find($item->po_item);
+                    if ($poItem) {
+                        $poItem->recalculateReceivedQty();
+                        $poItem->recalculatePaidAmount();
+                        $poItem->calculateForceClose();
+                    }
+                }
+
+                if ($item->pr_item) {
+                    $prItem = PrItem::find($item->pr_item);
+                    if ($prItem) {
+                        $prItem->recalculateQtyPurchase();
+                        $prItem->calculateForceClose();
+                    }
                 }
             }
 
-            if ($item->pr_item) {
-                $prItem = PrItem::find($item->pr_item);
-                if ($prItem) {
-                    $prItem->recalculateQtyPurchase();
-                    $prItem->calculateForceClose();
-                }
+            // Delete associated attachments
+            $attachments = $invoice->attachments;
+            foreach ($attachments as $attachment) {
+                $localFileService = new LocalFileService();
+                $localFileService->deleteFile($attachment->file_url);
+                $attachment->delete();
             }
+
+            $invoice->items()->delete();
+            $invoice->delete();
+
+            return response()->json(['message' => 'Invoice deleted successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Internal Server Error'], 500);
         }
-
-        // Delete associated attachments
-        $attachments = $invoice->attachments;
-        foreach ($attachments as $attachment) {
-            $localFileService = new LocalFileService();
-            $localFileService->deleteFile($attachment->file_url);
-            $attachment->delete();
-        }
-
-        $invoice->items()->delete();
-        $invoice->delete();
-
-        foreach ($invoiceItems as $item) {
-            if ($item->po_item) {
-                $poItem = PoItems::find($item->po_item);
-                if ($poItem) {
-                    $poItem->recalculateReceivedQty();
-                    $poItem->recalculatePaidAmount();
-                    $poItem->calculateForceClose();
-                }
-            }
-
-            if ($item->pr_item) {
-                $prItem = PrItem::find($item->pr_item);
-                if ($prItem) {
-                    $prItem->recalculateQtyPurchase();
-                    $prItem->calculateForceClose();
-                }
-            }
-        }
-
-        return response()->json(null, 204);
     }
 
     public function itemList()
