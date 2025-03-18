@@ -286,17 +286,23 @@ const submitForm = async () => {
 const refreshInvoiceListTable = async () => {
   try {
     const response = await axios.get('/invoices'); // Fetch updated invoices from the server
-    const invoices = response.data.map(invoice => ({
-      id: invoice.id,
-      pi_number: invoice.pi_number || '',
-      invoice_date: invoice.invoice_date || '',
-      supplier_name: invoice.supplier ? invoice.supplier.name : '',
-      total_amount: invoice.total_amount || 0,
-      paid_amount: invoice.paid_amount || 0,
-      transaction_type: invoice.transaction_type || 0,
-      payment_type: invoice.payment_type || 0,
-    }));
-    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Redraw the table with updated data
+    console.log('API Response:', response.data); // Debugging: Log the API response
+    const invoices = Array.isArray(response.data) 
+      ? response.data 
+      : response.data.invoices || []; // Adjust based on the actual API response structure
+
+    invoiceListTableInstance.value.clear().rows.add(
+      invoices.map(invoice => ({
+        id: invoice.id,
+        pi_number: invoice.pi_number || '',
+        invoice_date: invoice.invoice_date || '',
+        supplier_name: invoice.supplier ? invoice.supplier.name : '',
+        total_amount: invoice.total_amount || 0,
+        paid_amount: invoice.paid_amount || 0,
+        transaction_type: invoice.transaction_type || 0,
+        payment_type: invoice.payment_type || 0,
+      }))
+    ).draw(); // Redraw the table with updated data
   } catch (error) {
     console.error('Error refreshing invoice list:', error);
     toastr.error('Failed to refresh invoice list.');
