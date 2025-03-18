@@ -12,15 +12,17 @@ class InvoiceController extends Controller
 {
     public function index()
     {
-        try {
-            $invoices = PurchaseInvoice::with(['supplier:id,name'])->get(); // Fetch invoices with supplier name
-            return Inertia::render('Purchase/Invoices/Index', [
-                'purchaseInvoices' => $invoices, // Pass the invoices to the Inertia view
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error fetching invoices', ['exception' => $e->getMessage()]);
-            return redirect()->back()->with('error', 'Failed to fetch invoices.');
-        }
+        return Inertia::render('Purchase/Invoices/Index', [
+            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
+            'users' => User::all(),
+            'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
+            'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
+            'cashRequests' => CashRequest::all(),
+            'purchaseRequests' => PurchaseRequest::all(),
+            'purchaseOrders' => PurchaseOrder::all(),
+            'suppliers' => Supplier::all(),
+            'currentUser' => auth()->user(),
+        ]);
     }
 
     public function getPrItems(Request $request)
@@ -285,14 +287,9 @@ class InvoiceController extends Controller
 
     public function searchSuppliers(Request $request)
     {
-        try {
-            $query = $request->input('q');
-            $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
-            return response()->json($suppliers);
-        } catch (\Exception $e) {
-            Log::error('Error searching suppliers', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'Failed to search suppliers.'], 500);
-        }
+        $query = $request->input('q');
+        $suppliers = Supplier::where('name', 'like', '%' . $query . '%')->get();
+        return response()->json($suppliers);
     }
 
     public function filterCashRequests(Request $request)
@@ -310,7 +307,7 @@ class InvoiceController extends Controller
                 return $query->where('request_type', 2);
             })
             ->when($transactionType == 2, function ($query) {
-                return $query->whereNull('request_type');
+                return $query->whereNull('request_type'); // Ensure no cash requests are returned
             })
             ->get();
 
