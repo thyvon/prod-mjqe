@@ -24,10 +24,7 @@ const props = defineProps({
   currentUser: Object,
   cashRequests: Array,
   prItems: Array,
-  purchaseInvoices: {
-    type: Array,
-    default: () => [], // Default to an empty array
-  },
+  purchaseInvoices: Array,
   vatRate: Number,
 });
 
@@ -286,30 +283,20 @@ const submitForm = async () => {
   }
 };
 
-const refreshInvoiceListTable = async () => {
+const refreshInvoiceListTable = () => {
   try {
-    const response = await axios.get('/invoices', {
-      headers: {
-        'Accept': 'application/json', // Ensure JSON response
-      },
-    });
-    console.log('API Response:', response.data); // Debugging: Log the API response
-    const invoices = Array.isArray(response.data) 
-      ? response.data 
-      : response.data.invoices || []; // Adjust based on the actual API response structure
+    const invoices = props.purchaseInvoices.map(invoice => ({
+      id: invoice.id,
+      pi_number: invoice.pi_number || '',
+      invoice_date: invoice.invoice_date || '',
+      supplier_name: invoice.supplier ? invoice.supplier.name : '',
+      total_amount: invoice.total_amount || 0,
+      paid_amount: invoice.paid_amount || 0,
+      transaction_type: invoice.transaction_type || 0,
+      payment_type: invoice.payment_type || 0,
+    }));
 
-    invoiceListTableInstance.value.clear().rows.add(
-      invoices.map(invoice => ({
-        id: invoice.id,
-        pi_number: invoice.pi_number || '',
-        invoice_date: invoice.invoice_date || '',
-        supplier_name: invoice.supplier ? invoice.supplier.name : '',
-        total_amount: invoice.total_amount || 0,
-        paid_amount: invoice.paid_amount || 0,
-        transaction_type: invoice.transaction_type || 0,
-        payment_type: invoice.payment_type || 0,
-      }))
-    ).draw(); // Redraw the table with updated data
+    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Update the table with data from props
   } catch (error) {
     console.error('Error refreshing invoice list:', error);
     toastr.error('Failed to refresh invoice list.');
@@ -318,11 +305,6 @@ const refreshInvoiceListTable = async () => {
 
 const createInvoice = async () => {
   try {
-    if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
-    form.discount_total = parseFloat(form.discount_total);
-    form.cash_ref = form.cash_ref ? parseInt(form.cash_ref) : null; // Ensure cash_ref is captured
-    if (form.transaction_type !== 2 && form.cash_ref !== null) form.cash_ref = parseInt(form.cash_ref);
-    else form.cash_ref = null;
 
     if (Array.isArray(form.items)) {
       form.items.forEach(item => {
@@ -1378,11 +1360,10 @@ onMounted(() => {
       poItemsTableInstance.value.search(this.value).draw();
     });
 
-    console.log('purchaseInvoices:', props.purchaseInvoices); // Debugging
     invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
       responsive: true,
       autoWidth: true,
-      data: (props.purchaseInvoices || []).map(invoice => ({
+      data: props.purchaseInvoices.map(invoice => ({
         id: invoice.id,
         pi_number: invoice.pi_number || '',
         invoice_date: invoice.invoice_date || '',
