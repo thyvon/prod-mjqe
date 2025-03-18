@@ -10,46 +10,27 @@ use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        if ($request->ajax()) {
-            try {
-                // Fetch data for DataTable
-                $invoices = PurchaseInvoice::with(['supplier:id,name'])
-                    ->select(['id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type'])
-                    ->get();
+        $purchaseInvoices = PurchaseInvoice::with(['supplier:id,name', 'items'])
+            ->select('id', 'pi_number', 'invoice_date', 'supplier_id', 'total_amount', 'paid_amount', 'transaction_type', 'payment_type')
+            ->get();
 
-                $data = $invoices->map(function ($invoice) {
-                    return [
-                        'id' => $invoice->id,
-                        'pi_number' => $invoice->pi_number,
-                        'invoice_date' => $invoice->invoice_date,
-                        'supplier_name' => $invoice->supplier->name ?? 'Unknown',
-                        'total_amount' => $invoice->total_amount,
-                        'paid_amount' => $invoice->paid_amount,
-                        'transaction_type' => $invoice->transaction_type,
-                        'payment_type' => $invoice->payment_type,
-                    ];
-                });
+        $suppliers = Supplier::select('id', 'name')->get();
+        $users = User::select('id', 'name')->get();
+        $currentUser = auth()->user()->only(['id', 'name']); // Get only the user id and name
+        $prItems = PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get();
+        $poItems = PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get();
+        $cashRequests = CashRequest::select('id', 'ref_no', 'request_type', 'status', 'user_id', 'request_date', 'amount')->get();
 
-                return response()->json($data);
-            } catch (\Exception $e) {
-                Log::error('Error fetching invoices for DataTable', ['exception' => $e->getMessage()]);
-                return response()->json(['error' => 'Failed to fetch invoices'], 500);
-            }
-        }
-
-        // Render the page with initial data
         return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
-            'users' => User::all(),
-            'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
-            'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
-            'cashRequests' => CashRequest::all(),
-            'purchaseRequests' => PurchaseRequest::all(),
-            'purchaseOrders' => PurchaseOrder::all(),
-            'suppliers' => Supplier::all(),
-            'currentUser' => auth()->user(),
+            'purchaseInvoices' => $purchaseInvoices,
+            'suppliers' => $suppliers,
+            'users' => $users,
+            'currentUser' => (object) $currentUser, // Pass the current user as an object to the Vue component
+            'prItems' => $prItems,
+            'poItems' => $poItems,
+            'cashRequests' => $cashRequests,
         ]);
     }
 
