@@ -111,7 +111,7 @@ const balance = computed(() => {
                         <td>{{ item.description }}</td>
                         <td class="text-end">{{ item.qty }}</td>
                         <td class="text-end">{{ item.unit_price }}</td>
-                        <td class="text-end">{{ item.paid_amount }}</td>
+                        <td class="text-end">{{ parseFloat(item.paid_amount || 0).toFixed(4) }}</td>
                       </tr>
                       <tr >
                         <td colspan="4" class="text-end">Request Amount</td>
@@ -132,8 +132,8 @@ const balance = computed(() => {
             </div>
             <div class="row "> <!-- Add border class -->
               <div class="col-12 text-end "> <!-- Add border class -->
-                <button type="button" class="btn btn-primary mb-3">Download Invoice</button>
-                <button type="button" class="btn btn-danger mb-3">Submit Payment</button>
+                <!-- <button type="button" class="btn btn-primary mb-3">Download Invoice</button>
+                <button type="button" class="btn btn-danger mb-3">Submit Payment</button> -->
               </div>
             </div>
           </div>
