@@ -283,9 +283,15 @@ const submitForm = async () => {
   }
 };
 
-const refreshInvoiceListTable = () => {
-  const invoices = refreshInvoiceList(); // Get updated data from props
-  invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Redraw the table with updated data
+const refreshInvoiceListTable = async () => {
+  try {
+    const response = await axios.get('/invoices'); // Fetch the latest invoices from the server
+    const invoices = response.data;
+    invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Redraw the table with updated data
+  } catch (error) {
+    console.error('Error refreshing invoice list:', error);
+    toastr.error('Failed to refresh invoice list.');
+  }
 };
 
 const createInvoice = async () => {
