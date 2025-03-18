@@ -1309,6 +1309,14 @@ onMounted(() => {
       }
     });
 
+    $('#invoice-items-table tbody').on('click', 'tr', function (e) {
+      const rowIndex = invoiceItemsTableInstance.value.row(this).index();
+      const isActionColumn = $(e.target).closest('.dropdown').length > 0;
+      if (!isActionColumn) {
+        editItem(rowIndex);
+      }
+    });
+
     poItemsTableInstance.value = initializeDataTable('#po-items-table', {
       responsive: true,
       autoWidth: false,
