@@ -24,7 +24,10 @@ const props = defineProps({
   currentUser: Object,
   cashRequests: Array,
   prItems: Array,
-  purchaseInvoices: Array,
+  purchaseInvoices: {
+    type: Array,
+    default: () => [], // Default to an empty array
+  },
   vatRate: Number,
 });
 
@@ -1375,10 +1378,11 @@ onMounted(() => {
       poItemsTableInstance.value.search(this.value).draw();
     });
 
+    console.log('purchaseInvoices:', props.purchaseInvoices); // Debugging
     invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
       responsive: true,
       autoWidth: true,
-      data: props.purchaseInvoices.map(invoice => ({
+      data: (props.purchaseInvoices || []).map(invoice => ({
         id: invoice.id,
         pi_number: invoice.pi_number || '',
         invoice_date: invoice.invoice_date || '',
