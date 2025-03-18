@@ -260,7 +260,6 @@ const clearForm = () => {
   });
   invoiceItemsTableInstance.value.clear().draw();
   $('#supplier').val(null).trigger('change');
-  $('#cash_ref').select2('destroy'); // Destroy the select2 instance of Cash Reference
 };
 
 const submitForm = async () => {
