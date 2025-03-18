@@ -113,6 +113,9 @@
               </div>
             </div>
           </div>
+          <div class="col-md-6 text-end">
+            <h5>Grand Total: {{ formatCurrency(grandTotal, invoice.currency) }}</h5>
+          </div>
         </div>
         <div class="mt-3">
           <button class="btn btn-secondary" @click="goBack">Back</button>
@@ -124,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { usePage, Head, router } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer } from '@/Pages/Purchase/Invoices/helpers';
@@ -153,6 +156,10 @@ const initializeDataTable = (selector) => {
     scrollX: false,
   });
 };
+
+const grandTotal = computed(() => {
+  return invoice.value.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0).toFixed(2);
+});
 
 onMounted(() => {
   try {

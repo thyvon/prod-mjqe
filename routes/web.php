@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
     Route::put('/purchase-orders/items/{id}/cancel', [PurchaseOrderController::class, 'cancelItem'])->name('purchase-orders.items.cancel');
     Route::put('/clear-invoice/{id}/approve', [ClearInvoiceController::class, 'approve'])->name('clear-invoice.approve');
+    Route::put('clear-invoices/{id}/approve', [ClearInvoiceController::class, 'approve']);
     
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/pr-items', [InvoiceController::class, 'getPrItems']);
@@ -81,6 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/invoices/attachments/{id}', [InvoiceController::class, 'deleteFile'])->name('invoices.deleteFile');
     Route::post('/invoices/attachments/{id}/update-file', [InvoiceController::class, 'updateFile'])->name('invoices.updateFile');
     Route::get('/purchase/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('/clear-invoices', [ClearInvoiceController::class, 'getClearInvoices']);
 });
 
 require __DIR__.'/auth.php';

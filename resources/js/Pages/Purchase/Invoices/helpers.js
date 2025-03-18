@@ -42,3 +42,12 @@ export const openPdfViewer = (url) => {
   }
   window.open(url, '_blank');
 };
+
+// New function to get currency name based on currency code
+export const getCurrency = (currencyCode) => {
+  switch (currencyCode) {
+    case 1: return 'USD';
+    case 2: return 'KHR';
+    default: return 'Unknown';
+  }
+};

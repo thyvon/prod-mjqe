@@ -260,6 +260,7 @@ const clearForm = () => {
   });
   invoiceItemsTableInstance.value.clear().draw();
   $('#supplier').val(null).trigger('change');
+  $('#cash_ref').select2('destroy'); // Destroy the select2 instance of Cash Reference
 };
 
 const submitForm = async () => {
@@ -272,25 +273,25 @@ const submitForm = async () => {
     const success = await updateInvoice();
     if (success) {
       clearForm();
-      refreshInvoiceList(); // Refresh the invoice list after updating
+      refreshInvoiceListTable(); // Refresh the invoice list table after updating
     }
   } else {
     const success = await createInvoice();
     if (success) {
       clearForm();
-      refreshInvoiceList(); // Refresh the invoice list after creating
+      refreshInvoiceListTable(); // Refresh the invoice list table after creating
     }
   }
+};
+
+const refreshInvoiceListTable = () => {
+  const invoices = refreshInvoiceList(); // Get updated data from props
+  invoiceListTableInstance.value.clear().rows.add(invoices).draw(); // Redraw the table with updated data
 };
 
 const createInvoice = async () => {
   try {
     if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
-    form.created_by = props.currentUser.id;
-    form.transaction_type = parseInt(form.transaction_type);
-    form.payment_type = parseInt(form.payment_type);
-    form.currency = parseInt(form.currency);
-    form.vat_rate = parseFloat(form.vat_rate);
     form.discount_total = parseFloat(form.discount_total);
     form.cash_ref = form.cash_ref ? parseInt(form.cash_ref) : null; // Ensure cash_ref is captured
     if (form.transaction_type !== 2 && form.cash_ref !== null) form.cash_ref = parseInt(form.cash_ref);
@@ -700,27 +701,17 @@ const addSupplier = (newSupplier) => {
   form.supplier = newSupplier.id;
 };
 
-const refreshInvoiceList = async () => {
-  try {
-    const response = await axios.get('/invoices');
-    const invoices = response.data; // Ensure response data is correctly handled
-    if (Array.isArray(invoices)) {
-      invoiceListTableInstance.value.clear().rows.add(invoices.map(invoice => ({
-        id: invoice.id,
-        pi_number: invoice.pi_number || '',
-        invoice_date: invoice.invoice_date || '',
-        supplier_name: invoice.supplier ? invoice.supplier.name : '',
-        total_amount: invoice.total_amount || 0,
-        paid_amount: invoice.paid_amount || 0,
-        transaction_type: invoice.transaction_type || 0,
-        payment_type: invoice.payment_type || 0,
-      }))).draw();
-    } else {
-      console.error('Unexpected response format:', invoices);
-    }
-  } catch (error) {
-    console.error('Error refreshing invoice list:', error);
-  }
+const refreshInvoiceList = () => {
+  return props.purchaseInvoices.map(invoice => ({
+    id: invoice.id,
+    pi_number: invoice.pi_number || '',
+    invoice_date: invoice.invoice_date || '',
+    supplier_name: invoice.supplier ? invoice.supplier.name : '',
+    total_amount: invoice.total_amount || 0,
+    paid_amount: invoice.paid_amount || 0,
+    transaction_type: invoice.transaction_type || 0,
+    payment_type: invoice.payment_type || 0,
+  }));
 };
 
 const deleteInvoice = async (invoiceId) => {
@@ -1075,43 +1066,14 @@ watch(() => form.transaction_type, async (newTransactionType) => {
       });
       filteredCashRequests.value = response.data;
       console.log('Filtered Cash Requests:', filteredCashRequests.value); // Log the data to verify
-      updateCashRefSelect();
     } catch (error) {
       console.error('Error fetching filtered cash requests:', error);
     }
   } else {
     filteredCashRequests.value = [];
-    updateCashRefSelect();
   }
   form.cash_ref = null; // Ensure cash_ref is reset when transaction_type changes
 });
-
-const initializeCashRefSelect = () => {
-  $('#cash_ref').select2({
-    placeholder: 'Select Cash Reference',
-    allowClear: true,
-    width: 'resolve',
-    data: filteredCashRequests.value.map(request => ({ id: request.id, text: request.ref_no })),
-  }).on('select2:select', function (e) {
-    form.cash_ref = e.params.data.id;
-    // Reinitialize invoice_date after Cash Reference is selected
-    $('#invoice_date').datepicker('update', form.invoice_date);
-  }).on('select2:unselect', function () {
-    form.cash_ref = null;
-    // Reinitialize invoice_date after Cash Reference is unselected
-    $('#invoice_date').datepicker('update', form.invoice_date);
-  });
-};
-
-const updateCashRefSelect = () => {
-  const data = filteredCashRequests.value.map(request => ({ id: request.id, text: request.ref_no }));
-  $('#cash_ref').empty().select2({
-    data: data,
-    placeholder: 'Select Cash Reference',
-    allowClear: true,
-    width: 'resolve',
-  }).val(form.cash_ref).trigger('change'); // Ensure the selected value is set correctly
-};
 
 const attachFile = async (invoiceId, file) => {
   try {
@@ -1241,7 +1203,6 @@ const initializeDataTable = (selector, options) => {
 onMounted(() => {
   try {
     initializeSupplierSelect();
-    initializeCashRefSelect();
     watch(() => form.supplier, (newSupplierId) => {
       if (newSupplierId) {
       }
@@ -1590,7 +1551,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div v-if="form.transaction_type !== 2" class="row mb-1 align-items-center">
                       <label for="cash_ref" class="col-sm-4 col-form-label">Cash Reference</label>
                       <div class="col-sm-8">
-                        <select v-model="form.cash_ref" class="form-select" id="cash_ref" style="width: 100%;">
+                        <select v-model="form.cash_ref" class="form-select" id="cash_ref">
                           <option value="" disabled>Select Cash Reference</option>
                           <option v-for="cashRequest in filteredCashRequests" :key="cashRequest.id" :value="cashRequest.id">
                             {{ cashRequest.ref_no }}
