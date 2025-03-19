@@ -42,9 +42,9 @@ const logout = () => {
     <div id="header" class="app-header">
       <div class="navbar-header">
         <a href="/dashboard" class="navbar-brand">
-	<img src="//www.mjqeducation.edu.kh/FrontEnd/Image/logo/mjq-education-single-logo_1.ico" alt="Logo" class="navbar-logo">
-	<span class="navbar-text"><b>PROD</b> System</span>
-	</a>
+          <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Logo">
+          <span class="brand-text"><b>| PROD</b></span>
+        </a>
 
         <button type="button" class="navbar-mobile-toggler" data-toggle="app-sidebar-mobile">
             <span class="icon-bar"></span>
@@ -209,3 +209,11 @@ const logout = () => {
 		<!-- END theme-panel -->
   </div>
 </template>
+
+<style scoped>
+/* Optional styling specific to this component */
+.brand-text {
+    font-size: 24px; /* Set specific font size */
+    margin-left: 8px;
+}
+</style>
