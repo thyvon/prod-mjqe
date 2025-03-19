@@ -16,22 +16,28 @@
     <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
     <!-- ================== END core-css ================== -->
+
+    <!-- ================== BEGIN plugin-css ================== -->
     <link href="/coloradmin/plugins/datatables.net-bs5/css/dataTables.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/datatables.net-select-bs5/css/select.bootstrap5.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/select2/dist/css/select2.min.css" rel="stylesheet" defer />
+    <link href="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/bootstrap-datepicker/dist/css/bootstrap-datepicker.css" rel="stylesheet" defer/>
-    <link href="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet" defer/>
-    <link href="/coloradmin/plugins/dropzone/dist/min/dropzone.min.css" rel="stylesheet" defer/>
+    <link href="/coloradmin/plugins/dropzone/dist/min/dropzone.min.css" rel="stylesheet" defer />
+    <link href="/coloradmin/plugins/jvectormap-next/jquery-jvectormap.css" rel="stylesheet" defer />
+    <link href="/coloradmin/plugins/nvd3/build/nv.d3.css" rel="stylesheet" defer />
+    <!-- ================== END plugin-css ================== -->
+
     @inertiaHead
 </head>
 <body>
-
+    <!-- ================== BEGIN core-js ================== -->
     <script src="/coloradmin/js/vendor.min.js" defer></script>
     <script src="/coloradmin/js/app.min.js" defer></script>
+    <!-- ================== END core-js ================== -->
 
-    <!-- ================== BEGIN page-js ================== -->
-
+    <!-- ================== BEGIN plugin-js ================== -->
     <script src="/coloradmin/plugins/datatables.net/js/jquery.dataTables.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-bs5/js/dataTables.bootstrap5.min.js" defer></script>
     <script src="/coloradmin/plugins/datatables.net-responsive/js/dataTables.responsive.min.js" defer></script>
@@ -44,6 +50,17 @@
     <script src="/coloradmin/plugins/moment/min/moment.min.js" defer></script>
     <script src="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.js" defer></script>
     <script src="/coloradmin/plugins/dropzone/dist/min/dropzone.min.js" defer></script>
+    <!-- ================== END plugin-js ================== -->
+
+    <!-- ================== BEGIN dashboard-js ================== -->
+    <script src="/coloradmin/plugins/d3/d3.min.js" defer></script>
+    <script src="/coloradmin/plugins/nvd3/build/nv.d3.min.js" defer></script>
+    <script src="/coloradmin/plugins/jvectormap-next/jquery-jvectormap.min.js" defer></script>
+    <script src="/coloradmin/plugins/jvectormap-content/world-mill.js" defer></script>
+    <script src="/coloradmin/plugins/apexcharts/dist/apexcharts.min.js" defer></script>
+    <script src="/coloradmin/js/demo/dashboard-v3.js" defer></script>
+    <!-- ================== END dashboard-js ================== -->
+
     @vite(['resources/js/app.js'])
     @routes
     @inertia

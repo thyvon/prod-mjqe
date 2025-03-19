@@ -139,6 +139,7 @@ onMounted(() => {
     separator: " to ",
     startDate: moment().subtract(29, "days"),
     endDate: moment(),
+    showDropdowns: true, // Enable month and year selection
   }, function (start, end) {
     startDate.value = start.format("YYYY-MM-DD");
     endDate.value = end.format("YYYY-MM-DD");
