@@ -1,100 +1,4 @@
-<!-- <script setup>
-import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
-
-defineProps({
-    canResetPassword: {
-        type: Boolean,
-    },
-    status: {
-        type: String,
-    },
-});
-
-const form = useForm({
-    email: '',
-    password: '',
-    remember: false,
-});
-
-const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
-    });
-};
-</script>
-
-<template>
-    <GuestLayout>
-        <Head title="Log in" />
-
-        <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
-            {{ status }}
-        </div>
-
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="block mt-4">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600">Remember me</span>
-                </label>
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                    Forgot your password?
-                </Link>
-
-                <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Log in
-                </PrimaryButton>
-            </div>
-        </form>
-    </GuestLayout>
-</template>
- -->
-
- <script setup>
+<script setup>
  import { useForm } from '@inertiajs/vue3';
  import { Head } from '@inertiajs/vue3';
  import { onMounted } from 'vue';
@@ -145,7 +49,8 @@ const submit = () => {
              <div class="login-header">
                  <div class="brand">
                      <div class="d-flex align-items-center">
-                        <img src="//www.mjqeducation.edu.kh/FrontEnd/Image/logo/mjq-education-single-logo_1.ico" style="width: 50px; height: 50px;" alt="MJQ Logo"> <b>PROD</b> SYSTEM
+                        <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="MJQ Logo" class="logo-size">
+                        <span class="pt-4 ml-2"><b> | PROD</b></span>
                      </div>
                      <!-- <small>Bootstrap 5 Responsive Admin Template</small> -->
                  </div>
@@ -232,6 +137,15 @@ const submit = () => {
 
  <style scoped>
   /* Optional styling specific to this component */
+  .logo-size {
+    width: 200px; /* Increased width */
+    height: auto; /* Maintain aspect ratio */
+}
+
+/* Invert logo colors in dark mode */
+[data-bs-theme="dark"] .logo-size {
+    filter: invert(1);
+}
  </style>
 
 
