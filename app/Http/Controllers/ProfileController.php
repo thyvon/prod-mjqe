@@ -31,6 +31,17 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
+        // Add the missing fields
+        $request->user()->fill([
+            'card_id' => $request->input('card_id'),
+            'position' => $request->input('position'),
+            'campus' => $request->input('campus'),
+            'division' => $request->input('division'),
+            'department' => $request->input('department'),
+            'phone' => $request->input('phone'),
+            'extension' => $request->input('extension'),
+        ]);
+
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
