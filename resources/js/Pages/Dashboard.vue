@@ -41,26 +41,48 @@ onMounted(() => {
     }
 
     const ctx6 = document.getElementById('doughnut-chart').getContext('2d');
+    const isDarkTheme = document.body.classList.contains('dark-theme'); // Check if dark theme is active
+
+    const backgroundColors = isDarkTheme
+        ? [
+            'rgba(75, 192, 192, 0.7)', // Teal
+            'rgba(54, 162, 235, 0.7)', // Blue
+            'rgba(255, 206, 86, 0.7)', // Yellow
+            'rgba(201, 203, 207, 0.7)', // Gray
+            'rgba(153, 102, 255, 0.7)'  // Purple
+        ]
+        : [
+            'rgba(75, 192, 192, 0.5)', // Teal
+            'rgba(54, 162, 235, 0.5)', // Blue
+            'rgba(255, 206, 86, 0.5)', // Yellow
+            'rgba(201, 203, 207, 0.5)', // Gray
+            'rgba(153, 102, 255, 0.5)'  // Purple
+        ];
+
+    const borderColors = isDarkTheme
+        ? [
+            'rgba(75, 192, 192, 1)', // Teal
+            'rgba(54, 162, 235, 1)', // Blue
+            'rgba(255, 206, 86, 1)', // Yellow
+            'rgba(201, 203, 207, 1)', // Gray
+            'rgba(153, 102, 255, 1)'  // Purple
+        ]
+        : [
+            'rgba(75, 192, 192, 0.8)', // Teal
+            'rgba(54, 162, 235, 0.8)', // Blue
+            'rgba(255, 206, 86, 0.8)', // Yellow
+            'rgba(201, 203, 207, 0.8)', // Gray
+            'rgba(153, 102, 255, 0.8)'  // Purple
+        ];
+
     window.myDoughnut = new Chart(ctx6, {
         type: 'doughnut',
         data: {
             labels: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'],
             datasets: [{
                 data: [300, 50, 100, 40, 120],
-                backgroundColor: [
-                    'rgba(' + app.color.indigoRgb + ', .7)',
-                    'rgba(' + app.color.blueRgb + ', .7)',
-                    'rgba(' + app.color.successRgb + ', .7)',
-                    'rgba(' + app.color.gray300Rgb + ', .7)',
-                    'rgba(' + app.color.gray900Rgb + ', .7)'
-                ],
-                borderColor: [
-                    app.color.indigo,
-                    app.color.blue,
-                    app.color.success,
-                    app.color.gray300,
-                    app.color.gray900
-                ],
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
                 borderWidth: 2,
                 label: 'My dataset'
             }]
