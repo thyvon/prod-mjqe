@@ -59,6 +59,7 @@
     <script src="/coloradmin/plugins/jvectormap-content/world-mill.js" defer></script>
     <script src="/coloradmin/plugins/apexcharts/dist/apexcharts.min.js" defer></script>
     <script src="/coloradmin/js/demo/dashboard-v3.js" defer></script>
+    <script src="/coloradmin/plugins/chart.js/dist/chart.umd.js" defer></script>
     <!-- ================== END dashboard-js ================== -->
 
     @vite(['resources/js/app.js'])
