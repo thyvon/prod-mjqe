@@ -39,6 +39,33 @@ onMounted(() => {
             currentRange.value = `${start.format('D MMM YYYY')} - ${end.format('D MMM YYYY')}`;
         });
     }
+
+    const ctx6 = document.getElementById('doughnut-chart').getContext('2d');
+    window.myDoughnut = new Chart(ctx6, {
+        type: 'doughnut',
+        data: {
+            labels: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'],
+            datasets: [{
+                data: [300, 50, 100, 40, 120],
+                backgroundColor: [
+                    'rgba(' + app.color.indigoRgb + ', .7)',
+                    'rgba(' + app.color.blueRgb + ', .7)',
+                    'rgba(' + app.color.successRgb + ', .7)',
+                    'rgba(' + app.color.gray300Rgb + ', .7)',
+                    'rgba(' + app.color.gray900Rgb + ', .7)'
+                ],
+                borderColor: [
+                    app.color.indigo,
+                    app.color.blue,
+                    app.color.success,
+                    app.color.gray300,
+                    app.color.gray900
+                ],
+                borderWidth: 2,
+                label: 'My dataset'
+            }]
+        }
+    });
 });
 </script>
 
@@ -321,46 +348,11 @@ onMounted(() => {
 					<div class="card border-0 mb-3 bg-gray-800 text-white">
 						<div class="card-body">
 							<div class="mb-2 text-gray-500">
-								<b>SAVING COST</b>
+								<b>EXPENSE BY TYPE</b>
 								<span class="ms-2"><i class="fa fa-hand-holding-dollar" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="SAVING COST" data-bs-placement="top"></i></span>
 							</div>
-							<div id="visitors-map" class="mb-2" style="height: 200px" ></div>
-							<div>
-								<div class="d-flex align-items-center text-white mb-2">
-									<div class="widget-img widget-img-xs rounded bg-dark me-2 w-40px" style="background-image: url(/coloradmin/img/flag/us.jpg)"></div>
-									<div class="d-flex w-100">
-										<div>United States</div>
-										<div class="ms-auto text-gray-500"><span data-animation="number" data-value="39.85">0.00</span>%</div>
-									</div>
-								</div>
-								<div class="d-flex align-items-center text-white mb-2">
-									<div class="widget-img widget-img-xs rounded bg-dark me-2 w-40px" style="background-image: url(/coloradmin/img/flag/cn.jpg)"></div>
-									<div class="d-flex w-100">
-										<div>China</div>
-										<div class="ms-auto text-gray-500"><span data-animation="number" data-value="14.23">0.00</span>%</div>
-									</div>
-								</div>
-								<div class="d-flex align-items-center text-white mb-2">
-									<div class="widget-img widget-img-xs rounded bg-dark me-2 w-40px" style="background-image: url(/coloradmin/img/flag/de.jpg)"></div>
-									<div class="d-flex w-100">
-										<div>Germany</div>
-										<div class="ms-auto text-gray-500"><span data-animation="number" data-value="12.83">0.00</span>%</div>
-									</div>
-								</div>
-								<div class="d-flex align-items-center text-white mb-2">
-									<div class="widget-img widget-img-xs rounded bg-dark me-2 w-40px" style="background-image: url(/coloradmin/img/flag/fr.jpg)"></div>
-									<div class="d-flex w-100">
-										<div>France</div>
-										<div class="ms-auto text-gray-500"><span data-animation="number" data-value="11.14">0.00</span>%</div>
-									</div>
-								</div>
-								<div class="d-flex align-items-center text-white mb-0">
-									<div class="widget-img widget-img-xs rounded bg-dark me-2 w-40px" style="background-image: url(/coloradmin/img/flag/jp.jpg)"></div>
-									<div class="d-flex w-100">
-										<div>Japan</div>
-										<div class="ms-auto text-gray-500"><span data-animation="number" data-value="10.75">0.00</span>%</div>
-									</div>
-								</div>
+							<div id="expense-chart-container" class="mb-2">
+								<canvas id="doughnut-chart"></canvas>
 							</div>
 						</div>
 					</div>
