@@ -155,6 +155,7 @@ const editItemForm = reactive({
   service_charge_overwritten: false,
   deposit: 0.0,
   stop_purchase: 0,
+  departmentPercentages: {}, // Add this line to store department percentages
 });
 
 const calculateGrandTotal = () => {
@@ -1945,8 +1946,16 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                   <div class="row mb-2 align-items-center">
                     <label for="editDepartment" class="col-sm-4 col-form-label">Department</label>
                     <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.department" class="form-control" id="editDepartment">
+                      <select id="editDepartment" class="form-select" multiple>
+                        <option value="PROD">PROD</option>
+                        <option value="ESLP">ESLP</option>
+                        <option value="AISAD">AISAD</option>
+                      </select>
                       <div v-if="editItemFormErrors.department" class="text-danger">{{ editItemFormErrors.department }}</div>
+                      <div v-for="(percentage, department) in editItemForm.departmentPercentages" :key="department" class="mt-2">
+                        <label :for="'percentage-' + department">{{ department }} Percentage</label>
+                        <input type="number" v-model="editItemForm.departmentPercentages[department]" class="form-control" :id="'percentage-' + department" min="0" max="100" />
+                      </div>
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">
@@ -2004,3 +2013,18 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
   word-break: break-word;
 }
 </style>
+<script>
+onMounted(() => {
+  $('#editDepartment').select2({
+    placeholder: 'Select Departments',
+    allowClear: true,
+    width: 'resolve',
+  }).on('change', function () {
+    const selectedDepartments = $(this).val();
+    editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
+      acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
+      return acc;
+    }, {});
+  });
+});
+</script>
