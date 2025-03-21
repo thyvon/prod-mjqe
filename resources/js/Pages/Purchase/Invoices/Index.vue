@@ -1467,6 +1467,23 @@ const formattedTotalDiscount = computed(() => formatCurrency(form.total_discount
 const formattedTotalServiceCharge = computed(() => formatCurrency(totalServiceCharge.value, form.currency));
 const formattedTotalVat = computed(() => formatCurrency(totalVat.value, form.currency));
 const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form.currency));
+
+onMounted(() => {
+  const editDepartmentElement = document.getElementById('editDepartment');
+  if (editDepartmentElement) {
+    $(editDepartmentElement).select2({
+      placeholder: 'Select Departments',
+      allowClear: true,
+      width: 'resolve',
+    }).on('change', function () {
+      const selectedDepartments = $(this).val();
+      editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
+        acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
+        return acc;
+      }, {});
+    });
+  }
+});
 </script>
 
 <template>
@@ -2013,18 +2030,3 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
   word-break: break-word;
 }
 </style>
-<script>
-onMounted(() => {
-  $('#editDepartment').select2({
-    placeholder: 'Select Departments',
-    allowClear: true,
-    width: 'resolve',
-  }).on('change', function () {
-    const selectedDepartments = $(this).val();
-    editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
-      acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
-      return acc;
-    }, {});
-  });
-});
-</script>
