@@ -1472,7 +1472,7 @@ onMounted(() => {
   const editDepartmentElement = document.getElementById('editDepartment');
   if (editDepartmentElement) {
     $(editDepartmentElement).select2({
-      placeholder: 'Select Departments',
+      placeholder: 'Select a department',
       allowClear: true,
       width: 'resolve',
     }).on('change', function () {
@@ -1963,7 +1963,7 @@ onMounted(() => {
                   <div class="row mb-2 align-items-center">
                     <label for="editDepartment" class="col-sm-4 col-form-label">Department</label>
                     <div class="col-sm-8">
-                      <select id="editDepartment" class="form-select" multiple>
+                      <select id="editDepartment" class="multiple-select2 form-control" multiple>
                         <option value="PROD">PROD</option>
                         <option value="ESLP">ESLP</option>
                         <option value="AISAD">AISAD</option>
