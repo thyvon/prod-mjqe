@@ -1474,11 +1474,10 @@ onMounted(() => {
     editInvoiceItemModal.addEventListener('shown.bs.modal', () => {
       const editDepartmentElement = document.getElementById('editDepartment');
       if (editDepartmentElement) {
-        $(editDepartmentElement).select2('destroy'); // Destroy any existing select2 instance
         $(editDepartmentElement).select2({
           placeholder: 'Select a department',
           allowClear: true,
-          width: 'resolve',
+          width: '100%', // Ensure the dropdown fits the container
         }).on('change', function () {
           const selectedDepartments = $(this).val();
           editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
