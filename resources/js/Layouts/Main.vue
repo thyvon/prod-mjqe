@@ -108,6 +108,9 @@ const logout = () => {
         &copy; 2024 PROD MJQE All Right Reserved
       </div>
     </div>
+	<a href="javascript:;" class="btn btn-icon btn-circle btn-theme btn-scroll-to-top" data-toggle="scroll-to-top">
+		<i class="fa fa-angle-up"></i>
+	</a>
     <!-- END #content -->
 
 		<!-- BEGIN theme-panel -->
