@@ -155,7 +155,6 @@ const editItemForm = reactive({
   service_charge_overwritten: false,
   deposit: 0.0,
   stop_purchase: 0,
-  departmentPercentages: {}, // Add this line to store department percentages
 });
 
 const calculateGrandTotal = () => {
@@ -1467,28 +1466,6 @@ const formattedTotalDiscount = computed(() => formatCurrency(form.total_discount
 const formattedTotalServiceCharge = computed(() => formatCurrency(totalServiceCharge.value, form.currency));
 const formattedTotalVat = computed(() => formatCurrency(totalVat.value, form.currency));
 const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form.currency));
-
-onMounted(() => {
-  const editInvoiceItemModal = document.getElementById('editInvoiceItemModal');
-  if (editInvoiceItemModal) {
-    editInvoiceItemModal.addEventListener('shown.bs.modal', () => {
-      const editDepartmentElement = document.getElementById('editDepartment');
-      if (editDepartmentElement) {
-        $(editDepartmentElement).select2({
-          placeholder: 'Select a department',
-          allowClear: true,
-          width: '100%', // Ensure the dropdown fits the container
-        }).on('change', function () {
-          const selectedDepartments = $(this).val();
-          editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
-            acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
-            return acc;
-          }, {});
-        });
-      }
-    });
-  }
-});
 </script>
 
 <template>
@@ -1968,16 +1945,8 @@ onMounted(() => {
                   <div class="row mb-2 align-items-center">
                     <label for="editDepartment" class="col-sm-4 col-form-label">Department</label>
                     <div class="col-sm-8">
-                      <select id="editDepartment" class="multiple-select2 form-control" multiple>
-                        <option value="PROD">PROD</option>
-                        <option value="ESLP">ESLP</option>
-                        <option value="AISAD">AISAD</option>
-                      </select>
+                      <input type="text" v-model="editItemForm.department" class="form-control" id="editDepartment">
                       <div v-if="editItemFormErrors.department" class="text-danger">{{ editItemFormErrors.department }}</div>
-                      <div v-for="(percentage, department) in editItemForm.departmentPercentages" :key="department" class="mt-2">
-                        <label :for="'percentage-' + department">{{ department }} Percentage</label>
-                        <input type="number" v-model="editItemForm.departmentPercentages[department]" class="form-control" :id="'percentage-' + department" min="0" max="100" />
-                      </div>
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">
