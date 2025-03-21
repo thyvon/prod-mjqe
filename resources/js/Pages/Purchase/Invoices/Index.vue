@@ -1469,18 +1469,23 @@ const formattedTotalVat = computed(() => formatCurrency(totalVat.value, form.cur
 const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form.currency));
 
 onMounted(() => {
-  const editDepartmentElement = document.getElementById('editDepartment');
-  if (editDepartmentElement) {
-    $(editDepartmentElement).select2({
-      placeholder: 'Select a department',
-      allowClear: true,
-      width: 'resolve',
-    }).on('change', function () {
-      const selectedDepartments = $(this).val();
-      editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
-        acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
-        return acc;
-      }, {});
+  const editInvoiceItemModal = document.getElementById('editInvoiceItemModal');
+  if (editInvoiceItemModal) {
+    editInvoiceItemModal.addEventListener('shown.bs.modal', () => {
+      const editDepartmentElement = document.getElementById('editDepartment');
+      if (editDepartmentElement) {
+        $(editDepartmentElement).select2({
+          placeholder: 'Select a department',
+          allowClear: true,
+          width: 'resolve',
+        }).on('change', function () {
+          const selectedDepartments = $(this).val();
+          editItemForm.departmentPercentages = selectedDepartments.reduce((acc, department) => {
+            acc[department] = acc[department] || 0; // Initialize percentage to 0 if not already set
+            return acc;
+          }, {});
+        });
+      }
     });
   }
 });
