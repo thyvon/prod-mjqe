@@ -1474,6 +1474,7 @@ onMounted(() => {
     editInvoiceItemModal.addEventListener('shown.bs.modal', () => {
       const editDepartmentElement = document.getElementById('editDepartment');
       if (editDepartmentElement) {
+        $(editDepartmentElement).select2('destroy'); // Destroy any existing select2 instance
         $(editDepartmentElement).select2({
           placeholder: 'Select a department',
           allowClear: true,
