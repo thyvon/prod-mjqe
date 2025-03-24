@@ -1,10 +1,30 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
+import { CountUp } from 'countup.js';
 
 const pageTitle = 'Dashboard';
 const currentRange = ref('');
+const prCount = ref(0);
+const completedPercentage = ref(0);
+const pendingPRCount = ref(0);
+const pendingPercentage = ref(0);
+const partialPRCount = ref(0);
+const partialPercentage = ref(0);
+const voidPRCount = ref(0);
+const voidPercentage = ref(0);
+const completedPRCount = ref(0);
+
+const poCount = ref(0);
+const completedPOPercentage = ref(0);
+const pendingPOCount = ref(0);
+const pendingPOPercentage = ref(0);
+const partialPOCount = ref(0);
+const partialPOPercentage = ref(0);
+const voidPOCount = ref(0);
+const voidPOPercentage = ref(0);
+const completedPOCount = ref(0);
 
 onMounted(() => {
     const daterangeFilter = document.querySelector('#daterange-filter');
@@ -37,58 +57,384 @@ onMounted(() => {
             }
         }, function(start, end) {
             currentRange.value = `${start.format('D MMM YYYY')} - ${end.format('D MMM YYYY')}`;
+            fetchPRCount(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')); // Fetch PR count on range change
+			fetchPOCount(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
         });
     }
 
-    const ctx6 = document.getElementById('doughnut-chart').getContext('2d');
-    const isDarkTheme = document.body.classList.contains('dark-theme'); // Check if dark theme is active
+    // Fetch initial PR count
+    fetchPRCount(thisYearStart.format('YYYY-MM-DD'), today.format('YYYY-MM-DD'));
+	fetchPOCount(thisYearStart.format('YYYY-MM-DD'), today.format('YYYY-MM-DD'));
 
-    const backgroundColors = isDarkTheme
-        ? [
-            'rgba(75, 192, 192, 0.7)', // Teal
-            'rgba(54, 162, 235, 0.7)', // Blue
-            'rgba(255, 206, 86, 0.7)', // Yellow
-            'rgba(201, 203, 207, 0.7)', // Gray
-            'rgba(153, 102, 255, 0.7)'  // Purple
-        ]
-        : [
-            'rgba(75, 192, 192, 0.5)', // Teal
-            'rgba(54, 162, 235, 0.5)', // Blue
-            'rgba(255, 206, 86, 0.5)', // Yellow
-            'rgba(201, 203, 207, 0.5)', // Gray
-            'rgba(153, 102, 255, 0.5)'  // Purple
-        ];
-
-    const borderColors = isDarkTheme
-        ? [
-            'rgba(75, 192, 192, 1)', // Teal
-            'rgba(54, 162, 235, 1)', // Blue
-            'rgba(255, 206, 86, 1)', // Yellow
-            'rgba(201, 203, 207, 1)', // Gray
-            'rgba(153, 102, 255, 1)'  // Purple
-        ]
-        : [
-            'rgba(75, 192, 192, 0.8)', // Teal
-            'rgba(54, 162, 235, 0.8)', // Blue
-            'rgba(255, 206, 86, 0.8)', // Yellow
-            'rgba(201, 203, 207, 0.8)', // Gray
-            'rgba(153, 102, 255, 0.8)'  // Purple
-        ];
-
-    window.myDoughnut = new Chart(ctx6, {
-        type: 'doughnut',
-        data: {
-            labels: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'],
-            datasets: [{
-                data: [300, 50, 100, 40, 120],
-                backgroundColor: backgroundColors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                label: 'My dataset'
-            }]
+    async function fetchPRCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pr-count?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            prCount.value = data.count || 0;
+            fetchCompletedPercentage(startDate, endDate);
+            fetchPendingPRCount(startDate, endDate);
+            fetchPendingPercentage(startDate, endDate);
+			fetchPartialPRCount(startDate, endDate);
+			fetchPartialPercentage(startDate, endDate);
+			fetchVoidPRCount(startDate, endDate);
+			fetchVoidPercentage(startDate, endDate);
+			fetcheCompletedPRCount(startDate, endDate);
+        } catch (error) {
+            console.error('Error fetching PR count:', error);
+            prCount.value = 0; // Default to 0 in case of an error
         }
-    });
+    }
+
+	async function fetchPOCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/po-count?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            poCount.value = data.count || 0; // Correctly assign to poCount
+            fetchCompletedPOPercentage(startDate, endDate);
+            fetchPendingPOCount(startDate, endDate);
+            fetchPendingPOPercentage(startDate, endDate);
+			fetchPartialPOCount(startDate, endDate);
+			fetchPartialPOPercentage(startDate, endDate);
+			fetchVoidPOCount(startDate, endDate);
+			fetchVoidPOPercentage(startDate, endDate);
+			fetcheCompletedPOCount(startDate, endDate);
+        } catch (error) {
+            console.error('Error fetching PO count:', error);
+            poCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetcheCompletedPRCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pr-completed?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            completedPRCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PR count:', error);
+            completedPRCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetcheCompletedPOCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/po-completed?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            completedPOCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PO count:', error);
+            completedPOCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+    async function fetchCompletedPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/completed-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            completedPercentage.value = data.completed_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching completed percentage:', error);
+            completedPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchCompletedPOPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/completed-po-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            completedPercentage.value = data.completed_po_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching completed percentage:', error);
+            completedPOPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+    async function fetchPendingPRCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pr-pending?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            pendingPRCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PR count:', error);
+            pendingPRCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPendingPOCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/po-pending?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            pendingPOCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PO count:', error);
+            pendingPOCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+    async function fetchPendingPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pending-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            pendingPercentage.value = data.pending_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            pendingPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPendingPOPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pending-po-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            pendingPOPercentage.value = data.pending_po_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            pendingPOPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPartialPRCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pr-partial?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            partialPRCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PR count:', error);
+            partialPRCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPartialPOCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/po-partial?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            partialPOCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PO count:', error);
+            partialPOCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPartialPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/partial-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            partialPercentage.value = data.partial_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            partialPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchPartialPOPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/partial-po-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            partialPOPercentage.value = data.partial_po_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            partialPOPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchVoidPRCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/pr-void?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            voidPRCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PR count:', error);
+            voidPRCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchVoidPOCount(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/po-void?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            voidPOCount.value = data.count || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending PO count:', error);
+            voidPOCount.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchVoidPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/void-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            voidPercentage.value = data.partial_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            voidPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+	async function fetchVoidPOPercentage(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/void-po-percentage?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            voidPOPercentage.value = data.partial_po_percentage || 0; // Default to 0 if no data is returned
+        } catch (error) {
+            console.error('Error fetching pending percentage:', error);
+            voidPOPercentage.value = 0; // Default to 0 in case of an error
+        }
+    }
+
+    const doughnutChartElement = document.getElementById('doughnut-chart');
+    if (doughnutChartElement) {
+        const ctx6 = doughnutChartElement.getContext('2d');
+        const isDarkTheme = document.body.classList.contains('dark-theme'); // Check if dark theme is active
+
+        const backgroundColors = isDarkTheme
+            ? [
+                'rgba(75, 192, 192, 0.7)', // Teal
+                'rgba(54, 162, 235, 0.7)', // Blue
+                'rgba(255, 206, 86, 0.7)', // Yellow
+                'rgba(201, 203, 207, 0.7)', // Gray
+                'rgba(153, 102, 255, 0.7)'  // Purple
+            ]
+            : [
+                'rgba(75, 192, 192, 0.5)', // Teal
+                'rgba(54, 162, 235, 0.5)', // Blue
+                'rgba(255, 206, 86, 0.5)', // Yellow
+                'rgba(201, 203, 207, 0.5)', // Gray
+                'rgba(153, 102, 255, 0.5)'  // Purple
+            ];
+
+        const borderColors = isDarkTheme
+            ? [
+                'rgba(75, 192, 192, 1)', // Teal
+                'rgba(54, 162, 235, 1)', // Blue
+                'rgba(255, 206, 86, 1)', // Yellow
+                'rgba(201, 203, 207, 1)', // Gray
+                'rgba(153, 102, 255, 1)'  // Purple
+            ]
+            : [
+                'rgba(75, 192, 192, 0.8)', // Teal
+                'rgba(54, 162, 235, 0.8)', // Blue
+                'rgba(255, 206, 86, 0.8)', // Yellow
+                'rgba(201, 203, 207, 0.8)', // Gray
+                'rgba(153, 102, 255, 0.8)'  // Purple
+            ];
+
+        doughnutChartElement.width = 300; // Set smaller width
+        doughnutChartElement.height = 330; // Set smaller height
+
+        window.myDoughnut = new Chart(ctx6, {
+            type: 'doughnut',
+            data: {
+                labels: ['Credit', 'Advance', 'Petty Cash'], // Labels remain the same
+                datasets: [{
+                    data: [300, 50, 100],
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    label: 'Value'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false, // Allow custom size
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white' // Set label color to white
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        console.warn('Doughnut chart element not found.');
+    }
 });
+
+// Function to apply CountUp animation
+function applyCountUpAnimation(fieldId, value) {
+    const element = document.getElementById(fieldId);
+    if (element) {
+        const countUp = new CountUp(element, value);
+        if (!countUp.error) {
+            countUp.start();
+        } else {
+            console.error(countUp.error);
+        }
+    }
+}
+
+// Watch for changes in all fields and apply animation
+watch(prCount, (newValue) => applyCountUpAnimation('pr-count', newValue));
+watch(completedPercentage, (newValue) => applyCountUpAnimation('completed-percentage', newValue));
+watch(pendingPRCount, (newValue) => applyCountUpAnimation('pending-pr-count', newValue));
+watch(pendingPercentage, (newValue) => applyCountUpAnimation('pending-percentage', newValue));
+watch(partialPRCount, (newValue) => applyCountUpAnimation('partial-pr-count', newValue));
+watch(partialPercentage, (newValue) => applyCountUpAnimation('partial-percentage', newValue));
+watch(voidPRCount, (newValue) => applyCountUpAnimation('void-pr-count', newValue));
+watch(voidPercentage, (newValue) => applyCountUpAnimation('void-percentage', newValue));
+watch(completedPRCount, (newValue) => applyCountUpAnimation('completed-pr-count', newValue));
+
+watch(poCount, (newValue) => applyCountUpAnimation('po-count', newValue));
+watch(completedPOPercentage, (newValue) => applyCountUpAnimation('completed-po-percentage', newValue));
+watch(pendingPOCount, (newValue) => applyCountUpAnimation('pending-po-count', newValue));
+watch(pendingPOPercentage, (newValue) => applyCountUpAnimation('pending-po-percentage', newValue));
+watch(partialPOCount, (newValue) => applyCountUpAnimation('partial-po-count', newValue));
+watch(partialPOPercentage, (newValue) => applyCountUpAnimation('partial-po-percentage', newValue));
+watch(voidPOCount, (newValue) => applyCountUpAnimation('void-po-count', newValue));
+watch(voidPOPercentage, (newValue) => applyCountUpAnimation('void-po-percentage', newValue));
+watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count', newValue));
 </script>
 
 <template>
@@ -198,22 +544,33 @@ onMounted(() => {
 									<!-- BEGIN title -->
 									<div class="mb-3 text-gray-500">
 										<b class="mb-3">PR COPLETION RATE</b> 
-										<span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Conversion Rate" data-bs-placement="top" data-bs-content="Percentage of sessions that resulted in orders from total number of sessions." data-original-title="" title=""></i></span>
+										<span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="PR Completion Rate" data-bs-placement="top" data-bs-content="PR completion summary by the date range." data-original-title="" title=""></i></span>
 									</div>
 									<!-- END title -->
 									<!-- BEGIN conversion-rate -->
-									<div class="d-flex align-items-center mb-1">
-										<h2 class="text-white mb-0"><span data-animation="number" data-value="2.19">0.00</span>%</h2>
-										<div class="ms-auto">
-											<div id="conversion-rate-sparkline"></div>
+									<div class="col-12 border-bottom border-premary pb-4">
+										<div class="row">
+										<div class="col-6">
+											<div class="d-flex align-items-center mb-1">
+												<h2 class="text-white mb-0">
+													 <span id="completed-percentage">0</span>%
+												</h2>
+											</div>
+											<div class="text-gray-500 text-start">
+												<i class="fa fa-circle-check text-success fs-15px me-2"></i>
+												Completed ( {{ completedPRCount }} )</div>
+										</div>
+										<div class="col-6">
+											<div class="d-flex align-items-center mb-1">
+												<h2 class="text-white mb-0">
+													 <span id="pr-count">{{ prCount }}</span>
+												</h2>
+											</div>
+											<div class="text-gray-500 text-start">Total PR</div> <!-- Ensure proper placement -->
+										</div>
 										</div>
 									</div>
 									<!-- END conversion-rate -->
-									<!-- BEGIN percentage -->
-									<div class="mb-4 text-gray-500 ">
-										COMPLETED
-									</div>
-									<!-- END percentage -->
 									<!-- BEGIN info-row -->
 									<div class="d-flex mb-2">
 										<div class="d-flex align-items-center">
@@ -221,8 +578,12 @@ onMounted(() => {
 											Pending
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="262">0</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="3.79">0.00</span>%</div>
+											<div class="text-gray-500 small">
+												 <span id="pending-pr-count">{{ pendingPRCount }}</span>
+											</div>
+											<div class="w-50px text-end ps-2 fw-bold">
+												 <span id="pending-percentage">{{ pendingPercentage }}</span>%
+											</div>
 										</div>
 									</div>
 									<!-- END info-row -->
@@ -233,8 +594,8 @@ onMounted(() => {
 											Void
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="11">0</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="3.85">0.00</span>%</div>
+											<div class="text-gray-500 small"><span id="void-pr-count">{{ voidPRCount }}</span></div>
+											<div class="w-50px text-end ps-2 fw-bold"><span id="void-percentage">{{ voidPercentage }}</span>%</div>
 										</div>
 									</div>
 									<!-- END info-row -->
@@ -245,8 +606,8 @@ onMounted(() => {
 											Partial
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="57">0</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="2.19">0.00</span>%</div>
+											<div class="text-gray-500 small"><span id="partial-pr-count">{{partialPRCount}}</span></div>
+											<div class="w-50px text-end ps-2 fw-bold"><span id="partial-percentage">{{partialPercentage}}</span>%</div>
 										</div>
 									</div>
 									<!-- END info-row -->
@@ -264,56 +625,71 @@ onMounted(() => {
 								<div class="card-body">
 									<!-- BEGIN title -->
 									<div class="mb-3 text-gray-500">
-										<b class="mb-3">PO COMPLETION RATE</b> 
-										<span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Store Sessions" data-bs-placement="top" data-bs-content="Number of sessions on your online store. A session is a period of continuous activity from a visitor." data-original-title="" title=""></i></span>
+										<b class="mb-3">PO COPLETION RATE</b> 
+										<span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="PO Completion Rate" data-bs-placement="top" data-bs-content="PO completion summary by the date range." data-original-title="" title=""></i></span>
 									</div>
 									<!-- END title -->
-									<!-- BEGIN store-session -->
-									<div class="d-flex align-items-center mb-1">
-										<h2 class="text-white mb-0"><span data-animation="number" data-value="50.19">0.00</span>%</h2>
-										<div class="ms-auto">
-											<div id="store-session-sparkline"></div>
+									<!-- BEGIN conversion-rate -->
+									<div class="col-12 border-bottom border-premary pb-4">
+										<div class="row">
+										<div class="col-6">
+											<div class="d-flex align-items-center mb-1">
+												<h2 class="text-white mb-0">
+													 <span id="completed-po-percentage">0</span>%
+												</h2>
+											</div>
+											<div class="text-gray-500 text-start">
+												<i class="fa fa-circle-check text-success fs-15px me-2"></i>
+												Completed ( {{ completedPOCount }} )</div>
+										</div>
+										<div class="col-6">
+											<div class="d-flex align-items-center mb-1">
+												<h2 class="text-white mb-0">
+													 <span id="po-count">{{ poCount }}</span>
+												</h2>
+											</div>
+											<div class="text-gray-500 text-start">Total PO</div> <!-- Ensure proper placement -->
+										</div>
 										</div>
 									</div>
-									<!-- END store-session -->
-									<!-- BEGIN percentage -->
-									<div class="mb-4 text-gray-500 ">
-										COMPLETED
-									</div>
-									<!-- END percentage -->
+									<!-- END conversion-rate -->
 									<!-- BEGIN info-row -->
 									<div class="d-flex mb-2">
 										<div class="d-flex align-items-center">
-											<i class="fa fa-circle text-teal fs-8px me-2"></i>
+											<i class="fa fa-circle text-red fs-8px me-2"></i>
 											Pending
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="25">0.00</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="2.19">0.00</span>%</div>
+											<div class="text-gray-500 small">
+												 <span id="pending-po-count">{{ pendingPOCount }}</span>
+											</div>
+											<div class="w-50px text-end ps-2 fw-bold">
+												 <span id="pending-po-percentage">{{ pendingPOPercentage }}</span>%
+											</div>
 										</div>
 									</div>
 									<!-- END info-row -->
 									<!-- BEGIN info-row -->
 									<div class="d-flex mb-2">
 										<div class="d-flex align-items-center">
-											<i class="fa fa-circle text-blue fs-8px me-2"></i>
+											<i class="fa fa-circle text-warning fs-8px me-2"></i>
 											Void
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="16">0.00</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="2.19">0.00</span>%</div>
+											<div class="text-gray-500 small"><span id="void-po-count">{{ voidPOCount }}</span></div>
+											<div class="w-50px text-end ps-2 fw-bold"><span id="void-po-percentage">{{ voidPOPercentage }}</span>%</div>
 										</div>
 									</div>
 									<!-- END info-row -->
 									<!-- BEGIN info-row -->
 									<div class="d-flex">
 										<div class="d-flex align-items-center">
-											<i class="fa fa-circle text-cyan fs-8px me-2"></i>
+											<i class="fa fa-circle text-lime fs-8px me-2"></i>
 											Partial
 										</div>
 										<div class="d-flex align-items-center ms-auto">
-											<div class="text-gray-500 small"><span data-animation="number" data-value="7.9">0.00</span></div>
-											<div class="w-50px text-end ps-2 fw-bold"><span data-animation="number" data-value="2.19">0.00</span>%</div>
+											<div class="text-gray-500 small"><span id="partial-po-count">{{partialPOCount}}</span></div>
+											<div class="w-50px text-end ps-2 fw-bold"><span id="partial-po-percentage">{{partialPOPercentage}}</span>%</div>
 										</div>
 									</div>
 									<!-- END info-row -->

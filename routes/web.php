@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     PurchaseOrderController,
     InvoiceController,
     UserController,
-    InvoiceAttachmentController
+    InvoiceAttachmentController,
+    DashboardController
 };
 
 /*
@@ -33,8 +34,32 @@ Route::get('/', function () {
     return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
-// Dashboard route (protected with 'auth' middleware)
-Route::get('/dashboard', fn() => Inertia::render('Dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+// Dashboard routes (protected with 'auth' middleware)
+Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('index');
+
+    //PR Dashboard
+    Route::get('/pr-count', [DashboardController::class, 'countPRByDateRange'])->name('pr-count');
+    Route::get('/pr-completed', [DashboardController::class, 'countPRCompleted'])->name('pr-completed');
+    Route::get('/completed-percentage', [DashboardController::class, 'getCompletedPercentage'])->name('completed-percentage');
+    Route::get('/pr-pending', [DashboardController::class, 'countPRPending'])->name('pr-pending');
+    Route::get('/pending-percentage', [DashboardController::class, 'getPendingPercentage'])->name('pending-percentage');
+    Route::get('/pr-partial', [DashboardController::class, 'countPRPartial'])->name('pr-partial');
+    Route::get('/partial-percentage', [DashboardController::class, 'getPartialPercentage'])->name('partial-percentage');
+    Route::get('/pr-void', [DashboardController::class, 'countPRVoid'])->name('pr-void');
+    Route::get('/void-percentage', [DashboardController::class, 'getVoidPercentage'])->name('void-percentage');
+
+    //PO Dashboard
+    Route::get('/po-count', [DashboardController::class, 'countPOByDateRange'])->name('po-count');
+    Route::get('/po-completed', [DashboardController::class, 'countPOCompleted'])->name('po-completed');
+    Route::get('/completed-po-percentage', [DashboardController::class, 'getCompletedPOPercentage'])->name('completed-po-percentage');
+    Route::get('/po-pending', [DashboardController::class, 'countPOPending'])->name('po-pending');
+    Route::get('/pending-po-percentage', [DashboardController::class, 'getPendingPOPercentage'])->name('pending-po-percentage');
+    Route::get('/po-partial', [DashboardController::class, 'countPOPartial'])->name('po-partial');
+    Route::get('/partial-po-percentage', [DashboardController::class, 'getPartialPOPercentage'])->name('partial-po-percentage');
+    Route::get('/po-void', [DashboardController::class, 'countPOVoid'])->name('po-void');
+    Route::get('/void-po-percentage', [DashboardController::class, 'getVoidPOPercentage'])->name('void-po-percentage');
+});
 
 // Auth routes (login, logout, registration)
 Route::middleware('guest')->group(function () {
