@@ -290,8 +290,11 @@ const updateInvoiceListTable = (invoices) => {
       pi_number: invoice.pi_number || '',
       invoice_date: invoice.invoice_date || '',
       supplier_name: invoice.supplier ? invoice.supplier.name : '',
-      total_amount: invoice.total_amount || 0,
+      // total_amount: invoice.total_amount || 0,
       paid_amount: invoice.paid_amount || 0,
+      currency: invoice.currency || 0,
+      currency_rate: invoice.currency_rate || 0,
+      paid_usd: invoice.paid_usd || 0,
       transaction_type: invoice.transaction_type || 0,
       payment_type: invoice.payment_type || 0,
     }));
@@ -1173,10 +1176,13 @@ onMounted(() => {
       pi_number: invoice.pi_number || '',
       invoice_date: invoice.invoice_date || '',
       supplier_name: invoice.supplier ? invoice.supplier.name : '',
-      total_amount: invoice.total_amount || 0,
+      // total_amount: invoice.total_amount || 0,
       paid_amount: invoice.paid_amount || 0,
       transaction_type: invoice.transaction_type || 0,
       payment_type: invoice.payment_type || 0,
+      paid_usd: invoice.paid_usd || 0,
+      currency: invoice.currency || 0,
+      currency_rate: invoice.currency_rate || 0,
     }));
 
     invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
@@ -1188,8 +1194,11 @@ onMounted(() => {
         { data: 'pi_number' },
         { data: 'invoice_date', render: (data) => format(data, 'date') },
         { data: 'supplier_name' },
-        { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        // { data: 'total_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
         { data: 'paid_amount', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'currency', render: (data) => (data === 1 ? 'USD' : data === 2 ? 'KHR' : 'Unknown') }, // Corrected currency rendering
+        { data: 'currency_rate', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
+        { data: 'paid_usd', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
         { data: 'transaction_type', render: (data) => getTransactionType(data) },
         { data: 'payment_type', render: (data) => getPaymentType(data) },
         { data: null, render: (data) => `
@@ -1479,7 +1488,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
         <a href="#nav-create" id="nav-create-tab" data-bs-toggle="tab" class="nav-link">Form</a>
       </li>
     </ul>
-    <div class="tab-content panel p-3 rounded-0">
+    <div class="tab-content panel p-3">
       <div class="tab-pane fade active show" id="nav-list">
         <div class="panel-body">
           <table id="invoice-list-table" class="table table-bordered align-middle text-nowrap" width="100%">
@@ -1489,8 +1498,11 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <th>Invoice Ref</th>
                 <th>Invoice Date</th>
                 <th>Supplier</th>
-                <th>Total Amount</th>
+                <!-- <th>Total Amount</th> -->
                 <th>Grand Total</th>
+                <th>Currency</th>
+                <th>Exchange Rate</th>
+                <th>Paid USD</th>
                 <th>Transaction Type</th>
                 <th>Payment Type</th>
                 <th>Actions</th>
@@ -1502,8 +1514,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
       <div class="tab-pane fade" id="nav-create">
         <div class="panel-body">
           <form @submit.prevent="submitForm">
-            <div class="panel panel-inverse mb-4 border rounded-0">
-              <div class="panel-heading rounded-0">
+            <div class="panel panel-inverse mb-4 border">
+              <div class="panel-heading">
                 <h4 class="panel-title">Invoice Detail</h4>
                 <div class="panel-heading-btn">
                   <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
@@ -1623,8 +1635,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
               <button type="button" class="btn btn-primary btn-select-item" @click="openPrItemsModal" :disabled="!form.supplier">Select PR Item</button>
               <button type="button" class="btn btn-secondary btn-select-item" @click="openPoItemsModal" :disabled="!form.supplier">Select PO Item</button>
             </div>
-            <div class="panel panel-inverse border rounded-0">
-              <div class="panel-heading rounded-0">
+            <div class="panel panel-inverse border">
+              <div class="panel-heading">
                 <h4 class="panel-title">Invoice Items</h4>
                 <div class="panel-heading-btn">
                   <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
@@ -1722,7 +1734,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
               </div>
             </div>
             <div v-show="isEditMode" class="panel panel-inverse border rounded-0 mt-4">
-              <div class="panel-heading rounded-0">
+              <div class="panel-heading">
                 <h4 class="panel-title">Attachments</h4>
                 <div class="panel-heading-btn">
                   <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>

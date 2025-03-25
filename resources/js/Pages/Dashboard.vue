@@ -26,6 +26,18 @@ const voidPOCount = ref(0);
 const voidPOPercentage = ref(0);
 const completedPOCount = ref(0);
 
+const creditSum = ref(0);
+const advanceSum = ref(0);
+const pettyCashSum = ref(0);
+const totalPaid = ref(0);
+
+function formatToK(value) {
+    if (value >= 1000) {
+        return (value / 1000).toFixed(1) + 'K';
+    }
+    return value;
+}
+
 onMounted(() => {
     const daterangeFilter = document.querySelector('#daterange-filter');
     const today = moment();
@@ -59,12 +71,14 @@ onMounted(() => {
             currentRange.value = `${start.format('D MMM YYYY')} - ${end.format('D MMM YYYY')}`;
             fetchPRCount(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')); // Fetch PR count on range change
 			fetchPOCount(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+            fetchExpenseData(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
         });
     }
 
     // Fetch initial PR count
     fetchPRCount(thisYearStart.format('YYYY-MM-DD'), today.format('YYYY-MM-DD'));
 	fetchPOCount(thisYearStart.format('YYYY-MM-DD'), today.format('YYYY-MM-DD'));
+    fetchExpenseData(thisYearStart.format('YYYY-MM-DD'), today.format('YYYY-MM-DD'));
 
     async function fetchPRCount(startDate, endDate) {
         try {
@@ -334,6 +348,28 @@ onMounted(() => {
         }
     }
 
+    async function fetchExpenseData(startDate, endDate) {
+        try {
+            const response = await fetch(`/dashboard/expense-data?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            creditSum.value = data.credit_sum || 0;
+            advanceSum.value = data.advance_sum || 0;
+            pettyCashSum.value = data.petty_cash_sum || 0;
+			totalPaid.value = data.total_paid || 0;
+
+            // Update the doughnut chart data
+            if (window.myDoughnut) {
+                window.myDoughnut.data.datasets[0].data = [creditSum.value, advanceSum.value, pettyCashSum.value];
+                window.myDoughnut.update();
+            }
+        } catch (error) {
+            console.error('Error fetching expense data:', error);
+        }
+    }
+
     const doughnutChartElement = document.getElementById('doughnut-chart');
     if (doughnutChartElement) {
         const ctx6 = doughnutChartElement.getContext('2d');
@@ -379,7 +415,7 @@ onMounted(() => {
             data: {
                 labels: ['Credit', 'Advance', 'Petty Cash'], // Labels remain the same
                 datasets: [{
-                    data: [300, 50, 100],
+                    data: [creditSum.value, advanceSum.value, pettyCashSum.value],
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
                     borderWidth: 2,
@@ -476,7 +512,7 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 									<!-- END title -->
 									<!-- BEGIN total-sales -->
 									<div class="d-flex mb-1">
-										<h2 class="mb-0">$<span data-animation="number" data-value="64559.25">0.00</span></h2>
+										<h2 class="mb-0">$<span>{{ formatToK(totalPaid) }}</span></h2>
 										<div class="ms-auto mt-n1 mb-n1"><div id="total-sales-sparkline"></div></div>
 									</div>
 									<!-- END total-sales -->
@@ -484,33 +520,42 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 									<div class="mb-3 text-gray-500">
 										<i class="fa fa-caret-up"></i> <span data-animation="number" data-value="25.5">0.00</span>% from previous 7 days
 									</div>
-									<hr class="bg-white bg-opacity-50" />
+									<hr class="border border-primary" />
 									<!-- BEGIN row -->
 									<div class="row text-truncate">
 										<!-- BEGIN col-6 -->
 										<div class="col-4">
 											<div class=" text-gray-500">CREDIT</div>
-											<div class="fs-18px mb-5px fw-bold" data-animation="number" data-value="1568">0</div>
+											<div class="fs-18px mb-5px fw-bold">$<span>{{ formatToK(creditSum) }}</span></div>
 											<div class="progress h-5px rounded-3 bg-gray-900 mb-5px">
-												<div class="progress-bar progress-bar-striped rounded-right bg-teal" data-animation="width" data-value="55%" style="width: 0%"></div>
+												 <div 
+													class="progress-bar progress-bar-striped rounded-right bg-primary" 
+													:style="{ width: `${(creditSum / totalPaid * 100).toFixed(2)}%` }">
+												</div>
 											</div>
 										</div>
 										<!-- END col-6 -->
 										<!-- BEGIN col-6 -->
 										<div class="col-4">
 											<div class=" text-gray-500">ADVANCE</div>
-											<div class="fs-18px mb-5px fw-bold">$<span data-animation="number" data-value="41.20">0.00</span></div>
+											<div class="fs-18px mb-5px fw-bold">$<span>{{ formatToK(advanceSum) }}</span></div>
 											<div class="progress h-5px rounded-3 bg-gray-900 mb-5px">
-												<div class="progress-bar progress-bar-striped rounded-right" data-animation="width" data-value="55%" style="width: 0%"></div>
+												 <div 
+													class="progress-bar progress-bar-striped rounded-right bg-success" 
+													:style="{ width: `${(advanceSum / totalPaid * 100).toFixed(2)}%` }">
+												</div>
 											</div>
 										</div>
 										<!-- END col-6 -->
 										<!-- BEGIN col-6 -->
 										<div class="col-4">
 											<div class=" text-gray-500">PETTY CASH</div>
-											<div class="fs-18px mb-5px fw-bold">$<span data-animation="number" data-value="41.20">0.00</span></div>
+											<div class="fs-18px mb-5px fw-bold">$<span>{{ formatToK(pettyCashSum) }}</span></div>
 											<div class="progress h-5px rounded-3 bg-gray-900 mb-5px">
-												<div class="progress-bar progress-bar-striped rounded-right" data-animation="width" data-value="55%" style="width: 0%"></div>
+												 <div 
+													class="progress-bar progress-bar-striped rounded-right bg-warning" 
+													:style="{ width: `${(pettyCashSum / totalPaid * 100).toFixed(2)}%` }">
+												</div>
 											</div>
 										</div>
 										<!-- END col-6 -->
@@ -747,7 +792,7 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 						<div class="card-body">
 							<div class="mb-2 text-gray-500">
 								<b>EXPENSE BY TYPE</b>
-								<span class="ms-2"><i class="fa fa-hand-holding-dollar" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="SAVING COST" data-bs-placement="top"></i></span>
+								<span class="ms-2"><i class="fa fa-hand-holding-dollar" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Expense By Type" data-bs-placement="top"></i></span>
 							</div>
 							<div id="expense-chart-container" class="mb-2">
 								<canvas id="doughnut-chart"></canvas>

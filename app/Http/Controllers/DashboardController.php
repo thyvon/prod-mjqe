@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseInvoice;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
@@ -192,6 +193,33 @@ class DashboardController extends Controller
         $voidPOs = $this->countPOsByStatus($startDate, $endDate, 'Void');
         $percentage = $this->calculatePercentage($voidPOs, $totalPOs);
         return response()->json(['void_po_percentage' => $percentage]);
+    }
+
+    public function getExpenseData(Request $request)
+    {
+        ['start_date' => $startDate, 'end_date' => $endDate] = $this->validateDateRange($request);
+
+        $creditSum = PurchaseInvoice::where('transaction_type', 2)
+            ->whereBetween('invoice_date', [$startDate, $endDate])
+            ->sum('paid_usd');
+
+        $advanceSum = PurchaseInvoice::where('transaction_type', 3)
+            ->whereBetween('invoice_date', [$startDate, $endDate])
+            ->sum('paid_usd');
+
+        $pettyCashSum = PurchaseInvoice::where('transaction_type', 1)
+            ->whereBetween('invoice_date', [$startDate, $endDate])
+            ->sum('paid_usd');
+
+        $totalPaid = PurchaseInvoice::whereBetween('invoice_date', [$startDate, $endDate])
+            ->sum('paid_usd');
+
+        return response()->json([
+            'credit_sum' => $creditSum,
+            'advance_sum' => $advanceSum,
+            'petty_cash_sum' => $pettyCashSum,
+            'total_paid' => $totalPaid,
+        ]);
     }
 
     public function index()

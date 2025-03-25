@@ -59,6 +59,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
     Route::get('/partial-po-percentage', [DashboardController::class, 'getPartialPOPercentage'])->name('partial-po-percentage');
     Route::get('/po-void', [DashboardController::class, 'countPOVoid'])->name('po-void');
     Route::get('/void-po-percentage', [DashboardController::class, 'getVoidPOPercentage'])->name('void-po-percentage');
+
+    // Expense Data
+    Route::get('/expense-data', [DashboardController::class, 'getExpenseData'])->name('expense-data');
 });
 
 // Auth routes (login, logout, registration)
