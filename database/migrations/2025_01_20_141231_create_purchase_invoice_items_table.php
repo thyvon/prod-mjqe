@@ -31,11 +31,11 @@ return new class extends Migration
             $table->decimal('currency_rate', 8, 2);
             $table->decimal('unit_price', 15, 4);
             $table->decimal('total_price', 15, 8);
-            $table->decimal('discount', 15, 8)->nullable()->default(0);;
-            $table->decimal('vat', 15, 4)->nullable()->default(0);;
-            $table->decimal('return', 15, 4)->nullable()->default(0);;
-            $table->decimal('retention', 15, 4)->nullable()->default(0);;
-            $table->decimal('service_charge', 15, 8)->nullable()->default(0); // Add service_charge field
+            $table->decimal('discount', 23, 15)->nullable()->default(0);
+            $table->decimal('vat', 15, 4)->nullable()->default(0);
+            $table->decimal('return', 15, 4)->nullable()->default(0);
+            $table->decimal('retention', 15, 4)->nullable()->default(0);
+            $table->decimal('service_charge', 23, 15)->nullable()->default(0); // Add service_charge field
             $table->decimal('deposit', 15, 4)->nullable()->default(0); // Add deposit field
             $table->decimal('total_usd', 23, 15)->default(0);
             $table->decimal('total_khr', 23, 15)->default(0);
