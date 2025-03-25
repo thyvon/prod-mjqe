@@ -222,6 +222,71 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function getTotalPaidByMonth(Request $request)
+    {
+        $request->validate([
+            'year' => 'required|integer',
+        ]);
+
+        $year = $request->input('year');
+
+        $data = PurchaseInvoice::selectRaw('MONTH(invoice_date) as month, SUM(paid_usd) as total_paid')
+            ->whereYear('invoice_date', $year)
+            ->groupByRaw('MONTH(invoice_date)')
+            ->orderByRaw('MONTH(invoice_date)')
+            ->get()
+            ->pluck('total_paid', 'month');
+
+        // Ensure all months are included, even if no data exists
+        $result = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $result[] = $data[$month] ?? 0;
+        }
+
+        return response()->json($result);
+    }
+
+    public function getExpenseDataByMonth(Request $request)
+    {
+        $request->validate([
+            'year' => 'required|integer',
+        ]);
+
+        $year = $request->input('year');
+
+        $creditData = PurchaseInvoice::selectRaw('MONTH(invoice_date) as month, SUM(paid_usd) as total')
+            ->whereYear('invoice_date', $year)
+            ->where('transaction_type', 2)
+            ->groupByRaw('MONTH(invoice_date)')
+            ->pluck('total', 'month');
+
+        $advanceData = PurchaseInvoice::selectRaw('MONTH(invoice_date) as month, SUM(paid_usd) as total')
+            ->whereYear('invoice_date', $year)
+            ->where('transaction_type', 3)
+            ->groupByRaw('MONTH(invoice_date)')
+            ->pluck('total', 'month');
+
+        $pettyCashData = PurchaseInvoice::selectRaw('MONTH(invoice_date) as month, SUM(paid_usd) as total')
+            ->whereYear('invoice_date', $year)
+            ->where('transaction_type', 1)
+            ->groupByRaw('MONTH(invoice_date)')
+            ->pluck('total', 'month');
+
+        $result = [
+            'credit' => [],
+            'advance' => [],
+            'pettyCash' => [],
+        ];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $result['credit'][] = $creditData[$month] ?? 0;
+            $result['advance'][] = $advanceData[$month] ?? 0;
+            $result['pettyCash'][] = $pettyCashData[$month] ?? 0;
+        }
+
+        return response()->json($result);
+    }
+
     public function index()
     {
         return Inertia::render('Dashboard');

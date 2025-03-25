@@ -38,7 +38,7 @@ function formatToK(value) {
     return value;
 }
 
-onMounted(() => {
+onMounted(async () => {
     const daterangeFilter = document.querySelector('#daterange-filter');
     const today = moment();
     const thisYearStart = moment().startOf('year');
@@ -436,6 +436,212 @@ onMounted(() => {
     } else {
         console.warn('Doughnut chart element not found.');
     }
+
+    // Initialize the line chart for Visitors Analytics
+    const lastYear = moment().subtract(1, 'year').year();
+    const thisYear = moment().year();
+
+    const fetchTotalPaidByMonth = async (year) => {
+        try {
+            const response = await fetch(`/dashboard/total-paid-by-month?year=${year}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching totalPaid for year ${year}:`, error);
+            return Array(12).fill(0); // Default to 0 for all months in case of an error
+        }
+    };
+
+    const fetchExpenseDataByMonth = async (year) => {
+        try {
+            const response = await fetch(`/dashboard/expense-data-by-month?year=${year}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching expense data for year ${year}:`, error);
+            return { credit: Array(12).fill(0), advance: Array(12).fill(0), pettyCash: Array(12).fill(0) };
+        }
+    };
+
+    const lastYearData = await fetchTotalPaidByMonth(lastYear);
+    const thisYearData = await fetchTotalPaidByMonth(thisYear);
+
+    const lastYearExpenseData = await fetchExpenseDataByMonth(lastYear);
+    const thisYearExpenseData = await fetchExpenseDataByMonth(thisYear);
+
+    // Initialize the chart with fetched data
+    const lineChartElement = document.getElementById('line-chart');
+    if (lineChartElement) {
+        const ctx = lineChartElement.getContext('2d');
+        const isDarkTheme = document.body.classList.contains('dark-theme');
+
+        const lineChartColors = isDarkTheme
+            ? {
+                borderColor1: 'rgba(75, 192, 192, 1)',
+                backgroundColor1: 'rgba(75, 192, 192, 0.3)',
+                borderColor2: 'rgba(255, 99, 132, 1)',
+                backgroundColor2: 'rgba(255, 99, 132, 0.3)',
+                borderColor3: 'rgba(54, 162, 235, 1)', // Blue for credit
+                backgroundColor3: 'rgba(54, 162, 235, 0.3)',
+                borderColor4: 'rgba(255, 206, 86, 1)', // Yellow for advance
+                backgroundColor4: 'rgba(255, 206, 86, 0.3)',
+                borderColor5: 'rgba(201, 203, 207, 1)', // Gray for petty cash
+                backgroundColor5: 'rgba(201, 203, 207, 0.3)',
+                gridColor: 'rgba(255, 255, 255, 0.1)',
+                fontColor: 'rgba(255, 255, 255, 0.8)',
+            }
+            : {
+                borderColor1: 'rgba(54, 162, 235, 1)',
+                backgroundColor1: 'rgba(54, 162, 235, 0.3)',
+                borderColor2: 'rgba(255, 206, 86, 1)',
+                backgroundColor2: 'rgba(255, 206, 86, 0.3)',
+                borderColor3: 'rgba(75, 192, 192, 1)', // Teal for credit
+                backgroundColor3: 'rgba(75, 192, 192, 0.3)',
+                borderColor4: 'rgba(153, 102, 255, 1)', // Purple for advance
+                backgroundColor4: 'rgba(153, 102, 255, 0.3)',
+                borderColor5: 'rgba(201, 203, 207, 1)', // Gray for petty cash
+                backgroundColor5: 'rgba(201, 203, 207, 0.3)',
+                gridColor: 'rgba(128, 128, 128, 1)',
+                fontColor: 'rgba(255, 255, 255, 1)',
+            };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [
+                    'January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                ],
+                datasets: [
+                    {
+                        label: `Total (${lastYear})`,
+                        borderColor: lineChartColors.borderColor1,
+                        pointBackgroundColor: lineChartColors.borderColor1,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor1,
+                        data: lastYearData,
+                        hidden: false, // Default to visible
+                    },
+                    {
+                        label: `Total (${thisYear})`,
+                        borderColor: lineChartColors.borderColor2,
+                        pointBackgroundColor: lineChartColors.borderColor2,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor2,
+                        data: thisYearData,
+                        hidden: false, // Default to visible
+                    },
+                    {
+                        label: `Credit (${lastYear})`,
+                        borderColor: lineChartColors.borderColor3,
+                        pointBackgroundColor: lineChartColors.borderColor3,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor3,
+                        data: lastYearExpenseData.credit,
+                        hidden: true, // Default to hidden
+                    },
+                    {
+                        label: `Credit (${thisYear})`,
+                        borderColor: lineChartColors.borderColor4,
+                        pointBackgroundColor: lineChartColors.borderColor4,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor4,
+                        data: thisYearExpenseData.credit,
+                        hidden: true, // Default to hidden
+                    },
+                    {
+                        label: `Advance (${lastYear})`,
+                        borderColor: lineChartColors.borderColor5,
+                        pointBackgroundColor: lineChartColors.borderColor5,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor5,
+                        data: lastYearExpenseData.advance,
+                        hidden: true, // Default to hidden
+                    },
+                    {
+                        label: `Advance (${thisYear})`,
+                        borderColor: lineChartColors.borderColor2,
+                        pointBackgroundColor: lineChartColors.borderColor2,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor2,
+                        data: thisYearExpenseData.advance,
+                        hidden: true, // Default to hidden
+                    },
+                    {
+                        label: `Petty Cash (${lastYear})`,
+                        borderColor: lineChartColors.borderColor3,
+                        pointBackgroundColor: lineChartColors.borderColor3,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor3,
+                        data: lastYearExpenseData.pettyCash,
+                        hidden: true, // Default to hidden
+                    },
+                    {
+                        label: `Petty Cash (${thisYear})`,
+                        borderColor: lineChartColors.borderColor4,
+                        pointBackgroundColor: lineChartColors.borderColor4,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        backgroundColor: lineChartColors.backgroundColor4,
+                        data: thisYearExpenseData.pettyCash,
+                        hidden: true, // Default to hidden
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: lineChartColors.gridColor,
+                        },
+                        ticks: {
+                            color: lineChartColors.fontColor,
+                        },
+                    },
+                    y: {
+                        grid: {
+                            color: lineChartColors.gridColor,
+                        },
+                        ticks: {
+                            color: lineChartColors.fontColor,
+                        },
+                    },
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: lineChartColors.fontColor,
+                            boxWidth: 3, // Remove the border by setting box width to 0
+                            usePointStyle: true, // Use point style for the legend
+                            generateLabels: (chart) => {
+                                const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                return originalLabels.map((label, index) => ({
+                                    ...label,
+                                    pointStyle: 'circle', // Use a circle as the legend marker
+                                    fillStyle: index % 2 === 0 
+                                        ? lineChartColors.borderColor1 // Last year color
+                                        : lineChartColors.borderColor2, // This year color
+                                }));
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 });
 
 // Function to apply CountUp animation
@@ -756,7 +962,7 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 				<div class="col-xl-8 col-lg-6">
 					<!-- BEGIN card -->
 					<div class="card border-0 mb-3 bg-gray-800 text-white">
-						<div class="card-body">
+						<!-- <div class="card-body">
 							<div class="mb-3 text-gray-500 "><b>VISITORS ANALYTICS</b> <span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Top products with units sold" data-bs-placement="top" data-bs-content="Products with the most individual units sold. Includes orders from all sales channels." data-original-title="" title=""></i></span></div>
 							<div class="row">
 								<div class="col-xl-3 col-4">
@@ -775,10 +981,10 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 									<div class="text-gray-500 small text-truncate"><i class="fa fa-caret-up"></i> <span data-animation="number" data-value="0.323">0.00</span>% from previous 7 days</div>
 								</div>
 							</div>
-						</div>
+						</div> -->
 						<div class="card-body p-0">
-							<div style="height: 269px">
-								<div id="visitors-line-chart" class="widget-chart-full-width" data-bs-theme="dark" style="height: 254px"></div>
+							<div style="height: 392px"> <!-- Match height with EXPENSE BY TYPE -->
+								<canvas id="line-chart" style="height: 330px"></canvas>
 							</div>
 						</div>
 					</div>
