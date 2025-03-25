@@ -13,7 +13,8 @@ class InvoiceController extends Controller
     public function index()
     {
         return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])->get(),
+            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])
+                ->get(['id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type']), // Include paid_usd and other necessary fields
             'users' => User::all(),
             'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
             'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
@@ -69,6 +70,10 @@ class InvoiceController extends Controller
 
             $this->createOrUpdateInvoiceItems($invoice, $validatedData['items']);
             $this->recalculateItemQuantities($validatedData['items']); // Recalculate item quantities after creation
+
+            // Calculate and update the paid_usd field
+            $invoice->paid_usd = $invoice->items()->sum('total_usd');
+            $invoice->save();
 
             // Fetch updated invoices
             $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
@@ -150,6 +155,10 @@ class InvoiceController extends Controller
             $this->deleteRemovedItems($existingItems, $updatedItemIds);
 
             $this->recalculateItemQuantities($validatedData['items']);
+
+            // Calculate and update the paid_usd field
+            $invoice->paid_usd = $invoice->items()->sum('total_usd');
+            $invoice->save();
 
             // Fetch updated invoices
             $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();

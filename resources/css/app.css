@@ -21,9 +21,14 @@
 }
 
 .form-control,
-select.form-select {
+select.form-select,
+.select2-container .select2-selection,
+.panel,
+.panel-heading,
+button {
   border-radius: 0 !important;
 }
+
 body {
     font-size: 12px;
     font-family: 'TW Cen MT','Khmer OS Content','Poppins', 'Montserrat', sans-serif;

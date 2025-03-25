@@ -30,7 +30,8 @@ class PurchaseInvoice extends Model
         'service_charge',
         'total_amount',
         'paid_amount',
-        'created_by'
+        'created_by',
+        'paid_usd', // New field
     ];
 
     public static function boot()
