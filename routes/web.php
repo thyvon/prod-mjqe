@@ -31,7 +31,7 @@ use App\Http\Controllers\{
 
 // Redirect root URL based on authentication status
 Route::get('/', function () {
-    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard.index') : redirect()->route('login');
 });
 
 // Dashboard routes (protected with 'auth' middleware)
