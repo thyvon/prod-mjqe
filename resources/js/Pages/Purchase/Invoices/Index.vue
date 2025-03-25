@@ -1647,7 +1647,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                         <th>Price</th>
                         <th>Total Price</th>
                         <th>Discount</th>
-                        <th>Service Charge</th>
+                        <th>Delivery</th>
                         <th>VAT(%)</th>
                         <th>Return</th>
                         <th>Retention</th>
@@ -1669,7 +1669,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <div class="row mt-3">
                   <div class="col-md-6">
                     <div class="row mb-1 align-items-center">
-                      <label for="service_charge" class="col-sm-4 col-form-label">Service Charge</label>
+                      <label for="service_charge" class="col-sm-4 col-form-label">Delivery</label>
                       <div class="col-sm-4">
                         <input type="number" v-model="form.service_charge" class="form-control" id="service_charge">
                         <div v-if="formErrors.service_charge" class="text-danger">{{ formErrors.service_charge }}</div>
@@ -1705,7 +1705,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                       </div>
                     </div>
                     <div class="row mb-1 align-items-center">
-                      <label for="total_service_charge" class="col-sm-4 col-form-label">Service Charge</label>
+                      <label for="total_service_charge" class="col-sm-4 col-form-label">Delivery</label>
                       <div class="col-sm-4">
                         <input type="text" :value="formattedTotalServiceCharge" class="form-control" id="total_service_charge" disabled>
                       </div>
@@ -1876,7 +1876,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">
-                    <label for="editServiceCharge" class="col-sm-4 col-form-label">Service Charge</label>
+                    <label for="editServiceCharge" class="col-sm-4 col-form-label">Delivery</label>
                     <div class="col-sm-8">
                       <input type="number" v-model="editItemForm.service_charge" class="form-control" id="editServiceCharge" step="0.0001">
                       <div v-if="editItemFormErrors.service_charge" class="text-danger">{{ editItemFormErrors.service_charge }}</div>
