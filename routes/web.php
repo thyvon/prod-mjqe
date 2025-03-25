@@ -62,6 +62,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
 
     // Expense Data
     Route::get('/expense-data', [DashboardController::class, 'getExpenseData'])->name('expense-data');
+    Route::get('/total-paid-by-month', [DashboardController::class, 'getTotalPaidByMonth']);
+    Route::get('/expense-data-by-month', [DashboardController::class, 'getExpenseDataByMonth'])->name('expense-data-by-month');
 });
 
 // Auth routes (login, logout, registration)
