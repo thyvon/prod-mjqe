@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\CashRequest;
+use App\Models\Approval; // Import Approval model
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,9 @@ class CashRequestController extends Controller
 
         $cashRequest = CashRequest::create($validated);
 
+        // Store approvals
+        $this->storeApprovals($cashRequest->id, $request);
+
         // Load the relationships
         $cashRequest->load('user:id,name');
 
@@ -102,6 +106,9 @@ class CashRequestController extends Controller
         // Update the cash request
         $cashRequest->update($validated);
 
+        // Update approvals
+        $this->storeApprovals($cashRequest->id, $request);
+
         // Load the relationships
         $cashRequest->load('user:id,name');
 
@@ -109,22 +116,109 @@ class CashRequestController extends Controller
         return response()->json($cashRequest);
     }
 
+    // Helper function to store approvals
+    private function storeApprovals($cashRequestId, $request)
+    {
+        $docsType = $request->request_type; // Set docs_type based on request_type
+
+        $approvalData = [
+            ['status_type' => 1, 'user_id' => $request->checked_by],
+            ['status_type' => 2, 'user_id' => $request->acknowledged_by],
+            ['status_type' => 3, 'user_id' => $request->approved_by],
+            ['status_type' => 4, 'user_id' => $request->received_by],
+        ];
+
+        foreach ($approvalData as $data) {
+            if ($data['user_id']) {
+                // Check if an approval record already exists
+                $approval = Approval::where('approval_id', $cashRequestId)
+                    ->where('status_type', $data['status_type'])
+                    ->first();
+
+                if ($approval) {
+                    // Update the existing record
+                    $approval->update([
+                        'user_id' => $data['user_id'],
+                        'docs_type' => $docsType, // Update docs_type
+                    ]);
+                } else {
+                    // Create a new record if it doesn't exist
+                    Approval::create([
+                        'approval_id' => $cashRequestId,
+                        'status_type' => $data['status_type'],
+                        'docs_type' => $docsType, // Set docs_type
+                        'user_id' => $data['user_id'],
+                    ]);
+                }
+            }
+        }
+    }
+
+    // Fetch approvals for a specific cash request
+    public function getApprovals(CashRequest $cashRequest)
+    {
+        $approvals = Approval::where('approval_id', $cashRequest->id)
+            ->select('status_type', 'user_id')
+            ->get();
+
+        return response()->json($approvals);
+    }
+
     // Delete the specified cash request
     public function destroy(CashRequest $cashRequest)
     {
+        // Check if the cash request is associated with the purchase_invoice table
+        $isAssociated = \DB::table('purchase_invoices')
+            ->where('cash_ref', $cashRequest->id) // Ensure the column name matches your schema
+            ->exists();
+
+        if ($isAssociated) {
+            return response()->json([
+                'message' => 'Cannot delete this cash request because it is associated with a purchase invoice.'
+            ], 400); // Return a 400 Bad Request response
+        }
+
+        // Delete related approvals
+        Approval::where('approval_id', $cashRequest->id)->delete();
+
+        // Delete the cash request
         $cashRequest->delete();
 
         // Return success response
-        return response()->json(['message' => 'Cash request deleted successfully!']);
+        return response()->json(['message' => 'Cash request and related approvals deleted successfully!']);
     }
 
     // Display the specified cash request
     public function show(CashRequest $cashRequest)
     {
         $cashRequest->load('user:id,name');
+
+        // Fetch approvals for the cash request
+        $approvals = Approval::where('approval_id', $cashRequest->id)
+            ->with('user:id,name,position') // Load user details
+            ->get()
+            ->mapWithKeys(function ($approval) {
+                $labels = [
+                    1 => 'Requested By',
+                    2 => 'Checked By',
+                    3 => 'Approved By',
+                    4 => 'Received By',
+                ];
+
+                return [
+                    $approval->status_type => [
+                        'label' => $labels[$approval->status_type] ?? 'Unknown',
+                        'name' => $approval->user->name ?? '',
+                        'position' => $approval->user->position ?? '',
+                        'date' => $approval->updated_at->format('Y-m-d'),
+                        'signature' => $approval->user->signature ?? null, // Assuming a `signature` field exists
+                    ],
+                ];
+            });
+
         return Inertia::render('CashRequest/Show', [
             'cashRequest' => $cashRequest,
-            'users' => User::all(), // Ensure all users are passed to the view
+            'approvals' => $approvals,
         ]);
     }
 }

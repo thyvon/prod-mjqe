@@ -34,6 +34,10 @@ const cashRequestForm = reactive({
   via: '',
   reason: '',
   remark: '',
+  checked_by: null,
+  acknowledged_by: null,
+  approved_by: null,
+  received_by: null,
 });
 
 const validationErrors = ref({});
@@ -70,10 +74,25 @@ const openCreateModal = () => {
   });
 };
 
-const openEditModal = (cashRequest) => {
+const openEditModal = async (cashRequest) => {
   isEdit.value = true;
   Object.assign(cashRequestForm, cashRequest);
   cashRequestForm.request_date = cashRequestForm.request_date.split('T')[0]; // Ensure date format is "yyyy-MM-dd"
+
+  try {
+    // Fetch approval data for the cash request
+    const response = await axios.get(`/cash-request/${cashRequest.id}/approvals`);
+    const approvals = response.data;
+
+    // Map approvals to the corresponding fields
+    cashRequestForm.checked_by = approvals.find(a => a.status_type === 1)?.user_id || null;
+    cashRequestForm.acknowledged_by = approvals.find(a => a.status_type === 2)?.user_id || null;
+    cashRequestForm.approved_by = approvals.find(a => a.status_type === 3)?.user_id || null;
+    cashRequestForm.received_by = approvals.find(a => a.status_type === 4)?.user_id || null;
+  } catch (error) {
+    console.error('Failed to fetch approval data:', error);
+  }
+
   const modalElement = document.getElementById('cashRequestModal');
   const modal = new bootstrap.Modal(modalElement);
   modal.show();
@@ -164,7 +183,11 @@ const deleteCashRequest = async (cashRequestId) => {
         dataTableInstance.row((idx, data) => data.id === cashRequestId).remove().draw();
         swal('Deleted!', 'Cash request has been deleted.', 'success', { timer: 2000 });
       } catch (error) {
-        swal('Error!', 'Failed to delete cash request. Please try again.', 'error');
+        if (error.response && error.response.status === 400) {
+          swal('Error!', error.response.data.message, 'error');
+        } else {
+          swal('Error!', 'Failed to delete cash request. Please try again.', 'error');
+        }
       }
     }
   });
@@ -199,15 +222,6 @@ const initializeSelect2 = () => {
   }).on('change', function () {
     const field = $(this).attr('id');
     cashRequestForm[field] = $(this).val();
-    if (field === 'user_id') {
-      const selectedUser = props.users.find(user => user.id === cashRequestForm.user_id);
-      cashRequestForm.request_by = selectedUser ? selectedUser.name : '';
-      cashRequestForm.position = selectedUser ? selectedUser.position : '';
-      cashRequestForm.id_card = selectedUser ? selectedUser.id_card : '';
-      cashRequestForm.campus = selectedUser ? selectedUser.campus : '';
-      cashRequestForm.division = selectedUser ? selectedUser.division : '';
-      cashRequestForm.department = selectedUser ? selectedUser.department : '';
-    }
   });
 };
 
@@ -478,6 +492,42 @@ onMounted(() => {
                         <div class="col-sm-10">
                           <textarea v-model="cashRequestForm.remark" class="form-control" id="remark"></textarea>
                           <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="checked_by" class="col-sm-2 col-form-label">Checked By</label>
+                        <div class="col-sm-10">
+                          <select v-model="cashRequestForm.checked_by" class="form-select select2" id="checked_by">
+                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                          </select>
+                          <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="acknowledged_by" class="col-sm-2 col-form-label">Acknowledged By</label>
+                        <div class="col-sm-10">
+                          <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by">
+                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                          </select>
+                          <div v-if="validationErrors.acknowledged_by" class="text-danger">{{ validationErrors.acknowledged_by[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="approved_by" class="col-sm-2 col-form-label">Approved By</label>
+                        <div class="col-sm-10">
+                          <select v-model="cashRequestForm.approved_by" class="form-select select2" id="approved_by">
+                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                          </select>
+                          <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="received_by" class="col-sm-2 col-form-label">Received By</label>
+                        <div class="col-sm-10">
+                          <select v-model="cashRequestForm.received_by" class="form-select select2" id="received_by">
+                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                          </select>
+                          <div v-if="validationErrors.received_by" class="text-danger">{{ validationErrors.received_by[0] }}</div>
                         </div>
                       </div>
                     </div>
