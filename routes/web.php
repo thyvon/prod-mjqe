@@ -113,6 +113,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoices/attachments/{id}/update-file', [InvoiceController::class, 'updateFile'])->name('invoices.updateFile');
     Route::get('/purchase/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/clear-invoices', [ClearInvoiceController::class, 'getClearInvoices']);
+
+    // Add route to fetch approvals for a specific cash request
+    Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
 });
 
 require __DIR__.'/auth.php';
