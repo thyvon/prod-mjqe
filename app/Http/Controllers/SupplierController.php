@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class SupplierController extends Controller
 {
@@ -61,5 +62,16 @@ class SupplierController extends Controller
     {
         $supplier->delete();
         return response()->json(null, 204);
+    }
+
+    public function getVat($id)
+    {
+        try {
+            $supplier = Supplier::findOrFail($id);
+            return response()->json(['vat' => $supplier->vat], 200); // Return VAT of the supplier
+        } catch (\Exception $e) {
+            Log::error('Error fetching supplier VAT:', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch VAT.'], 500);
+        }
     }
 }

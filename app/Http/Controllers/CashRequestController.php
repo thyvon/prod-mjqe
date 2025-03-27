@@ -14,7 +14,7 @@ class CashRequestController extends Controller
     // Display all cash requests with their user details
     public function index()
     {
-        $cashRequests = CashRequest::with('user:id,name')->get(); // Only load necessary fields
+        $cashRequests = CashRequest::with('user:id,name,position,card_id,campus,division,department')->get(); // Ensure all necessary fields are loaded
         $users = User::all();
         $currentUser = Auth::user();
 
@@ -66,8 +66,8 @@ class CashRequestController extends Controller
         // Store approvals
         $this->storeApprovals($cashRequest->id, $request);
 
-        // Load the relationships
-        $cashRequest->load('user:id,name');
+        // Load the user relationship
+        $cashRequest->load('user:id,name,position,card_id,campus,division,department');
 
         // Return success response
         return response()->json($cashRequest, 201);
@@ -109,8 +109,8 @@ class CashRequestController extends Controller
         // Update approvals
         $this->storeApprovals($cashRequest->id, $request);
 
-        // Load the relationships
-        $cashRequest->load('user:id,name');
+        // Load the user relationship
+        $cashRequest->load('user:id,name,position,card_id,campus,division,department');
 
         // Return success response
         return response()->json($cashRequest);
@@ -140,6 +140,7 @@ class CashRequestController extends Controller
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
+                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance', // Set approval_name based on docsType
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -148,6 +149,7 @@ class CashRequestController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
+                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance', // Set approval_name based on docsType
                     ]);
                 }
             }
@@ -158,6 +160,7 @@ class CashRequestController extends Controller
     public function getApprovals(CashRequest $cashRequest)
     {
         $approvals = Approval::where('approval_id', $cashRequest->id)
+            ->whereIn('docs_type', [1, 2]) // Filter by docs_type
             ->select('status_type', 'user_id')
             ->get();
 
@@ -191,30 +194,36 @@ class CashRequestController extends Controller
     // Display the specified cash request
     public function show(CashRequest $cashRequest)
     {
-        $cashRequest->load('user:id,name');
+        $cashRequest->load('user:id,name,position,card_id,campus,division,department'); // Ensure user details are loaded
 
         // Fetch approvals for the cash request
         $approvals = Approval::where('approval_id', $cashRequest->id)
-            ->with('user:id,name,position') // Load user details
+            ->whereIn('docs_type', [1, 2]) // Filter by docs_type (1 or 2)
+            ->with('user:id,name,position,card_id,campus,division,department') // Load user details
             ->get()
-            ->mapWithKeys(function ($approval) {
+            ->filter(function ($approval) {
+                return $approval->status_type !== 2; // Exclude "Acknowledged By"
+            })
+            ->map(function ($approval) {
                 $labels = [
-                    1 => 'Requested By',
-                    2 => 'Checked By',
+                    1 => 'Checked By',
                     3 => 'Approved By',
                     4 => 'Received By',
                 ];
 
                 return [
-                    $approval->status_type => [
-                        'label' => $labels[$approval->status_type] ?? 'Unknown',
-                        'name' => $approval->user->name ?? '',
-                        'position' => $approval->user->position ?? '',
-                        'date' => $approval->updated_at->format('Y-m-d'),
-                        'signature' => $approval->user->signature ?? null, // Assuming a `signature` field exists
-                    ],
+                    'label' => $labels[$approval->status_type] ?? 'Unknown',
+                    'name' => $approval->user->name ?? '',
+                    'position' => $approval->user->position ?? '',
+                    'card_id' => $approval->user->card_id ?? '',
+                    'campus' => $approval->user->campus ?? '',
+                    'division' => $approval->user->division ?? '',
+                    'department' => $approval->user->department ?? '',
+                    'date' => $approval->updated_at->format('Y-m-d'),
+                    'signature' => $approval->user->signature ?? null, // Assuming a `signature` field exists
                 ];
-            });
+            })
+            ->values(); // Reindex the collection
 
         return Inertia::render('CashRequest/Show', [
             'cashRequest' => $cashRequest,

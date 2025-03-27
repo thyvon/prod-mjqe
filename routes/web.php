@@ -102,6 +102,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/po-items', [InvoiceController::class, 'getPoItems']);
     Route::get('/search-suppliers', [PurchaseOrderController::class, 'searchSuppliers']);
     Route::get('/search-suppliers', [InvoiceController::class, 'searchSuppliers']);
+    Route::get('/search-purchaser', [InvoiceController::class, 'searchPurchaser']);
     Route::get('/invoice-items', [InvoiceController::class, 'itemList'])->name('invoice.items');
     Route::post('/invoices/{id}/force-close', [InvoiceController::class, 'forceClose']);
     Route::post('/invoices/filter', [InvoiceController::class, 'filterInvoiceItems']);
@@ -116,6 +117,12 @@ Route::middleware('auth')->group(function () {
 
     // Add route to fetch approvals for a specific cash request
     Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
+
+    // Add route to handle the VAT fetching request
+    Route::get('/suppliers/{id}/vat', [SupplierController::class, 'getVat']);
+
+    // Route to fetch user details by ID
+    Route::get('/users/{id}/details', [UserController::class, 'getUserDetails'])->name('users.details');
 });
 
 require __DIR__.'/auth.php';

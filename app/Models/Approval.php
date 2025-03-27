@@ -19,6 +19,7 @@ class Approval extends Model
         'status_type',
         'status',
         'user_id',
+        'approval_name',
     ];
 
     // Define relationships

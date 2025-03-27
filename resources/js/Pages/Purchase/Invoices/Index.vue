@@ -48,6 +48,7 @@ const form = reactive({
   service_charge: 0,
   discount_total: 0,
   attachments: [],
+  purchased_by: null, // Initialize purchased_by as null to be set by the dropdown
 });
 
 const calculateTotalDiscount = () => {
@@ -257,6 +258,7 @@ const clearForm = () => {
     service_charge: 0,
     discount_total: 0,
     attachments: [],
+    purchased_by: null, // Initialize purchased_by as null to be set by the dropdown
   });
   invoiceItemsTableInstance.value.clear().draw();
   $('#supplier').val(null).trigger('change');
@@ -268,6 +270,11 @@ const submitForm = async () => {
   calculateTotalAmount();
   calculateServiceChargeForItems();
   calculateItemDiscounts(); // Ensure discounts are calculated correctly before submitting
+
+  if (!form.purchased_by) {
+    toastr.error('Please select a user for "Purchased By".');
+    return;
+  }
 
   let response = null;
   if (isEditMode.value && form.id) {
@@ -723,6 +730,7 @@ const editInvoice = async (invoiceId) => {
       vat_rate: formatNumber(invoice.vat_rate),
       service_charge: formatNumber(invoice.service_charge),
       discount_total: formatNumber(invoice.discount_total),
+      purchased_by: invoice.purchased_by, // Populate the purchased_by field
       items: prepareInvoiceItems(invoice.items.map(item => ({
         pr_item: item.pr_item,
         po_item: item.po_item,
@@ -842,8 +850,19 @@ watch(() => form.invoice_no, (newValue) => {
   }
 });
 
+const fetchSupplierVat = async (supplierId) => {
+  try {
+    const response = await axios.get(`/suppliers/${supplierId}/vat`);
+    form.vat_rate = response.data.vat || 0; // Set VAT rate from server response
+  } catch (error) {
+    console.error('Error fetching supplier VAT:', error);
+    toastr.error('Failed to fetch VAT for the selected supplier.');
+  }
+};
+
 watch(() => form.supplier, async (newSupplierId) => {
   if (newSupplierId && !isEditMode.value) {
+    await fetchSupplierVat(newSupplierId); // Fetch VAT from server
   }
 });
 
@@ -1283,6 +1302,45 @@ onMounted(() => {
     });
 
     initializeSupplierSelect();
+
+    // Initialize Select2 for Purchased By
+    $('#purchased_by').select2({
+      placeholder: 'Select User',
+      allowClear: true,
+      width: 'resolve',
+      ajax: {
+        url: '/search-purchaser', // Ensure this matches your route
+        dataType: 'json',
+        delay: 250,
+        data: params => ({
+          q: params.term, // Search query
+        }),
+        processResults: data => ({
+          results: data.map(user => ({
+            id: user.id,
+            text: user.name,
+          })),
+        }),
+      },
+    }).on('select2:select', e => {
+      form.purchased_by = e.params.data.id; // Update v-model
+    }).on('select2:unselect', () => {
+      form.purchased_by = null; // Clear v-model when unselected
+    });
+
+    // Retain selected purchaser during edit mode
+    watch(() => form.purchased_by, (newValue) => {
+      if (newValue) {
+        const selectedOption = new Option(
+          props.users.find(user => user.id === newValue)?.name || 'Unknown', // Use props.users instead of users
+          newValue,
+          true,
+          true
+        );
+        $('#purchased_by').append(selectedOption).trigger('change');
+      }
+    });
+
     watch(() => form.supplier, (newSupplierId) => {
       if (newSupplierId) {
       }
@@ -1625,6 +1683,13 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                           <label class="form-check-label" for="payment_type_deposit">Deposit</label>
                         </div>
                         <div v-if="formErrors.payment_type" class="text-danger">{{ formErrors.payment_type }}</div>
+                      </div>
+                    </div>
+                    <div class="row mb-1 align-items-center">
+                      <label for="purchased_by" class="col-sm-4 col-form-label">Purchased By</label>
+                      <div class="col-sm-8">
+                        <select id="purchased_by" class="form-select" style="width: 100%;"></select>
+                        <div v-if="formErrors.purchased_by" class="text-danger">{{ formErrors.purchased_by }}</div>
                       </div>
                     </div>
                   </div>

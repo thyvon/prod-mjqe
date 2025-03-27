@@ -1,6 +1,6 @@
 <template>
   <Main>
-    <Head :title="'View Cash Request'" />
+    <Head :title="`${cashRequest.ref_no}`" />
     <div class="container a4-size">
       <!-- Add a print button -->
       <div class="row mb-3">
@@ -50,19 +50,19 @@
             <div class="col-md-4">
               <div class="row">
                 <div class="col-sm-4"><div>អ្នកទទួល/</div>Receiver</div>
-                <div class="col-sm-8 border border-dark pt-2">{{ cashRequest.request_by }}</div>
+                <div class="col-sm-8 border border-dark pt-2">{{ approvals[2].name }}</div>
               </div>
             </div>
             <div class="col-md-5">
               <div class="row">
                 <div class="col-sm-3"><div>តួនាទី/</div>Position</div>
-                <div class="col-sm-9 border border-dark pt-2">Procurement Officer</div>
+                <div class="col-sm-9 border border-dark pt-2">{{ approvals[2].position }}</div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="row">
                 <div class="col-sm-4"><div>អត្តលេខ/</div>ID Card</div>
-                <div class="col-sm-8 border border-dark pt-2 text-center">3665</div>
+                <div class="col-sm-8 border border-dark pt-2 text-center">{{ approvals[2].card_id }}</div>
               </div>
             </div>
           </div>
@@ -156,44 +156,67 @@
 
           <!-- Footer Section -->
           <div class="row mb-3">
+            <!-- Requested By -->
             <div class="col-md-3 text-center">
-              <div class="fw-bold">ស្នើសុំដោយ</div>
+              <div>ស្នើសុំដោយ</div>
               <div>Requested By</div>
-              <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Signature" style="width: 130px; height: 80px; object-fit: contain;">
+              <img
+                :src="'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: Vun Thy</div>
-                <div>Position: Procurement Officer</div>
-                <div>Date: Mar 20, 2025</div>
+                <div>Name: {{ cashRequest.user.name }}</div>
+                <div>Position: {{ cashRequest.user.position || 'N/A' }}</div>
+                <div>Date: {{ formatDate(cashRequest.request_date) }}</div>
               </div>
             </div>
-            <div class="col-md-3 text-center">
-              <div class="fw-bold">ត្រួតពីនិត្យដោយ</div>
-              <div>Checked By</div>
-              <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Signature" style="width: 130px; height: 80px; object-fit: contain;">
+
+            <!-- Checked By -->
+            <div class="col-md-3 text-center" v-if="approvals[0] && approvals[0].label === 'Checked By'">
+              <div>ពិនិត្យដោយ</div>
+              <div>{{ approvals[0].label }}</div>
+              <img
+                :src="approvals[0].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: Vun Thy</div>
-                <div>Position: Procurement Officer</div>
-                <div>Date: Mar 20, 2025</div>
+                <div>Name: {{ approvals[0].name }}</div>
+                <div>Position: {{ approvals[0].position }}</div>
+                <div>Date: {{ formatDate(approvals[0].date) }}</div>
               </div>
             </div>
-            <div class="col-md-3 text-center">
-              <div class="fw-bold">អនុម័តដោយ</div>
-              <div>Approved By</div>
-              <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Signature" style="width: 130px; height: 80px; object-fit: contain;">
+
+            <!-- Approved By -->
+            <div class="col-md-3 text-center" v-if="approvals[1] && approvals[1].label === 'Approved By'">
+              <div>អនុម័តដោយ</div>
+              <div>{{ approvals[1].label }}</div>
+              <img
+                :src="approvals[1].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: Vun Thy</div>
-                <div>Position: Procurement Officer</div>
-                <div>Date: Mar 20, 2025</div>
+                <div>Name: {{ approvals[1].name }}</div>
+                <div>Position: {{ approvals[1].position }}</div>
+                <div>Date: {{ formatDate(approvals[1].date) }}</div>
               </div>
             </div>
-            <div class="col-md-3 text-center">
-              <div class="fw-bold">ទទួលដោយ</div>
-              <div>Received By</div>
-              <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Signature" style="width: 130px; height: 80px; object-fit: contain;">
+
+            <!-- Received By -->
+            <div class="col-md-3 text-center" v-if="approvals[2] && approvals[2].label === 'Received By'">
+              <div>ទទួលដោយ</div>
+              <div>{{ approvals[2].label }}</div>
+              <img
+                :src="approvals[2].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: Vun Thy</div>
-                <div>Position: Procurement Officer</div>
-                <div>Date: Mar 20, 2025</div>
+                <div>Name: {{ approvals[2].name }}</div>
+                <div>Position: {{ approvals[2].position }}</div>
+                <div>Date: {{ formatDate(approvals[2].date) }}</div>
               </div>
             </div>
           </div>
@@ -210,6 +233,10 @@ import Main from '@/Layouts/Main.vue';
 // Props
 const props = defineProps({
   cashRequest: Object,
+  approvals: {
+    type: Array,
+    default: () => [], // Ensure approvals has a default value
+  },
 });
 
 // Helper function to format dates

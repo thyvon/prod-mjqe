@@ -35,11 +35,10 @@ return new class extends Migration
             $table->decimal('vat', 15, 4)->nullable()->default(0);
             $table->decimal('return', 15, 4)->nullable()->default(0);
             $table->decimal('retention', 15, 4)->nullable()->default(0);
-            $table->decimal('service_charge', 23, 15)->nullable()->default(0); // Add service_charge field
-            $table->decimal('deposit', 15, 4)->nullable()->default(0); // Add deposit field
+            $table->decimal('service_charge', 23, 15)->nullable()->default(0);
+            $table->decimal('deposit', 15, 4)->nullable()->default(0);
             $table->decimal('total_usd', 23, 15)->default(0);
             $table->decimal('total_khr', 23, 15)->default(0);
-            // $table->decimal('due_amount', 15, 8)->default(0);
             $table->decimal('paid_amount', 15, 8)->default(0);
             $table->foreignId('requested_by')->nullable()->constrained('users');
             $table->string('campus');
