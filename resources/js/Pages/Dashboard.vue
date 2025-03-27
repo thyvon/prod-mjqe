@@ -602,25 +602,16 @@ onMounted(async () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: lineChartColors.gridColor,
-                        },
-                        ticks: {
-                            color: lineChartColors.fontColor,
-                        },
-                    },
-                    y: {
-                        grid: {
-                            color: lineChartColors.gridColor,
-                        },
-                        ticks: {
-                            color: lineChartColors.fontColor,
-                        },
-                    },
-                },
                 plugins: {
+                    title: {
+                        display: true,
+                        text: `Total Expense (${lastYear} Vs ${thisYear})`, // Dynamic title
+                        color: lineChartColors.fontColor,
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
                     legend: {
                         labels: {
                             color: lineChartColors.fontColor,
@@ -636,6 +627,24 @@ onMounted(async () => {
                                         : lineChartColors.borderColor2, // This year color
                                 }));
                             },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: lineChartColors.gridColor,
+                        },
+                        ticks: {
+                            color: lineChartColors.fontColor,
+                        },
+                    },
+                    y: {
+                        grid: {
+                            color: lineChartColors.gridColor,
+                        },
+                        ticks: {
+                            color: lineChartColors.fontColor,
                         },
                     },
                 },
