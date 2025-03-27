@@ -173,7 +173,7 @@ onMounted(async () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            completedPercentage.value = data.completed_po_percentage || 0; // Default to 0 if no data is returned
+            completedPOPercentage.value = data.completed_po_percentage || 0; // Default to 0 if no data is returned
         } catch (error) {
             console.error('Error fetching completed percentage:', error);
             completedPOPercentage.value = 0; // Default to 0 in case of an error
