@@ -14,22 +14,23 @@ return new class extends Migration
         Schema::create('purchase_invoices', function (Blueprint $table) {
             $table->id();
             $table->string('pi_number')->unique();
-            $table->integer('transaction_type');
+            $table->integer('transaction_type')->comment('1 = Petty Cash, 2 = Credit, 3 = Advance');
             $table->foreignId('cash_ref')->nullable()->constrained('cash_requests')->onDelete('restrict');
-            $table->integer('payment_type')->default(1);
+            $table->integer('payment_type')->default(1)->comment('1 = Final, 2 = Deposit');
             $table->date('invoice_date');
             $table->string('invoice_no');
             $table->foreignId('supplier')->constrained('suppliers');
-            $table->integer('currency')->default(1);
+            $table->integer('currency')->default(1)->comment('1 = USD, 2 = KHR');
             $table->decimal('currency_rate', 8, 2);
-            $table->integer('payment_term');
+            $table->integer('payment_term')->comment('1 = Credit 1 week, 2 = Credit 2 weeks, 3 = Credit 1 month, 4 = Non-Credit');
             $table->decimal('sub_total', 15, 8)->default(0);
             $table->decimal('vat_rate', 8, 2)->default(0);
             $table->decimal('vat_amount', 15, 8)->default(0);
             $table->decimal('discount_total', 15, 4)->default(0);
-            $table->decimal('service_charge', 15, 4)->default(0)->nullable(); // Add service_charge field
+            $table->decimal('service_charge', 15, 4)->default(0)->nullable();
             $table->decimal('total_amount', 15, 8);
             $table->decimal('paid_amount', 15, 8)->default(0);
+            // $table->foreignId('purchased_by')->constrained('users');
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
         });

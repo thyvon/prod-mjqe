@@ -59,11 +59,9 @@ class InvoiceController extends Controller
                 $validatedData['cash_ref'] = null;
             }
 
-            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
-
-            foreach ($validatedData['items'] as &$item) {
-                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
-            }
+            // Use the purchased_by value from the request
+            $validatedData['purchased_by'] = $request->input('purchased_by');
+            $validatedData['created_by'] = auth()->id();
 
             $invoice = PurchaseInvoice::create($validatedData);
             Log::info('Invoice created', ['invoice' => $invoice->toArray()]);
@@ -84,11 +82,15 @@ class InvoiceController extends Controller
                 'purchaseInvoices' => $updatedInvoices, // Return updated invoices
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
+            Log::error('Validation error in store method', ['errors' => $e->errors(), 'request_data' => $request->all()]);
             return response()->json(['error' => 'Validation Error', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Error storing invoice', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => 'Internal Server Error'], 500);
+            Log::error('Unexpected error in store method', [
+                'exception' => $e->getMessage(),
+                'request_data' => $request->all(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Internal Server Error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -97,12 +99,13 @@ class InvoiceController extends Controller
         try {
             $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
 
-            // Ensure cash_ref is included in the response
+            // Ensure purchased_by is included in the response
             return response()->json([
                 'invoice' => $invoice,
                 'transaction_type' => $invoice->transaction_type,
                 'cash_ref' => $invoice->cash_ref, // Include cash_ref explicitly
                 'vat_rate' => $invoice->vat_rate,
+                'purchased_by' => $invoice->purchased_by, // Include purchased_by explicitly
             ]);
         } catch (\Exception $e) {
             Log::error('Error in edit method:', ['message' => $e->getMessage()]);
@@ -142,11 +145,9 @@ class InvoiceController extends Controller
                 $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
             }
 
-            $validatedData['created_by'] = auth()->id(); // Automatically capture the authenticated user's ID
-
-            foreach ($validatedData['items'] as &$item) {
-                $item['purchased_by'] = $validatedData['created_by']; // Copy created_by to purchased_by
-            }
+            // Use the purchased_by value from the request
+            $validatedData['purchased_by'] = $request->input('purchased_by');
+            $validatedData['created_by'] = auth()->id();
 
             $invoice->update($validatedData);
 
@@ -169,11 +170,15 @@ class InvoiceController extends Controller
                 'purchaseInvoices' => $updatedInvoices, // Return updated invoices
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation error', ['errors' => $e->errors(), 'request_data' => $request->all()]);
+            Log::error('Validation error in update method', ['errors' => $e->errors(), 'request_data' => $request->all()]);
             return response()->json(['error' => 'Validation Error', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Error updating invoice', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => 'Internal Server Error'], 500);
+            Log::error('Unexpected error in update method', [
+                'exception' => $e->getMessage(),
+                'request_data' => $request->all(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Internal Server Error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -311,6 +316,16 @@ class InvoiceController extends Controller
         return response()->json($suppliers);
     }
 
+    public function searchPurchaser(Request $request)
+    {
+        $query = $request->input('q');
+        $purchasers = User::where('name', 'like', '%' . $query . '%')
+            ->select('id', 'name') // Select only necessary fields for Select2
+            ->get();
+
+        return response()->json($purchasers);
+    }
+
     public function filterCashRequests(Request $request)
     {
         $transactionType = $request->input('transaction_type');
@@ -415,6 +430,7 @@ class InvoiceController extends Controller
             'service_charge' => 'nullable|numeric',
             'total_amount' => 'nullable|numeric',
             'paid_amount' => 'required|numeric',
+            'purchased_by' => 'required|integer|exists:users,id', // Ensure purchased_by is required and valid
             'items' => 'required|array',
             'items.*.pr_item' => 'required|integer|exists:pr_items,id',
             'items.*.po_item' => 'nullable|integer|exists:po_items,id',
@@ -445,6 +461,7 @@ class InvoiceController extends Controller
             'items.*.total_usd' => 'required|numeric',
             'items.*.total_khr' => 'required|numeric',
             'items.*.deposit' => 'nullable|numeric',
+            'items.*.purchased_by' => 'required|integer|exists:users,id', // Ensure purchased_by is set for each item
         ];
 
         if ($transactionType != 2) {
@@ -534,6 +551,7 @@ class InvoiceController extends Controller
             if ($prItem) {
                 $itemData['pr_number'] = $prItem->purchase_request_id;
                 $itemData['item_code'] = $prItem->product_id;
+                $itemData['requested_by'] = $prItem->purchaseRequest->request_by; // Use relationship to get requested_by
             }
 
             if (isset($itemData['po_item'])) {
@@ -550,9 +568,9 @@ class InvoiceController extends Controller
             $itemData['payment_term'] = $invoice->payment_term;
             $itemData['transaction_type'] = $invoice->transaction_type;
             $itemData['pi_number'] = $invoice->id;
-            $itemData['requested_by'] = $invoice->created_by;
             $itemData['currency'] = $invoice->currency;
-            $itemData['cash_ref'] = $invoice->cash_ref; // Copy cash_ref from invoice to invoice item
+            $itemData['cash_ref'] = $invoice->cash_ref;
+            $itemData['purchased_by'] = $invoice->purchased_by;
 
             $itemData['total_price'] = $itemData['qty'] * $itemData['unit_price'];
 

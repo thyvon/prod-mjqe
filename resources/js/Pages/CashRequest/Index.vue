@@ -372,7 +372,7 @@ onMounted(() => {
                     <!-- Left side for requester information -->
                     <div class="col-md-6">
                       <div class="mb-3 row">
-                        <label for="user_id" class="col-sm-4 col-form-label">Request By</label>
+                        <label for="user_id" class="col-sm-4 col-form-label">Receiver</label>
                         <div class="col-sm-8">
                           <select v-model="cashRequestForm.user_id" class="form-select select2" id="user_id" required>
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>

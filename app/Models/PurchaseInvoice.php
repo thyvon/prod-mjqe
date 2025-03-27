@@ -32,6 +32,7 @@ class PurchaseInvoice extends Model
         'paid_amount',
         'created_by',
         'paid_usd', // New field
+        'purchased_by', // Ensure this field is fillable
     ];
 
     public static function boot()
