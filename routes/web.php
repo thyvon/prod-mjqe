@@ -77,6 +77,13 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Profile upload routes
+    Route::post('/profile/{id}/upload-signature', [UserController::class, 'uploadSignature'])->name('profile.uploadSignature');
+    Route::post('/profile/{id}/upload-profile', [UserController::class, 'uploadProfile'])->name('profile.uploadProfile');
+
+    // Add route to retrieve the file URLs for the signature and profile
+    Route::get('/profile/{id}/file/{type}', [UserController::class, 'getFileUrl'])->name('profile.getFileUrl');
+
     // CRUD
     Route::resources([
         'suppliers' => SupplierController::class,
@@ -116,6 +123,7 @@ Route::middleware('auth')->group(function () {
 
     // Add route to fetch approvals for a specific cash request
     Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
+    Route::post('/cash-request/{cashRequest}/approve', [CashRequestController::class, 'approve'])->name('cash-request.approve');
 
     // Add route to handle the VAT fetching request
     Route::get('/suppliers/{id}/vat', [SupplierController::class, 'getVat']);

@@ -25,6 +25,8 @@ class User extends Authenticatable
         'department',
         'phone',
         'extension',
+        'signature', // Added
+        'profile',   // Added
     ];
 
     /**

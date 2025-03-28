@@ -273,7 +273,7 @@
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ approvals[0].name }}</div>
                 <div>Position: {{ approvals[0].position }}</div>
-                <div>Date: {{ formatDate(approvals[0].date) }}</div>
+                <div>Date: {{ approvals[0].click_date ? formatDate(approvals[0].click_date) : '' }}</div>
               </div>
             </div>
 
@@ -289,7 +289,7 @@
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ approvals[1].name }}</div>
                 <div>Position: {{ approvals[1].position }}</div>
-                <div>Date: {{ formatDate(approvals[1].date) }}</div>
+                <div>Date: {{ approvals[1].click_date ? formatDate(approvals[1].click_date) : '' }}</div>
               </div>
             </div>
 
@@ -305,23 +305,42 @@
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ approvals[2].name }}</div>
                 <div>Position: {{ approvals[2].position }}</div>
-                <div>Date: {{ formatDate(approvals[2].date) }}</div>
+                <div>Date: {{ approvals[2].click_date ? formatDate(approvals[2].click_date) : '' }}</div>
               </div>
             </div>
           </div>
-        </div>
+        </div> 
       </div>
+      <div class="row mb-3">
+        <div class="col text-center" v-for="approval in approvals" :key="approval.status_type">
+          <button 
+            class="btn btn-success btn-sm" 
+            @click="approveRequest(approval.status_type)"
+            v-if="approval.user_id === currentUser.user.id && approval.status === 0 &&
+              (
+                (approval.label === 'Checked By') ||
+                (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1)) ||
+                (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
+              )"
+          >
+            Click {{ approval.label }}
+          </button>
+        </div>
+       </div>
     </div>
+
   </Main>
 </template>
 
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
+import axios from 'axios';
 
 // Props
 const props = defineProps({
   cashRequest: Object,
+  currentUser: Object,
   approvals: {
     type: Array,
     default: () => [], // Ensure approvals has a default value
@@ -351,6 +370,20 @@ const printForm = () => {
 // Function to navigate back to the previous page
 const goBack = () => {
   window.history.back();
+};
+
+// Function to handle approval action
+const approveRequest = async (statusType) => {
+  try {
+    const response = await axios.post(`/cash-request/${props.cashRequest.id}/approve`, {
+      status_type: statusType,
+    });
+    alert(response.data.message);
+    window.location.reload(); // Optionally reload the page
+  } catch (error) {
+    console.error('Approval Error:', error); // Log the full error object
+    alert(error.response?.data?.message || 'An error occurred while approving the request.');
+  }
 };
 </script>
 

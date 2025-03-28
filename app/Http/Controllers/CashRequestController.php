@@ -213,6 +213,7 @@ class CashRequestController extends Controller
 
                 return [
                     'label' => $labels[$approval->status_type] ?? 'Unknown',
+                    'user_id' => $approval->user_id, // Ensure user_id is included
                     'name' => $approval->user->name ?? '',
                     'position' => $approval->user->position ?? '',
                     'card_id' => $approval->user->card_id ?? '',
@@ -221,13 +222,61 @@ class CashRequestController extends Controller
                     'department' => $approval->user->department ?? '',
                     'date' => $approval->updated_at->format('Y-m-d'),
                     'signature' => $approval->user->signature ?? null, // Assuming a `signature` field exists
+                    'status_type' => $approval->status_type, // Include status_type for button logic
+                    'status' => $approval->status,
+                    'click_date' => $approval->click_date, // Include click_date
                 ];
             })
             ->values(); // Reindex the collection
 
+        // Pass the authenticated user in the `auth` object
         return Inertia::render('CashRequest/Show', [
             'cashRequest' => $cashRequest,
             'approvals' => $approvals,
+            'currentUser' => [
+                'user' => Auth::user(), // Pass the authenticated user
+            ],
         ]);
+    }
+
+    // Handle approval action
+    public function approve(Request $request, CashRequest $cashRequest)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+
+            // Find the approval record for the current user and status type
+            $approval = Approval::where('approval_id', $cashRequest->id)
+                ->where('status_type', $request->status_type)
+                ->where('user_id', $currentUser->id)
+                ->first();
+
+            if (!$approval) {
+                \Log::warning('Approval record not found or unauthorized.', [
+                    'cashRequestId' => $cashRequest->id,
+                    'statusType' => $request->status_type,
+                    'userId' => $currentUser->id,
+                ]);
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+
+            // Update the approval status
+            $approval->update([
+                'status' => 1, // Update the status to 'approved'
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            return response()->json(['message' => 'Approval successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Approval Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
+        }
     }
 }
