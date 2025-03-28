@@ -2,9 +2,10 @@
   <Main>
     <Head :title="`${cashRequest.ref_no}`" />
     <div class="container a4-size">
-      <!-- Add a print button -->
-      <div class="row mb-3">
+      <!-- Add a back button -->
+      <div class="row">
         <div class="col text-end">
+          <button class="btn btn-secondary" @click="goBack">Back</button>
           <button class="btn btn-primary" @click="printForm">Print</button>
         </div>
       </div>
@@ -12,152 +13,240 @@
       <div id="printable-area">
         <div class="row justify-content-center">
           <!-- Header Section -->
-          <div class="row mb-3">
+          <div class="row mb-1">
             <div class="col-3">
               <a class="d-block text-start" href="#!">
-                <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="Logo" width="135" height="44">
+                <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="BootstrapBrain Logo" width="135" height="44">
               </a>
             </div>
-            <div class="col-6 text-center">
-              <h5 class="text-uppercase" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំសាច់ប្រាក់បន្ទាប់បន្សំ</h5>
-              <h5 class="text-uppercase fw-bold" style="font-family: 'TW Cen MT';">Petty Cash Request Form</h5>
+            <div class="col-6 pt-5">
+              <div class="row font-monospace">
+                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">
+                  {{ cashRequest.request_type === 1 ? 'ពាក្យស្នើសុំសាច់ប្រាក់បន្ទាប់បន្សំ' : 'ពាក្យស្នើសុំប្រាក់បុរេប្រទាន' }}
+                </h5>
+                <h5 class="text-uppercase text-center fw-bold" style="font-family: 'TW Cen MT';">
+                  {{ cashRequest.request_type === 1 ? 'Petty Cash Request Form' : 'Advance Request Form' }}
+                </h5>
+                <h6 class="text-uppercase text-center fw-bold text-danger" style="font-family: 'TW Cen MT';"  v-show="cashRequest.request_type === 2">Urgent</h6>
+              </div>
             </div>
-            <div class="col-3 text-end">
-              <span class="d-block" style="font-size: x-small;">Code: MJQE0211</span>
-              <span class="d-block" style="font-size: x-small;">Version 1.0</span>
+            <div class="col-3">
+              <div class="row font-monospace">
+                <span class="text-sm-end" style="font-size: x-small;">{{ cashRequest.request_type === 1 ? 'Code: MJQE0211' : 'Code: MJQE0073' }}</span>
+                <span class="text-sm-end" style="font-size: x-small;">{{ cashRequest.request_type === 1 ? 'Version 1.0' : 'Version 1.3' }}</span>
+              </div>
             </div>
           </div>
 
           <!-- Personal Information Section -->
+
           <div class="row mb-1">
-            <div class="col-md-12">
+            <div class="col-12">
               <div class="row">
-                <div class="col-sm-10 text-end">លេខយោង/Ref No.:</div>
-                <div class="col-sm-2 text-danger text-center p-0">{{ cashRequest.ref_no }}</div>
+
+                <div class="col-8">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row">
+                    <span>លេខយោង/Ref no:</span>
+                  </div>
+                </div>
+                <div class="col-2 text-end text-danger px-0">
+                  <div class="row">
+                    <span>{{ cashRequest.ref_no }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
           <div class="row mb-1">
-            <div class="col-md-12">
+            <div class="col-12">
               <div class="row">
-                <div class="col-sm-10 text-end">កាលបរិច្ឆេទ/Date:</div>
-                <div class="col-sm-2 text-danger text-center p-0">{{ formatDate(cashRequest.request_date) }}</div>
+
+                <div class="col-8">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row">
+                    <span>កាលបរិច្ឆេទ/Date:</span>
+                  </div>
+                </div>
+                <div class="col-2 text-end px-0">
+                  <div class="row">
+                    <span>{{formatDate(cashRequest.request_date)}}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="row mb-3">
-            <div class="col-md-4">
+          <div class="row mb-2">
+            <div class="col-12">
               <div class="row">
-                <div class="col-sm-4"><div>អ្នកទទួល/</div>Receiver</div>
-                <div class="col-sm-8 border border-dark pt-2">{{ approvals[2].name }}</div>
-              </div>
-            </div>
-            <div class="col-md-5">
-              <div class="row">
-                <div class="col-sm-3"><div>តួនាទី/</div>Position</div>
-                <div class="col-sm-9 border border-dark pt-2">{{ approvals[2].position }}</div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="row">
-                <div class="col-sm-4"><div>អត្តលេខ/</div>ID Card</div>
-                <div class="col-sm-8 border border-dark pt-2 text-center">{{ approvals[2].card_id }}</div>
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>អ្នកទទួល/Receiver:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].name }}</span>
+                </div>
+
+                <div class="col-2 text-start">
+                  <div class="row mt-2">
+                    <span>តួនាទី/Position:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].position }}</span>
+                </div>
+
+                <div class="col-1 text-start p-0">
+                  <div class="row mt-2">
+                    <span>អត្តលេខ/ID:</span>
+                  </div>
+                </div>
+                <div class="col-1 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].card_id }}</span>
+                </div>
+
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
-            <div class="col-md-3">
+          <div class="row mb-1">
+            <div class="col-12">
               <div class="row">
-                <div class="col-sm-5"><div>សាខា/</div>Campus</div>
-                <div class="col-sm-7 border border-dark pt-2">{{ cashRequest.campus }}</div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="row">
-                <div class="col-sm-5"><div>អាជីវកម្ម/</div>Division</div>
-                <div class="col-sm-7 border border-dark pt-2">{{ cashRequest.division }}</div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="row">
-                <div class="col-sm-6"><div>ផ្នែក/</div>Department</div>
-                <div class="col-sm-6 border border-dark pt-2">{{ cashRequest.department }}</div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="row">
-                <div class="col-sm-5"><div>ស្ថានភាព/</div>Status</div>
-                <div class="col-sm-7 border border-dark pt-2 fw-bold text-danger">Urgent</div>
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>សាខា/Campus:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].campus }}</span>
+                </div>
+
+                <div class="col-3">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>ចំនួនទឹកប្រាក់/Amount:</span>
+                  </div>
+                </div>
+                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.amount}}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Financial Information Section -->
+          <div class="row mb-1">
+            <div class="col-12">
+              <div class="row">
+                <div class="col-2 text-start p-0 ">
+                  <div class="row mt-2">
+                    <span>អាជីវកម្ម/Division:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].division }}</span>
+                </div>
+                <div class="col-3">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
 
-          <!-- <div class="row mb-3 mt-3">
-            <div class="col-md-4">
-              <div class="row">
-                <div class="col-sm-7">ចំនួនទឹកប្រាក់/Amount</div>
-                <div class="col-sm-5 border border-dark">{{ cashRequest.amount }}</div>
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>រូបិយបណ្ណ/Currency:</span>
+                  </div>
+                </div>
+                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.currency}}</span>
+                </div>
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="row">
-                <div class="col-sm-7">ចំនួនទឹកប្រាក់/Amount</div>
-                <div class="col-sm-5 border border-dark">{{ cashRequest.amount }}</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="row">
-                <div class="col-sm-7">ចំនួនទឹកប្រាក់/Amount</div>
-                <div class="col-sm-5 border border-dark">{{ cashRequest.amount }}</div>
-              </div>
-            </div>
-          </div> -->
+          </div>
 
-          <div class="row mb-4">
-            <div class="col-md-2">
-              <label>ទឹកប្រាក់/Amount</label>
+          <div class="row mb-1">
+            <div class="col-12">
               <div class="row">
-                <div class="col-sm-10 border border-dark mx-2 p-1">{{ cashRequest.amount }}</div>
+                <div class="col-2 text-start p-0 ">
+                  <div class="row mt-2">
+                    <span>ផ្នែក/Department:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].department }}</span>
+                </div>
+                <div class="col-3">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>តាមរយៈ/Via:</span>
+                  </div>
+                </div>
+                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.via}}</span>
+                </div>
               </div>
             </div>
-            <div class="col-md-2">
-              <label>រូបិយប័ណ្ណ/Currency</label>
-              <div class="row">
-                <div class="col-sm-10 border border-dark mx-2 p-1">{{ cashRequest.currency }}</div>
+          </div>
+
+          <div class="row mb-2" v-show="cashRequest.request_type === 2">
+            <div class="col-2 text-start p-0">
+              <div class="row mt-2">
+                <span>សម្រាប់/Advance for:</span>
               </div>
             </div>
-            <div class="col-md-2">
-              <label>តាមរយៈ/Via</label>
-              <div class="row">
-                <div class="col-sm-10 border border-dark mx-2 p-1">{{ cashRequest.via }}</div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <label>ស្នើសុំសម្រាប់/Request for:</label>
-              <div class="row">
-                <div class="col-sm-12 border border-dark p-1">{{ cashRequest.via }}</div>
-              </div>
+            <div class="col-5 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+              <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.reason}}</span>
             </div>
           </div>
 
           <!-- Additional Information Section -->
-          <label class="ml-4">បរិយាយ/Description</label>
-          <div class="row mb-3 col-12">
-            <span class="border border-dark ml-1" style="height: 60px;">{{ cashRequest.amount }}</span>
+          <div class="row mb-2 mt-3"  v-show="cashRequest.request_type === 1">
+            <span class="text-start p-0">បរិយាយ/Description:</span>
+            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+              <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.description}}</span>
+            </div>
           </div>
-          <label class="ml-4">បរិយាយ/Description</label>
-          <div class="row mb-5 col-12" style="padding-bottom: 80px;">
-            <span class="border border-dark ml-1" style="height: 60px;">{{ cashRequest.amount }}</span>
+
+          <div class="row mb-2 mt-3" v-show="cashRequest.request_type === 2">
+            <span class="text-start p-0">មូលហេតុ/Reason:</span>
+            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+              <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.description}}</span>
+            </div>
+          </div>
+
+          <div class="row mb-5">
+            <span class="text-start p-0">កំណត់សម្គាល់/Remark:</span>
+            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+              <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.remark}}</span>
+            </div>
           </div>
 
           <!-- Footer Section -->
           <div class="row mb-3">
             <!-- Requested By -->
-            <div class="col-md-3 text-center">
+            <div class="col-3 text-center px-2">
               <div>ស្នើសុំដោយ</div>
               <div>Requested By</div>
               <img
@@ -173,7 +262,7 @@
             </div>
 
             <!-- Checked By -->
-            <div class="col-md-3 text-center" v-if="approvals[0] && approvals[0].label === 'Checked By'">
+            <div class="col-3 text-center px-2" v-if="approvals[0] && approvals[0].label === 'Checked By'">
               <div>ពិនិត្យដោយ</div>
               <div>{{ approvals[0].label }}</div>
               <img
@@ -189,7 +278,7 @@
             </div>
 
             <!-- Approved By -->
-            <div class="col-md-3 text-center" v-if="approvals[1] && approvals[1].label === 'Approved By'">
+            <div class="col-3 text-center px-2" v-if="approvals[1] && approvals[1].label === 'Approved By'">
               <div>អនុម័តដោយ</div>
               <div>{{ approvals[1].label }}</div>
               <img
@@ -205,7 +294,7 @@
             </div>
 
             <!-- Received By -->
-            <div class="col-md-3 text-center" v-if="approvals[2] && approvals[2].label === 'Received By'">
+            <div class="col-3 text-center px-2" v-if="approvals[2] && approvals[2].label === 'Received By'">
               <div>ទទួលដោយ</div>
               <div>{{ approvals[2].label }}</div>
               <img
@@ -254,6 +343,14 @@ const printForm = () => {
   document.body.innerHTML = printableContent;
   window.print();
   document.body.innerHTML = originalContent;
+
+  // Reload the page to restore functionality
+  window.location.reload();
+};
+
+// Function to navigate back to the previous page
+const goBack = () => {
+  window.history.back();
 };
 </script>
 
@@ -261,8 +358,22 @@ const printForm = () => {
 .a4-size {
   width: 210mm;
   height: 297mm;
-  margin: 0 auto;
+  margin: 10mm auto; /* Updated margin for A4 paper */
   padding: 10mm;
   background: white;
+}
+
+@media print {
+  .a4-size {
+    width: 210mm;
+    height: 297mm;
+    margin: 10mm auto; /* Ensure margin is applied during printing */
+    padding: 20mm !important; /* Enforce padding for print */
+    box-shadow: none; /* Remove any shadow for clean printing */
+  }
+
+  #printable-area {
+    padding: 20mm !important; /* Ensure padding is applied to the printable area */
+  }
 }
 </style>

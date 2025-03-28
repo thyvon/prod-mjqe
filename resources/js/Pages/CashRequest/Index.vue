@@ -225,6 +225,16 @@ const initializeSelect2 = () => {
   });
 };
 
+// Function to clear select2 fields
+const clearSelect2 = () => {
+  $('#cashRequestModal .select2').val(null).trigger('change');
+  cashRequestForm.reason = '';
+  cashRequestForm.checked_by = null;
+  cashRequestForm.acknowledged_by = null;
+  cashRequestForm.approved_by = null;
+  cashRequestForm.received_by = null;
+};
+
 // Helper function to format dates
 const format = (value, type) => {
   if (type === 'date') {
@@ -372,11 +382,9 @@ onMounted(() => {
                     <!-- Left side for requester information -->
                     <div class="col-md-6">
                       <div class="mb-3 row">
-                        <label for="user_id" class="col-sm-4 col-form-label">Receiver</label>
+                        <label for="user_id" class="col-sm-4 col-form-label">Requester</label>
                         <div class="col-sm-8">
-                          <select v-model="cashRequestForm.user_id" class="form-select select2" id="user_id" required>
-                            <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                          </select>
+                          <input v-model="cashRequestForm.request_by" type="text" class="form-control" id="user_id" readonly />
                           <div v-if="validationErrors.user_id" class="text-danger">{{ validationErrors.user_id[0] }}</div>
                         </div>
                       </div>
@@ -421,7 +429,7 @@ onMounted(() => {
                       <div class="mb-3 row">
                         <label for="request_type" class="col-sm-4 col-form-label">Request Type</label>
                         <div class="col-sm-8">
-                          <select v-model="cashRequestForm.request_type" class="form-select select2" id="request_type" required>
+                          <select v-model="cashRequestForm.request_type" class="form-select select2" id="request_type" :disabled="isEdit" required>
                             <option value="1">Petty Cash</option>
                             <option value="2">Cash Advance</option>
                           </select>
@@ -472,18 +480,25 @@ onMounted(() => {
                       </div>
                     </div>
                     <!-- Middle section for description, reason, and remark -->
+                  </div>
+                  <div class="row mb-2">
                     <div class="col-12">
                       <div class="mb-3 row">
-                        <label for="description" class="col-sm-2 col-form-label">Description</label>
+                        <label for="description" class="col-sm-2 col-form-label">Description/Reason</label>
                         <div class="col-sm-10">
                           <textarea v-model="cashRequestForm.description" class="form-control" id="description"></textarea>
                           <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
                         </div>
                       </div>
                       <div class="mb-3 row">
-                        <label for="reason" class="col-sm-2 col-form-label">Reason</label>
+                        <label for="reason" class="col-sm-2 col-form-label">Request For</label>
                         <div class="col-sm-10">
-                          <textarea v-model="cashRequestForm.reason" class="form-control" id="reason"></textarea>
+                          <select v-model="cashRequestForm.reason" class="form-select select2" id="reason">
+                            <option value="ប្រាក់បៀវត្យគ្រូ/Teacher's Salary">ប្រាក់បៀវត្យគ្រូ/Teacher's Salary</option>
+                            <option value="ប្រាក់បៀវត្យបុគ្គលិក/Staff's Salary">ប្រាក់បៀវត្យបុគ្គលិក/Staff's Salary</option>
+                            <option value="ទិញសម្ភារៈ/Purchase Request">ទិញសម្ភារៈ/Purchase Request</option>
+                            <option value="Other">ផ្សេងៗ/Others</option>
+                          </select>
                           <div v-if="validationErrors.reason" class="text-danger">{{ validationErrors.reason[0] }}</div>
                         </div>
                       </div>
@@ -494,36 +509,48 @@ onMounted(() => {
                           <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
                         </div>
                       </div>
-                      <div class="mb-3 row">
-                        <label for="checked_by" class="col-sm-2 col-form-label">Checked By</label>
-                        <div class="col-sm-10">
-                          <select v-model="cashRequestForm.checked_by" class="form-select select2" id="checked_by">
+                    </div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-3 border">
+                      <div class="row">
+                        <span class="text-center">Checked By</span>
+                      </div>
+                      <div class="col-sm-12">
+                        <select v-model="cashRequestForm.checked_by" class="form-select select2" id="checked_by">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
                           <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
-                        </div>
                       </div>
-                      <div class="mb-3 row">
-                        <label for="acknowledged_by" class="col-sm-2 col-form-label">Acknowledged By</label>
-                        <div class="col-sm-10">
+                    </div>
+
+                      <div class="col-3 border">
+                        <div class="row">
+                          <span class="text-center">Acknowledged By</span>
+                        </div>
+                        <div class="col-sm-12">
                           <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
                           <div v-if="validationErrors.acknowledged_by" class="text-danger">{{ validationErrors.acknowledged_by[0] }}</div>
                         </div>
                       </div>
-                      <div class="mb-3 row">
-                        <label for="approved_by" class="col-sm-2 col-form-label">Approved By</label>
-                        <div class="col-sm-10">
+                      <div class="col-3 border">
+                        <div class="row">
+                          <span class="text-center">Approved By</span>
+                        </div>
+                        <div class="col-sm-12">
                           <select v-model="cashRequestForm.approved_by" class="form-select select2" id="approved_by">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
                           <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
                         </div>
                       </div>
-                      <div class="mb-3 row">
-                        <label for="received_by" class="col-sm-2 col-form-label">Received By</label>
-                        <div class="col-sm-10">
+                      <div class="col-3 border">
+                        <div class="row">
+                          <span class="text-center">Received By</span>
+                        </div>
+                        <div class="col-sm-12">
                           <select v-model="cashRequestForm.received_by" class="form-select select2" id="received_by">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
@@ -531,8 +558,8 @@ onMounted(() => {
                         </div>
                       </div>
                     </div>
-                  </div>
                   <div class="modal-footer">
+                    <button type="button" class="btn btn-danger btn-sm text-start" @click="clearSelect2">Clear Fields</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Create' }}</button>
                   </div>
