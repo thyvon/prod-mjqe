@@ -2,7 +2,7 @@
 import MainLayout from '@/Layouts/Main.vue';
 import { Head } from '@inertiajs/vue3';
 import { useForm, usePage } from '@inertiajs/vue3';
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onMounted } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -10,6 +10,11 @@ import TextInput from '@/Components/TextInput.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
+import toastr from 'toastr';
+import 'toastr/build/toastr.min.css';
+
+Dropzone.autoDiscover = false;
 
 defineProps({
     mustVerifyEmail: {
@@ -48,6 +53,15 @@ const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
 const confirmingUserDeletion = ref(false);
 
+const signatureUrl = ref(null);
+const profileUrl = ref(null);
+
+const setAutofocus = (refElement) => {
+    if (document.activeElement === document.body) {
+        refElement.value?.focus();
+    }
+};
+
 const updatePassword = () => {
     passwordForm.put(route('password.update'), {
         preserveScroll: true,
@@ -55,11 +69,11 @@ const updatePassword = () => {
         onError: () => {
             if (passwordForm.errors.password) {
                 passwordForm.reset('password', 'password_confirmation');
-                passwordInput.value.focus();
+                setAutofocus(passwordInput);
             }
             if (passwordForm.errors.current_password) {
                 passwordForm.reset('current_password');
-                currentPasswordInput.value.focus();
+                setAutofocus(currentPasswordInput);
             }
         },
     });
@@ -76,8 +90,14 @@ const confirmUserDeletion = () => {
 const deleteUser = () => {
     deleteForm.delete(route('profile.destroy'), {
         preserveScroll: true,
-        onSuccess: () => closeModal(),
-        onError: () => passwordInput.value.focus(),
+        onSuccess: () => {
+            toastr.success('Account deleted successfully!');
+            closeModal();
+        },
+        onError: () => {
+            toastr.error('Error deleting account.');
+            setAutofocus(passwordInput);
+        },
         onFinish: () => deleteForm.reset(),
     });
 };
@@ -88,6 +108,89 @@ const closeModal = () => {
     modal.hide();
     deleteForm.reset();
 };
+
+const uploadFile = async (file, url, paramName) => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const formData = new FormData();
+    formData.append(paramName, file);
+
+    try {
+        const response = await axios.post(url, formData, {
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        toastr.success(`${paramName} uploaded successfully!`);
+        console.log(`${paramName} uploaded successfully:`, response.data);
+    } catch (error) {
+        toastr.error(`Error uploading ${paramName}.`);
+        console.error(`Error uploading ${paramName}:`, error.response?.data || error.message);
+    }
+};
+
+const fetchFileUrl = async (type) => {
+    try {
+        const response = await axios.get(route('profile.getFileUrl', { id: user.id, type }));
+        return response.data.url;
+    } catch (error) {
+        console.error(`Error fetching ${type} URL:`, error.response?.data || error.message);
+        return null;
+    }
+};
+
+const initializeDropzone = () => {
+    try {
+        const signatureUploadUrl = route('profile.uploadSignature', { id: user.id });
+        const profileUploadUrl = route('profile.uploadProfile', { id: user.id });
+
+        const signatureDropzone = new Dropzone("#signature-dropzone", {
+            url: signatureUploadUrl,
+            maxFiles: 1,
+            acceptedFiles: "image/*",
+            addRemoveLinks: true,
+            autoProcessQueue: false,
+            init: function () {
+                if (signatureUrl.value) {
+                    const mockFile = { name: "Existing Signature", size: 12345 };
+                    this.emit("addedfile", mockFile);
+                    this.emit("thumbnail", mockFile, signatureUrl.value);
+                    this.emit("complete", mockFile);
+                }
+                this.on("addedfile", (file) => {
+                    uploadFile(file, signatureUploadUrl, "signature");
+                });
+            },
+        });
+
+        const profileDropzone = new Dropzone("#profile-dropzone", {
+            url: profileUploadUrl,
+            maxFiles: 1,
+            acceptedFiles: "image/*",
+            addRemoveLinks: true,
+            autoProcessQueue: false,
+            init: function () {
+                if (profileUrl.value) {
+                    const mockFile = { name: "Existing Profile", size: 12345 };
+                    this.emit("addedfile", mockFile);
+                    this.emit("thumbnail", mockFile, profileUrl.value);
+                    this.emit("complete", mockFile);
+                }
+                this.on("addedfile", (file) => {
+                    uploadFile(file, profileUploadUrl, "profile");
+                });
+            },
+        });
+    } catch (error) {
+        console.error("Error initializing Dropzone:", error.message);
+    }
+};
+
+onMounted(async () => {
+    signatureUrl.value = await fetchFileUrl('signature');
+    profileUrl.value = await fetchFileUrl('profile');
+    initializeDropzone();
+});
 </script>
 
 <template>
@@ -421,6 +524,33 @@ const closeModal = () => {
                                                 Delete Account
                                             </DangerButton>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <section>
+                            <header>
+                                <h2 class="h4">Upload Signature and Profile</h2>
+                                <p class="text-muted">Upload your signature and profile picture.</p>
+                            </header>
+
+                            <div class="mt-4">
+                                <div id="signature-dropzone" class="dropzone needsclick">
+                                    <div class="dz-message needsclick">
+                                        Drop signature <b>here</b> or <b>click</b> to upload.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div id="profile-dropzone" class="dropzone needsclick">
+                                    <div class="dz-message needsclick">
+                                        Drop profile picture <b>here</b> or <b>click</b> to upload.
                                     </div>
                                 </div>
                             </div>
