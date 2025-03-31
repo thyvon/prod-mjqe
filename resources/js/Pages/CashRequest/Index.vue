@@ -273,6 +273,18 @@ onMounted(() => {
           { data: 'remark' },
           { data: 'request_date', render: (data) => format(data, 'date') },
           {
+            data: 'approval_status',
+            render: (data) => {
+              if (data == 1) return '<span class="badge bg-primary">Checked</span>';
+              if (data == 2) return '<span class="badge bg-warning">Acknowledged</span>';
+              if (data == 3) return '<span class="badge bg-primary">Approved</span>';
+              if (data == 4) return '<span class="badge bg-success">Received</span>';
+              if (data == -1) return '<span class="badge bg-danger">Rejected</span>';
+              return '<span class="badge bg-secondary">Requested</span>'; // Default case
+            },
+            defaultContent: '<span class="badge bg-secondary">Requested</span>', // Handle missing approval_status
+          },
+          {
             data: null,
             render: () => `
               <div class="btn-group">
@@ -363,6 +375,7 @@ onMounted(() => {
               <th>Amount</th>
               <th>Remark</th>
               <th>Request Date</th>
+              <th>Approval Status</th>
               <th>Actions</th>
             </tr>
           </thead>

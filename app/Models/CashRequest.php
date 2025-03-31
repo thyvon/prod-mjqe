@@ -30,6 +30,7 @@ class CashRequest extends Model
         'reason',
         'remark',
         'status',
+        'approval_status',
     ];
 
     protected $casts = [

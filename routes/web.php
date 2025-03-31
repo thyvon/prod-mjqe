@@ -124,6 +124,7 @@ Route::middleware('auth')->group(function () {
     // Add route to fetch approvals for a specific cash request
     Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
     Route::post('/cash-request/{cashRequest}/approve', [CashRequestController::class, 'approve'])->name('cash-request.approve');
+    Route::post('/cash-request/{cashRequest}/reject', [CashRequestController::class, 'reject'])->name('cash-request.reject');
 
     // Add route to handle the VAT fetching request
     Route::get('/suppliers/{id}/vat', [SupplierController::class, 'getVat']);
