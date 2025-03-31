@@ -69,6 +69,9 @@ class CashRequestController extends Controller
         // Load the user relationship
         $cashRequest->load('user:id,name,position,card_id,campus,division,department');
 
+        // Include approval_status in the response
+        $cashRequest->approval_status = 0; // Default status
+
         // Return success response
         return response()->json($cashRequest, 201);
     }
@@ -111,6 +114,9 @@ class CashRequestController extends Controller
 
         // Load the user relationship
         $cashRequest->load('user:id,name,position,card_id,campus,division,department');
+
+        // Include approval_status in the response
+        $cashRequest->approval_status = $cashRequest->approval_status ?? 0;
 
         // Return success response
         return response()->json($cashRequest);
@@ -201,12 +207,10 @@ class CashRequestController extends Controller
             ->whereIn('docs_type', [1, 2]) // Filter by docs_type (1 or 2)
             ->with('user:id,name,position,card_id,campus,division,department') // Load user details
             ->get()
-            ->filter(function ($approval) {
-                return $approval->status_type !== 2; // Exclude "Acknowledged By"
-            })
             ->map(function ($approval) {
                 $labels = [
                     1 => 'Checked By',
+                    2 => 'Acknowledged By',
                     3 => 'Approved By',
                     4 => 'Received By',
                 ];
@@ -270,6 +274,11 @@ class CashRequestController extends Controller
                 'click_date' => now(), // Capture the current date
             ]);
 
+            // Update the cash request's approval_status based on status_type
+            $cashRequest->update([
+                'approval_status' => $request->status_type,
+            ]);
+
             return response()->json(['message' => 'Approval successful.']);
         } catch (\Exception $e) {
             \Log::error('Approval Error:', [
@@ -277,6 +286,51 @@ class CashRequestController extends Controller
                 'stack' => $e->getTraceAsString(),
             ]);
             return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
+        }
+    }
+
+    // Handle rejection action
+    public function reject(Request $request, CashRequest $cashRequest)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+
+            // Find the approval record for the current user and status type
+            $approval = Approval::where('approval_id', $cashRequest->id)
+                ->where('status_type', $request->status_type)
+                ->where('user_id', $currentUser->id)
+                ->first();
+
+            if (!$approval) {
+                \Log::warning('Approval record not found or unauthorized.', [
+                    'cashRequestId' => $cashRequest->id,
+                    'statusType' => $request->status_type,
+                    'userId' => $currentUser->id,
+                ]);
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+
+            // Update the approval status to rejected
+            $approval->update([
+                'status' => -1, // Set status to -1 for rejection
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            $cashRequest->update([
+                'approval_status' => -1, // Update the cash request's approval status to rejected
+            ]);
+
+            return response()->json(['message' => 'Rejection successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Rejection Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the rejection.'], 500);
         }
     }
 }

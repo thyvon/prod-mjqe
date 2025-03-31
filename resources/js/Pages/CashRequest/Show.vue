@@ -246,7 +246,7 @@
           <!-- Footer Section -->
           <div class="row mb-3">
             <!-- Requested By -->
-            <div class="col-3 text-center px-2">
+            <div class="col-3 text-center px-2 mb-3">
               <div>ស្នើសុំដោយ</div>
               <div>Requested By</div>
               <img
@@ -261,51 +261,26 @@
               </div>
             </div>
 
-            <!-- Checked By -->
-            <div class="col-3 text-center px-2" v-if="approvals[0] && approvals[0].label === 'Checked By'">
-              <div>ពិនិត្យដោយ</div>
-              <div>{{ approvals[0].label }}</div>
+            <!-- Loop through approvals -->
+            <div 
+              v-for="approval in approvals" 
+              :key="approval.status_type" 
+              class="col-3 text-center px-2 mb-3"
+            >
+              <div v-if="approval.label === 'Checked By'">ពិនិត្យដោយ</div>
+              <div v-else-if="approval.label === 'Acknowledged By'">ទទួលស្គាល់ដោយ</div>
+              <div v-else-if="approval.label === 'Approved By'">អនុម័តដោយ</div>
+              <div v-else-if="approval.label === 'Received By'">ទទួលដោយ</div>
+              <div>{{ approval.label }}</div>
               <img
-                :src="approvals[0].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                :src="approval.signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
                 alt="Signature"
                 style="width: 130px; height: 80px; object-fit: contain;"
               />
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: {{ approvals[0].name }}</div>
-                <div>Position: {{ approvals[0].position }}</div>
-                <div>Date: {{ approvals[0].click_date ? formatDate(approvals[0].click_date) : '' }}</div>
-              </div>
-            </div>
-
-            <!-- Approved By -->
-            <div class="col-3 text-center px-2" v-if="approvals[1] && approvals[1].label === 'Approved By'">
-              <div>អនុម័តដោយ</div>
-              <div>{{ approvals[1].label }}</div>
-              <img
-                :src="approvals[1].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
-                alt="Signature"
-                style="width: 130px; height: 80px; object-fit: contain;"
-              />
-              <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: {{ approvals[1].name }}</div>
-                <div>Position: {{ approvals[1].position }}</div>
-                <div>Date: {{ approvals[1].click_date ? formatDate(approvals[1].click_date) : '' }}</div>
-              </div>
-            </div>
-
-            <!-- Received By -->
-            <div class="col-3 text-center px-2" v-if="approvals[2] && approvals[2].label === 'Received By'">
-              <div>ទទួលដោយ</div>
-              <div>{{ approvals[2].label }}</div>
-              <img
-                :src="approvals[2].signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
-                alt="Signature"
-                style="width: 130px; height: 80px; object-fit: contain;"
-              />
-              <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: {{ approvals[2].name }}</div>
-                <div>Position: {{ approvals[2].position }}</div>
-                <div>Date: {{ approvals[2].click_date ? formatDate(approvals[2].click_date) : '' }}</div>
+                <div>Name: {{ approval.name }}</div>
+                <div>Position: {{ approval.position }}</div>
+                <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
               </div>
             </div>
           </div>
@@ -319,11 +294,19 @@
             v-if="approval.user_id === currentUser.user.id && approval.status === 0 &&
               (
                 (approval.label === 'Checked By') ||
-                (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1)) ||
+                (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
+                (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
                 (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
               )"
           >
             Click {{ approval.label }}
+          </button>
+          <button 
+            class="btn btn-danger btn-sm ms-2" 
+            @click="rejectRequest(approval.status_type)"
+            v-if="approval.user_id === currentUser.user.id && approval.status === 0"
+          >
+            Reject {{ approval.label }}
           </button>
         </div>
        </div>
@@ -383,6 +366,20 @@ const approveRequest = async (statusType) => {
   } catch (error) {
     console.error('Approval Error:', error); // Log the full error object
     alert(error.response?.data?.message || 'An error occurred while approving the request.');
+  }
+};
+
+// Function to handle rejection action
+const rejectRequest = async (statusType) => {
+  try {
+    const response = await axios.post(`/cash-request/${props.cashRequest.id}/reject`, {
+      status_type: statusType,
+    });
+    alert(response.data.message);
+    window.location.reload(); // Optionally reload the page
+  } catch (error) {
+    console.error('Rejection Error:', error); // Log the full error object
+    alert(error.response?.data?.message || 'An error occurred while rejecting the request.');
   }
 };
 </script>
