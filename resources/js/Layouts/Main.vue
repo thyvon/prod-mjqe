@@ -76,7 +76,12 @@ const logout = () => {
         <div class="navbar-item navbar-user dropdown">
           <a href="#" class="navbar-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
 			<div class="menu-profile-image">
-				<img :src="`/storage/${$page.props.auth.user.profile}`" alt="User Profile" class="img-fluid rounded-circle" style="width: 30px; height: 30px; object-fit: cover;" />
+				<img 
+					:src="$page.props.auth.user.profile ? `/storage/${$page.props.auth.user.profile}` : '/images/default-user-icon.png'" 
+					alt="User Profile" 
+					class="img-fluid rounded-circle" 
+					style="width: 30px; height: 30px; object-fit: cover;" 
+				/>
 			</div>
             <span class="d-none d-md-inline">{{ $page.props.auth.user.name }}</span> <b class="caret ms-10px"></b>
           </a>
