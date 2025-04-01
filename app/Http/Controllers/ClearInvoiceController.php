@@ -98,11 +98,17 @@ class ClearInvoiceController extends Controller
             'cash_id' => 'required|exists:cash_requests,id|unique:clear_invoices,cash_id', // Ensure cash_id is unique
             'clear_by' => 'required',
             'description' => 'nullable|string',
-            'status' => 'required',
         ]);
+
+        // Check if related PurchaseInvoiceItem count is greater than 0
+        $purchaseInvoiceItemCount = PurchaseInvoiceItem::where('cash_ref', $request->cash_id)->count();
+        if ($purchaseInvoiceItemCount <= 0) {
+            return response()->json(['message' => 'Cannot save. No related PurchaseInvoiceItem found.'], 400);
+        }
 
         $clearInvoice = new ClearInvoice($request->all());
         $clearInvoice->ref_no = ClearInvoice::generateRefNo();
+        $clearInvoice->status = 0; // Set default status to 0
         $clearInvoice->save();
 
         // Store approvals
@@ -121,8 +127,14 @@ class ClearInvoiceController extends Controller
             'cash_id' => 'required|exists:cash_requests,id|unique:clear_invoices,cash_id,' . $id, // Ensure cash_id is unique, excluding the current record
             'clear_by' => 'required',
             'description' => 'nullable|string',
-            'status' => 'required',
+            // 'status' => 'required',
         ]);
+
+        // Check if related PurchaseInvoiceItem count is greater than 0
+        $purchaseInvoiceItemCount = PurchaseInvoiceItem::where('cash_ref', $request->cash_id)->count();
+        if ($purchaseInvoiceItemCount <= 0) {
+            return response()->json(['message' => 'Cannot update. No related PurchaseInvoiceItem found.'], 400);
+        }
 
         $clearInvoice = ClearInvoice::findOrFail($id);
         $clearInvoice->update($request->all());
