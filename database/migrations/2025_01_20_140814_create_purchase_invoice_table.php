@@ -30,6 +30,7 @@ return new class extends Migration
             $table->decimal('service_charge', 15, 4)->default(0)->nullable();
             $table->decimal('total_amount', 15, 8);
             $table->decimal('paid_amount', 15, 8)->default(0);
+            $table->decimal('paid_usd', 23, 15)->default(0)->after('paid_amount');
             // $table->foreignId('purchased_by')->constrained('users');
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
