@@ -156,6 +156,16 @@ const initializeDropzone = () => {
                     this.emit("addedfile", mockFile);
                     this.emit("thumbnail", mockFile, signatureUrl.value);
                     this.emit("complete", mockFile);
+
+                    // Apply custom styling to the thumbnail
+                    const thumbnailElement = mockFile.previewElement.querySelector(".dz-image img");
+                    if (thumbnailElement) {
+                        thumbnailElement.classList.add("img-fluid");
+                        thumbnailElement.style.width = "auto";
+                        thumbnailElement.style.height = "auto";
+                        thumbnailElement.style.maxWidth = "100%";
+                        thumbnailElement.style.maxHeight = "100%";
+                    }
                 }
                 this.on("addedfile", (file) => {
                     uploadFile(file, signatureUploadUrl, "signature");
@@ -175,6 +185,15 @@ const initializeDropzone = () => {
                     this.emit("addedfile", mockFile);
                     this.emit("thumbnail", mockFile, profileUrl.value);
                     this.emit("complete", mockFile);
+
+                    // Apply custom styling to the thumbnail
+                    const thumbnailElement = mockFile.previewElement.querySelector(".dz-image img");
+                    if (thumbnailElement) {
+                        thumbnailElement.classList.add("img-fluid", "rounded-circle");
+                        thumbnailElement.style.width = "100px";
+                        thumbnailElement.style.height = "100px";
+                        thumbnailElement.style.objectFit = "cover";
+                    }
                 }
                 this.on("addedfile", (file) => {
                     uploadFile(file, profileUploadUrl, "profile");

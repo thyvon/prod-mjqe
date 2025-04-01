@@ -22,8 +22,8 @@ const isActive = (targetRoute) => {
             <div class="menu-profile">
                 <a href="javascript:;" class="menu-profile-link" data-toggle="app-sidebar-profile" data-target="#appSidebarProfileMenu">
                     <div class="menu-profile-cover with-shadow"></div>
-                    <div class="menu-profile-image menu-profile-image-icon bg-gray-900 text-gray-600">
-                        <i class="fa fa-user"></i>
+                    <div class="menu-profile-image">
+                        <img :src="`/storage/${$page.props.auth.user.profile}`" alt="User Profile" class="img-fluid rounded-circle" style="width: 50px; height: 50px; object-fit: cover;" />
                     </div>
                     <div class="menu-profile-info">
                         <div class="d-flex align-items-center">

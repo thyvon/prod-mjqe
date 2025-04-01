@@ -75,19 +75,19 @@ const logout = () => {
         </div>
         <div class="navbar-item navbar-user dropdown">
           <a href="#" class="navbar-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
-            <div class="image image-icon bg-gray-800 text-gray-600">
-              <i class="fa fa-user"></i>
-            </div>
+			<div class="menu-profile-image">
+				<img :src="`/storage/${$page.props.auth.user.profile}`" alt="User Profile" class="img-fluid rounded-circle" style="width: 30px; height: 30px; object-fit: cover;" />
+			</div>
             <span class="d-none d-md-inline">{{ $page.props.auth.user.name }}</span> <b class="caret ms-10px"></b>
           </a>
           <div class="dropdown-menu dropdown-menu-end me-1">
             <Link href="/profile" class="dropdown-item">Edit Profile</Link>
-            <a href="javascript:;" class="dropdown-item d-flex align-items-center">
+            <!-- <a href="javascript:;" class="dropdown-item d-flex align-items-center">
               Inbox
               <span class="badge bg-danger rounded-pill ms-auto pb-4px">2</span>
             </a>
             <a href="javascript:;" class="dropdown-item">Calendar</a>
-            <a href="javascript:;" class="dropdown-item">Setting</a>
+            <a href="javascript:;" class="dropdown-item">Setting</a> -->
             <div class="dropdown-divider"></div>
             <!-- Log out option -->
             <a href="javascript:;" @click="logout" class="dropdown-item">Log Out</a>
