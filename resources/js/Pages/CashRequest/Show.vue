@@ -250,7 +250,7 @@
               <div>ស្នើសុំដោយ</div>
               <div>Requested By</div>
               <img
-                :src="'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                :src="getSignatureUrl(cashRequest.user.signature)"
                 alt="Signature"
                 style="width: 130px; height: 80px; object-fit: contain;"
               />
@@ -273,10 +273,44 @@
               <div v-else-if="approval.label === 'Received By'">ទទួលដោយ</div>
               <div>{{ approval.label }}</div>
               <img
-                :src="approval.signature || 'https://www.shutterstock.com/image-vector/signature-vector-hand-drawn-autograph-600nw-2387543207.jpg'"
+                v-if="approval.status === 1"
+                :src="getSignatureUrl(approval.signature)"
                 alt="Signature"
                 style="width: 130px; height: 80px; object-fit: contain;"
               />
+              <div v-else-if="approval.status === -1" class="text-danger mt-2">
+                <i class="fas fa-times-circle fa-2x"></i> <!-- Font Awesome Reject Icon -->
+                <div>Rejected</div>
+              </div>
+              <!-- Buttons under the image -->
+              <div class="mt-2">
+                <button 
+                  class="btn btn-success btn-sm" 
+                  @click="approveRequest(approval.status_type)"
+                  v-if="approval.user_id === currentUser.user.id && approval.status === 0 &&
+                    (
+                      (approval.label === 'Checked By') ||
+                      (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
+                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
+                      (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
+                    )"
+                >
+                  Sign
+                </button>
+                <button 
+                  class="btn btn-danger btn-sm ms-2" 
+                  @click="rejectRequest(approval.status_type)"
+                  v-if="approval.user_id === currentUser.user.id && approval.status === 0 &&
+                    (
+                      (approval.label === 'Checked By') ||
+                      (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
+                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
+                      (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
+                    )"
+                >
+                  Reject
+                </button>
+              </div>
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ approval.name }}</div>
                 <div>Position: {{ approval.position }}</div>
@@ -286,32 +320,7 @@
           </div>
         </div> 
       </div>
-      <div class="row mb-3">
-        <div class="col text-center" v-for="approval in approvals" :key="approval.status_type">
-          <button 
-            class="btn btn-success btn-sm" 
-            @click="approveRequest(approval.status_type)"
-            v-if="approval.user_id === currentUser.user.id && approval.status === 0 &&
-              (
-                (approval.label === 'Checked By') ||
-                (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
-                (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
-                (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
-              )"
-          >
-            Click {{ approval.label }}
-          </button>
-          <button 
-            class="btn btn-danger btn-sm ms-2" 
-            @click="rejectRequest(approval.status_type)"
-            v-if="approval.user_id === currentUser.user.id && approval.status === 0"
-          >
-            Reject {{ approval.label }}
-          </button>
-        </div>
-       </div>
     </div>
-
   </Main>
 </template>
 
@@ -319,6 +328,7 @@
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 import axios from 'axios';
+import swal from 'sweetalert';
 
 // Props
 const props = defineProps({
@@ -335,6 +345,29 @@ const formatDate = (dateString) => {
   const options = { year: 'numeric', month: 'short', day: '2-digit' };
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', options);
+};
+
+// Helper function to convert statusType to string
+const getStatusTypeString = (statusType) => {
+  switch (statusType) {
+    case 1:
+      return 'Check';
+    case 2:
+      return 'Acknowledge';
+    case 3:
+      return 'Approve';
+    case 4:
+      return 'Receive';
+    default:
+      return 'Unknown';
+  }
+};
+
+// Add a method to log and return the signature URL
+const getSignatureUrl = (signature) => {
+  const url = signature ? `/storage/${signature}` : 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png';
+  console.log('Signature URL:', url); // Log the URL to the console
+  return url;
 };
 
 // Function to print only the form
@@ -357,29 +390,115 @@ const goBack = () => {
 
 // Function to handle approval action
 const approveRequest = async (statusType) => {
+  const confirmResult = await swal({
+    title: 'Confirm',
+    text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, approve it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-primary',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (!confirmResult) {
+    return;
+  }
+
   try {
     const response = await axios.post(`/cash-request/${props.cashRequest.id}/approve`, {
       status_type: statusType,
     });
-    alert(response.data.message);
-    window.location.reload(); // Optionally reload the page
+    await swal({
+      title: 'Success',
+      text: `The Request is successfully ${getStatusTypeString(statusType)}.`,
+      icon: 'success',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
+      },
+    });
+    window.location.reload(); // Reload the page after showing the alert
   } catch (error) {
     console.error('Approval Error:', error); // Log the full error object
-    alert(error.response?.data?.message || 'An error occurred while approving the request.');
+    await swal({
+      title: 'Error',
+      text: `The request is failed to ${getStatusTypeString(statusType)}.`,
+      icon: 'error',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
+      },
+    });
   }
 };
 
 // Function to handle rejection action
 const rejectRequest = async (statusType) => {
+  const confirmResult = await swal({
+    title: 'Confirm',
+    text: `Are you sure you want to Reject?`,
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, reject it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-danger',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (!confirmResult) {
+    return;
+  }
+
   try {
     const response = await axios.post(`/cash-request/${props.cashRequest.id}/reject`, {
       status_type: statusType,
     });
-    alert(response.data.message);
-    window.location.reload(); // Optionally reload the page
+    await swal({
+      title: 'Success',
+      text: `Request have been rejected for ${getStatusTypeString(statusType)} step.`,
+      icon: 'success',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
+      },
+    });
+    window.location.reload(); // Reload the page after showing the alert
   } catch (error) {
     console.error('Rejection Error:', error); // Log the full error object
-    alert(error.response?.data?.message || 'An error occurred while rejecting the request.');
+    await swal({
+      title: 'Error',
+      text: `Failed to reject request for ${getStatusTypeString(statusType)} step.`,
+      icon: 'error',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
+      },
+    });
   }
 };
 </script>

@@ -200,12 +200,12 @@ class CashRequestController extends Controller
     // Display the specified cash request
     public function show(CashRequest $cashRequest)
     {
-        $cashRequest->load('user:id,name,position,card_id,campus,division,department'); // Ensure user details are loaded
+        $cashRequest->load('user:id,name,position,card_id,campus,division,department,signature'); // Include 'signature' field
 
         // Fetch approvals for the cash request
         $approvals = Approval::where('approval_id', $cashRequest->id)
             ->whereIn('docs_type', [1, 2]) // Filter by docs_type (1 or 2)
-            ->with('user:id,name,position,card_id,campus,division,department') // Load user details
+            ->with('user:id,name,position,card_id,campus,division,department,signature') // Include 'signature' field
             ->get()
             ->map(function ($approval) {
                 $labels = [
@@ -225,7 +225,7 @@ class CashRequestController extends Controller
                     'division' => $approval->user->division ?? '',
                     'department' => $approval->user->department ?? '',
                     'date' => $approval->updated_at->format('Y-m-d'),
-                    'signature' => $approval->user->signature ?? null, // Assuming a `signature` field exists
+                    'signature' => $approval->user->signature ?? null, // Include 'signature'
                     'status_type' => $approval->status_type, // Include status_type for button logic
                     'status' => $approval->status,
                     'click_date' => $approval->click_date, // Include click_date
