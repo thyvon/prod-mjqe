@@ -334,7 +334,8 @@ class InvoiceController extends Controller
             return response()->json(['error' => 'Invalid transaction type'], 400);
         }
 
-        $cashRequests = CashRequest::when($transactionType == 1, function ($query) {
+        $cashRequests = CashRequest::where('approval_status', 4) // Filter by approval_status = 4
+            ->when($transactionType == 1, function ($query) {
                 return $query->where('request_type', 1);
             })
             ->when($transactionType == 3, function ($query) {
@@ -461,7 +462,7 @@ class InvoiceController extends Controller
             'items.*.total_usd' => 'required|numeric',
             'items.*.total_khr' => 'required|numeric',
             'items.*.deposit' => 'nullable|numeric',
-            'items.*.purchased_by' => 'required|integer|exists:users,id', // Ensure purchased_by is set for each item
+            // 'items.*.purchased_by' => 'required|integer|exists:users,id', // Ensure purchased_by is set for each item
         ];
 
         if ($transactionType != 2) {
@@ -528,6 +529,36 @@ class InvoiceController extends Controller
                     $sku = $prItem->product->sku ?? 'unknown';
                     throw \Illuminate\Validation\ValidationException::withMessages([
                         "items.$index.qty" => ['The qty of Item: ' . $sku . ' cannot exceed the pending qty in PR.']
+                    ]);
+                }
+            }
+
+            if (isset($itemData['cash_ref'])) {
+                $cashRef = $itemData['cash_ref'];
+
+                // Calculate cash amount from the database
+                $cashAmount = CashRequest::where('id', $cashRef)->sum('amount');
+
+                // Calculate paid amount from existing invoices excluding the current invoice
+                $paidAmount = PurchaseInvoiceItem::where('cash_ref', $cashRef)
+                    ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
+                    ->sum('paid_amount');
+
+                // Calculate remaining amount
+                $remainAmount = $cashAmount - $paidAmount;
+
+                // Calculate new paid amount from the current input
+                $newPaidAmount = array_reduce($items, function ($sum, $item) use ($cashRef) {
+                    return $item['cash_ref'] == $cashRef ? $sum + $item['paid_amount'] : $sum;
+                }, 0);
+
+                // Validate that the total paid amount does not exceed the cash amount
+                $validationAmount = $remainAmount - $newPaidAmount;
+                if ($validationAmount < 0) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "items.$index.paid_amount" => [
+                            'The total paid amount for the selected cash reference exceeds the available cash amount. Remaining amount: ' . $remainAmount
+                        ]
                     ]);
                 }
             }
