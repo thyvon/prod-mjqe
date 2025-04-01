@@ -12,6 +12,12 @@ const props = defineProps({
   users: Array,
   cashRequests: Array,
   purchaseInvoiceItems: Array,
+  groupedByCampus: Array, // Add groupedByCampus to props
+  approvals: {
+    type: Array,
+    default: () => [], // Ensure approvals has a default value
+  },
+  currentUser: Object,
 });
 
 // Local state for clear invoice
@@ -40,107 +46,381 @@ const balance = computed(() => {
   return parseFloat(result.toFixed(4));
 });
 
+const printForm = () => {
+  const printableContent = document.getElementById('printable-area').innerHTML;
+  const originalContent = document.body.innerHTML;
+
+  document.body.innerHTML = printableContent;
+  window.print();
+  document.body.innerHTML = originalContent;
+
+  // Reload the page to restore functionality
+  window.location.reload();
+};
+
+const goBack = () => {
+  window.history.back();
+};
+
+const getSignatureUrl = (signature) => {
+  const url = signature ? `/storage/${signature}` : 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png';
+  return url;
+};
+
+const getStatusTypeString = (statusType) => {
+  switch (statusType) {
+    case 1:
+      return 'Check';
+    case 2:
+      return 'Approve';
+    default:
+      return 'Unknown';
+  }
+};
+
+const approveRequest = async (statusType) => {
+  const confirmResult = await swal({
+    title: 'Confirm',
+    text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes',
+        value: true,
+        visible: true,
+        className: 'btn btn-primary',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (!confirmResult) {
+    return;
+  }
+
+  try {
+    await axios.post(`/clear-invoice/${props.clearInvoice.id}/approve`, {
+      status_type: statusType,
+    });
+    await swal({
+      title: 'Success',
+      text: `The Request is successfully ${getStatusTypeString(statusType)}.`,
+      icon: 'success',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
+      },
+    });
+    window.location.reload(); // Reload the page after showing the alert
+  } catch (error) {
+    console.error('Approval Error:', error);
+    await swal({
+      title: 'Error',
+      text: `The request failed to ${getStatusTypeString(statusType)}.`,
+      icon: 'error',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
+      },
+    });
+  }
+};
+
+const rejectRequest = async (statusType) => {
+  const confirmResult = await swal({
+    title: 'Confirm',
+    text: `Are you sure you want to Reject?`,
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, reject it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-danger',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (!confirmResult) {
+    return;
+  }
+
+  try {
+    await axios.post(`/clear-invoice/${props.clearInvoice.id}/reject`, {
+      status_type: statusType,
+    });
+    await swal({
+      title: 'Success',
+      text: `Request has been rejected for ${getStatusTypeString(statusType)} step.`,
+      icon: 'success',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
+      },
+    });
+    window.location.reload(); // Reload the page after showing the alert
+  } catch (error) {
+    console.error('Rejection Error:', error);
+    await swal({
+      title: 'Error',
+      text: `Failed to reject request for ${getStatusTypeString(statusType)} step.`,
+      icon: 'error',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
+      },
+    });
+  }
+};
+
 </script>
 
 <template>
   <Main>
     <Head :title="'Clear Invoice Details'" />
-    <section class="py-3 py-md-5 bg-white"> <!-- Add bg-white class for white background -->
-      <div class="container">
+    <div class="container a4-size">
+      <!-- Add a back button -->
+      <div class="row">
+        <div class="col text-end">
+          <button class="btn btn-secondary" @click="goBack">Back</button>
+          <button class="btn btn-primary" @click="printForm">Print</button>
+        </div>
+      </div>
+      <!-- Wrap the content in a unique ID -->
+      <div id="printable-area">
         <div class="row justify-content-center">
-          <div class="col-12 col-lg-9 col-xl-8 col-xxl-7">
-            <div class="border p-4 rounded"> <!-- Add border, padding, and rounded corners -->
-              <div class="row gy-3 mb-0 "> <!-- Add border class -->
-                <div class="col-3 "> <!-- Add border class -->
-                  <a class="d-block" href="#!">
-                    <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="BootstrapBrain Logo" width="135" height="44">
-                  </a>
-                </div>
+          <!-- Header Section -->
+          <div class="row mb-3">
+            <div class="col-3">
+              <a class="d-block text-start" href="#!">
+                <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="BootstrapBrain Logo" width="135" height="44">
+              </a>
+            </div>
+            <div class="col-6 pt-5">
+              <div class="row font-monospace">
+                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំទូទាត់ប្រាក់បុរេប្រទាន</h5>
+                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Liquidation of Advance</h5>
               </div>
-              <div class="row mb-3 "> <!-- Add border class -->
-                  <div class="col-3 "></div> <!-- Empty column to balance the layout and add border class -->
-                <div class="col-6 d-flex align-items-center justify-content-center mb-0"> <!-- Add border class -->
-                  <h2 class="text-uppercase m-0">{{ getClearTypeHeading(clearInvoice.clear_type) }}</h2>
-                </div>
-                <div class="col-12 col-sm-6 col-md-5 "> <!-- Add border class -->
-                  <h5 class="text-center text-decoration-underline text-primary">Request Info</h5>
-                  <div class="row">
-                    <span class="col-6">Requested By:</span>
-                    <span class="col-6 text-start">{{ clearInvoice.cash_request?.user?.name }}</span> <!-- Align text to the left -->
-                    <span class="col-6">Cash Ref:</span>
-                    <span class="col-6 text-danger text-start">{{ clearInvoice.cash_request?.ref_no }}</span> 
-                    <span class="col-6">Status</span>
-                    <span class="col-6 text-start">{{ clearInvoice.cash_request?.status === 1 ? 'Cleared' : 'Pending' }}</span>
-                    <span class="col-6">Requested Date</span>
-                    <span class="col-6 text-start">{{ formatDate(clearInvoice.cash_request?.request_date) }}</span> <!-- Format the date -->
-                    <span class="col-6">Currency</span>
-                    <span class="col-6 text-start">{{ clearInvoice.cash_request?.currency}}</span>
-                  </div>
-                </div>
+            </div>
+            <div class="col-3">
+              <div class="row font-monospace">
+                <span class="text-sm-end" style="font-size: x-small;">Code: MJQE0166</span>
+                <span class="text-sm-end" style="font-size: x-small;">Version 1.0</span>
+              </div>
+            </div>
+          </div>
 
-                <div class="col-12 col-sm-6 col-md-2 "></div>  <!-- Empty column to balance the layout and add border class -->
-                <div class="col-12 col-sm-6 col-md-5 "> <!-- Add border class -->
-                  <h5 class="text-center text-decoration-underline text-primary">Clear Info</h5>
-                  <div class="row">
-                    <span class="col-6">Cleared By</span>
-                    <span class="col-6 text-start">{{ clearInvoice.user?.name}}</span>
-                    <span class="col-6">Clear Ref</span>
-                    <span class="col-6 text-danger text-start">{{ clearInvoice.ref_no }}</span>
-                    <span class="col-6">Status</span>
-                    <span class="col-6 text-start">{{ clearInvoice.status === 1 ? 'Approved' : 'Pending' }}</span>
-                    <span class="col-6">Clear Date</span>
-                    <span class="col-6 text-start">{{  formatDate(clearInvoice.clear_date) }}</span>
+          <!-- Personal Information Section -->
+          <div class="row mb-3">
+            <div class="col-12 col-sm-6 col-md-4">
+              <div class="row">
+                <div class="col-5 text-start p-0">
+                  <div class="row" style="font-size: 12;">
+                    <span>ឈ្មោះ/Name:</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span>អត្តលេខ/ID Card:</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span>ទូរស័ព/Phone:</span>
+                  </div>
+                </div>
+                <div class="col-7 text-start p-0">
+                  <div class="row" style="font-size: 12;">
+                    <span class="fw-bold">{{ clearInvoice.user?.name}}</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span class="fw-bold">{{ clearInvoice.user?.card_id}}</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span class="fw-bold">{{ clearInvoice.user?.phone}}</span>
                   </div>
                 </div>
               </div>
-              <div class="row mb-3 "> <!-- Add border class -->
-                <div class="col-12 "> <!-- Add border class -->
-                  <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                      <thead>
-                        <tr>
-                          <th scope="col" class="text-uppercase">Item Code</th>
-                          <th scope="col" class="text-uppercase">Description</th>
-                          <th scope="col" class="text-uppercase text-end">Quantity</th>
-                          <th scope="col" class="text-uppercase text-end">Unit Price</th>
-                          <th scope="col" class="text-uppercase text-end">Grand Total</th>
-                        </tr>
-                      </thead>
-                      <tbody class="table-group-divider">
-                        <tr v-for="item in purchaseInvoiceItems" :key="item.id">
-                          <td>{{ item.product?.sku }}</td>
-                          <td>{{ item.description }}</td>
-                          <td class="text-end">{{ item.qty }}</td>
-                          <td class="text-end">{{ item.unit_price }}</td>
-                          <td class="text-end">{{ parseFloat(item.paid_amount || 0).toFixed(4) }}</td>
-                        </tr>
-                        <tr >
-                          <td colspan="4" class="text-end">Request Amount</td>
-                          <td class="text-end">{{ clearInvoice.cash_request?.amount }}</td>
-                        </tr>
-                        <tr>
-                          <td colspan="4" class="text-end">Actual Expense</td>
-                          <td class="text-end">{{ actualExpense }}</td>
-                        </tr>
-                        <tr>
-                          <th scope="row" colspan="4" class="text-uppercase text-end">Balance</th>
-                          <td class="text-end">{{ balance }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3"></div>
+            <div class="col-12 col-sm-6 col-md-5">
+              <div class="row">
+                <div class="col-5 text-start p-0">
+                  <div class="row" style="font-size: 12;">
+                    <span>កាលបរិច្ឆេទ/Date:</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span>លេខស្នើ/Adv. Ref.:</span>
+                  </div>
+                  <div class="row" style="font-size: 12;">
+                    <span>លេខទូទាត់/Clear Ref.:</span>
+                  </div>
+                </div>
+                <div class="col-7 text-start p-0">
+                  <div class="row" style="font-size: 12;">
+                    <span class="fw-bold">{{  formatDate(clearInvoice.clear_date) }}</span>
+                  </div>
+                  <div class="row text-danger" style="font-size: 12;">
+                    <span class="fw-bold">{{ clearInvoice.cash_request?.ref_no }}</span>
+                  </div>
+                  <div class="row text-danger" style="font-size: 12;">
+                    <span class="fw-bold">{{ clearInvoice.ref_no }} ({{ clearInvoice.cash_request?.currency}})</span>
                   </div>
                 </div>
               </div>
-              <div class="row "> <!-- Add border class -->
-                <div class="col-12 text-end "> <!-- Add border class -->
-                  <!-- <button type="button" class="btn btn-primary mb-3">Download Invoice</button>
-                  <button type="button" class="btn btn-danger mb-3">Submit Payment</button> -->
-                </div>
+            </div>
+          </div>
+
+          <!-- Table Section -->
+          <div class="row mb-3">
+            <div class="table-responsive width-full p-0">
+              <table class="table table-bordered border-dark table-sm">
+                <thead style="font-size: 12px;">
+                  <tr class="text-center">
+                    <th>ល.រ.<br>No.</th>
+                    <th>បរិយាយ<br>Description</th>
+                    <th>សាខា<br>Campus</th>
+                    <th>ទឹកប្រាក់<br>Total Amount</th>
+                  </tr>
+                </thead>
+                <tbody class="table-group-divider" style="font-size: 12px;">
+                  <tr v-for="(group, index) in groupedByCampus" :key="index">
+                    <td class="text-center">{{ index + 1 }}</td>
+                    <td class="text-start">{{ clearInvoice.description }}</td>
+                    <td class="text-center">{{ group.campus }}</td>
+                    <td class="text-end">{{ parseFloat(group.total_paid).toFixed(4) }}</td>
+                  </tr>
+                  <tr style="height: 200px;">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" rowspan="3">Procurement Remark: Hello testing</td>
+                    <td class="fw-bold">Actual Expense</td>
+                    <td class="fw-bold">{{ actualExpense.toFixed(4) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-bold">Cash Advance</td>
+                    <td class="fw-bold">{{ parseFloat(clearInvoice.cash_request?.amount || 0).toFixed(4) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-bold">Remaining Cash</td>
+                    <td class="fw-bold">{{ balance.toFixed(4) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Footer Section -->
+          <div class="row mb-3" style="height: 150px;">
+
+            <div class="col-3 text-center px-2 mb-3">
+              <div>រៀបចំដោយ</div>
+              <div>Prepared By</div>
+              <img
+                :src="getSignatureUrl(clearInvoice.user.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ clearInvoice.user.name }}</div>
+                <div>Position: {{ clearInvoice.user.position || 'N/A' }}</div>
+                <div>Date: {{ formatDate(clearInvoice.request_date) }}</div>
+              </div>
+            </div>
+            <!-- Loop through approvals -->
+            <div 
+              v-for="approval in approvals" 
+              :key="approval.status_type" 
+              class="col-4 text-center px-2 mb-3"
+            >
+              <div v-if="approval.label === 'Checked By'">ពិនិត្យដោយ</div>
+              <div v-else-if="approval.label === 'Approved By'">អនុម័តដោយ</div>
+              <div>{{ approval.label }}</div>
+              <img
+                v-if="approval.status === 1"
+                :src="getSignatureUrl(approval.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div v-else-if="approval.status === -1" class="text-danger mt-2">
+                <i class="fas fa-times-circle fa-2x"></i> <!-- Font Awesome Reject Icon -->
+                <div>Rejected</div>
+              </div>
+              <!-- Buttons under the image -->
+              <div class="mt-2">
+                <button 
+                  class="btn btn-success btn-sm" 
+                  @click="approveRequest(approval.status_type)"
+                  v-if="approval.user_id === currentUser.id && approval.status === 0 &&
+                    (
+                      (approval.label === 'Checked By') ||
+                      (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1))
+                    )"
+                >
+                  Sign
+                </button>
+                <button 
+                  class="btn btn-danger btn-sm ms-2" 
+                  @click="rejectRequest(approval.status_type)"
+                  v-if="approval.user_id === currentUser.id && approval.status === 0 &&
+                    (
+                      (approval.label === 'Checked By') ||
+                      (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1))
+                    )"
+                >
+                  Reject
+                </button>
+              </div>
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ approval.name }}</div>
+                <div>Position: {{ approval.position }}</div>
+                <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   </Main>
 </template>
+
+<style scoped>
+.a4-size {
+  width: 210mm;
+  height: 297mm;
+  margin: 10mm auto; /* Updated margin for A4 paper */
+  padding: 10mm;
+  background: white;
+}
+
+@media print {
+  .a4-size {
+    width: 210mm;
+    height: 297mm;
+    margin: 10mm auto; /* Ensure margin is applied during printing */
+    padding: 20mm !important; /* Enforce padding for print */
+    box-shadow: none; /* Remove any shadow for clean printing */
+  }
+
+  #printable-area {
+    padding: 20mm !important; /* Ensure padding is applied to the printable area */
+  }
+}
+</style>

@@ -131,6 +131,13 @@ Route::middleware('auth')->group(function () {
 
     // Route to fetch user details by ID
     Route::get('/users/{id}/details', [UserController::class, 'getUserDetails'])->name('users.details');
+
+    // Add routes for ClearInvoice approvals and rejections
+    Route::post('/clear-invoice/{clearInvoice}/approve', [ClearInvoiceController::class, 'approve'])->name('clear-invoice.approve');
+    Route::post('/clear-invoice/{clearInvoice}/reject', [ClearInvoiceController::class, 'reject'])->name('clear-invoice.reject');
+
+    // Add route to fetch approvals for a specific ClearInvoice
+    Route::get('/clear-invoice/{clearInvoice}/approvals', [ClearInvoiceController::class, 'getApprovals'])->name('clear-invoice.approvals');
 });
 
 require __DIR__.'/auth.php';

@@ -76,17 +76,34 @@ const openCreateModal = () => {
   });
 };
 
-const openEditModal = (clearInvoice) => {
+const openEditModal = async (clearInvoice) => {
   isEdit.value = true;
   Object.assign(clearInvoiceForm, clearInvoice);
   clearInvoiceForm.clear_date = new Date(clearInvoiceForm.clear_date).toISOString().split('T')[0]; // Ensure date format is "yyyy-MM-dd"
+
+  try {
+    // Fetch approval data for the clear invoice
+    const response = await axios.get(`/clear-invoice/${clearInvoice.id}/approvals`);
+    const approvals = response.data;
+
+    // Map approvals to the corresponding fields
+    clearInvoiceForm.checked_by = approvals.find(a => a.status_type === 1)?.user_id || null;
+    clearInvoiceForm.approved_by = approvals.find(a => a.status_type === 2)?.user_id || null;
+  } catch (error) {
+    console.error('Failed to fetch approval data:', error);
+  }
+
   filterCashRequests(); // Filter cash requests based on clear type
   nextTick(() => {
     const modalElement = document.getElementById('clearInvoiceModal');
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
     initializeSelect2();
-    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change'); // Set the value of the Select2 component
+
+    // Set the values of Select2 components
+    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change');
+    $('#checked_by').val(clearInvoiceForm.checked_by).trigger('change');
+    $('#approved_by').val(clearInvoiceForm.approved_by).trigger('change');
   });
 };
 
@@ -405,6 +422,30 @@ onMounted(() => {
                           <textarea v-model="clearInvoiceForm.description" class="form-control" id="description"></textarea>
                           <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-6 border">
+                      <div class="row">
+                        <span class="text-center">Checked By</span>
+                      </div>
+                      <div class="col-sm-12">
+                        <select v-model="clearInvoiceForm.checked_by" class="form-select select2" id="checked_by">
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
+                      </div>
+                    </div>
+                    <div class="col-6 border">
+                      <div class="row">
+                        <span class="text-center">Approved By</span>
+                      </div>
+                      <div class="col-sm-12">
+                        <select v-model="clearInvoiceForm.approved_by" class="form-select select2" id="approved_by">
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
                       </div>
                     </div>
                   </div>
