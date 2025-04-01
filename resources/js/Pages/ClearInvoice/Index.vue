@@ -250,7 +250,14 @@ onMounted(() => {
           { data: 'description' },
           { data: 'clear_type', render: (data) => data === 1 ? 'Petty Cash' : 'Advance' }, // Render clear type
           { data: 'clear_by', render: (data) => props.users.find(user => user.id === data)?.name || 'Unknown' }, // Render user's name
-          { data: 'status', render: (data) => data === 1 ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-warning">Pending</span>' }, // Render status with badge
+          { 
+            data: 'status',
+            render: (data) => {
+              if (data === 1) return '<span class="badge bg-primary">Checked</span>';
+              if (data === 2) return '<span class="badge bg-success">Approved</span>';
+              return '<span class="badge bg-warning">Pending</span>';
+            },
+          }, // Render status with badge
           { data: 'clear_date', render: (data) => format(data, 'date') },
           {
             data: null,
@@ -263,7 +270,6 @@ onMounted(() => {
                   <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                   <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> View</a></li>
-                  ${data.status === 0 ? '<li><a class="dropdown-item btn-approve text-success"><i class="fas fa-check"></i> Approve</a></li>' : ''}
                 </ul>
               </div>
             `,
