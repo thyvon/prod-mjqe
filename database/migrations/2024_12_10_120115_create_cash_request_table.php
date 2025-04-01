@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('division');
             $table->string('department');
             $table->text('description')->nullable();
-            $table->string('currency');
+            $table->integer('currency');
             $table->decimal('exchange_rate', 15, 2); // Adjust precision/scale if needed
             $table->decimal('amount', 15, 2); // Adjust precision/scale if needed
             $table->string('via');

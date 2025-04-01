@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -140,5 +141,16 @@ class UserController extends Controller
         } else {
             return response()->json(['message' => 'File not found'], 404);
         }
+    }
+
+    /**
+     * Display a listing of the users.
+     */
+    public function index()
+    {
+        $users = User::select('name', 'email', 'card_id', 'position', 'campus', 'division', 'department', 'phone', 'extension')->get();
+        return Inertia::render('User/Index', [
+            'users' => $users,
+        ]);
     }
 }

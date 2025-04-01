@@ -65,6 +65,10 @@ const openCreateModal = () => {
     via: '',
     reason: '',
     remark: '',
+    checked_by: null, // Clear checked_by
+    acknowledged_by: null, // Clear acknowledged_by
+    approved_by: null, // Clear approved_by
+    received_by: currentUser.id || '', // Set received_by to the same as the Requester
   });
   const modalElement = document.getElementById('cashRequestModal');
   const modal = new bootstrap.Modal(modalElement);
@@ -142,6 +146,12 @@ const saveCashRequest = async () => {
       dataTableInstance.row.add(response.data).draw();
       swal('Success!', 'Cash request created successfully!', 'success', { timer: 2000 });
     }
+    // Clear specific fields after save
+    cashRequestForm.checked_by = null;
+    cashRequestForm.acknowledged_by = null;
+    cashRequestForm.approved_by = null;
+    cashRequestForm.received_by = null;
+
     const modalElement = document.getElementById('cashRequestModal');
     const modal = bootstrap.Modal.getInstance(modalElement);
     modal.hide();
@@ -268,7 +278,14 @@ onMounted(() => {
           },
           { data: 'request_by' },
           { data: 'campus' },
-          { data: 'currency' },
+          {
+            data: 'request_type',
+            render: (data) => {
+              if (data == 1) return '<span class="badge bg-primary">USD</span>';
+              if (data == 2) return '<span class="badge bg-success">KHR</span>';
+              return ''; // Default case to handle unexpected values
+            }
+          },
           { data: 'amount' },
           { data: 'remark' },
           { data: 'request_date', render: (data) => format(data, 'date') },
@@ -460,8 +477,8 @@ onMounted(() => {
                         <label for="currency" class="col-sm-4 col-form-label">Currency</label>
                         <div class="col-sm-8">
                           <select v-model="cashRequestForm.currency" class="form-select select2" id="currency" required>
-                            <option value="USD">USD</option>
-                            <option value="KHR">KHR</option>
+                            <option value="1">USD</option>
+                            <option value="2">KHR</option>
                           </select>
                           <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
                         </div>
