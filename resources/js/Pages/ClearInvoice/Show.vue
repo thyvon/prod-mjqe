@@ -329,7 +329,7 @@ const rejectRequest = async (statusType) => {
           <!-- Footer Section -->
           <div class="row mb-3" style="height: 150px;">
 
-            <div class="col-3 text-center px-2 mb-3">
+            <div class="col-4 text-center px-2 mb-3">
               <div>រៀបចំដោយ</div>
               <div>Prepared By</div>
               <img

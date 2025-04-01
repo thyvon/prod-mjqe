@@ -413,16 +413,6 @@ onMounted(() => {
                     <!-- Right side for other information -->
                     <div class="col-md-6">
                       <div class="mb-3 row">
-                        <label for="status" class="col-sm-4 col-form-label">Status</label>
-                        <div class="col-sm-8">
-                          <select v-model="clearInvoiceForm.status" class="form-select select2" id="status" required>
-                            <option value="0">Pending</option>
-                            <option value="1">Approved</option>
-                          </select>
-                          <div v-if="validationErrors.status" class="text-danger">{{ validationErrors.status[0] }}</div>
-                        </div>
-                      </div>
-                      <div class="mb-3 row">
                         <label for="description" class="col-sm-4 col-form-label">Description</label>
                         <div class="col-sm-8">
                           <textarea v-model="clearInvoiceForm.description" class="form-control" id="description"></textarea>
