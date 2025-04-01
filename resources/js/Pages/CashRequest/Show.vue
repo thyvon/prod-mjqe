@@ -396,14 +396,14 @@ const approveRequest = async (statusType) => {
     icon: 'warning',
     buttons: {
       cancel: {
-        text: 'No, cancel!',
+        text: 'No',
         value: null,
         visible: true,
         className: 'btn btn-secondary',
         closeModal: true,
       },
       confirm: {
-        text: 'Yes, approve it!',
+        text: 'Yes',
         value: true,
         visible: true,
         className: 'btn btn-primary',
