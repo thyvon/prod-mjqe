@@ -63,8 +63,7 @@ const goBack = () => {
 };
 
 const getSignatureUrl = (signature) => {
-  const url = signature ? `/storage/${signature}` : 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png';
-  return url;
+  return signature ? `/storage/${signature}` : 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png'; // Fallback image
 };
 
 const getStatusTypeString = (statusType) => {
@@ -341,7 +340,7 @@ const rejectRequest = async (statusType) => {
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ clearInvoice.user.name }}</div>
                 <div>Position: {{ clearInvoice.user.position || 'N/A' }}</div>
-                <div>Date: {{ formatDate(clearInvoice.request_date) }}</div>
+                <div>Date: {{ formatDate(clearInvoice.clear_date) }}</div>
               </div>
             </div>
             <!-- Loop through approvals -->

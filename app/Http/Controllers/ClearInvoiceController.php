@@ -34,7 +34,8 @@ class ClearInvoiceController extends Controller
     public function show($id)
     {
         try {
-            $clearInvoice = ClearInvoice::with(['cashRequest.user:id,name', 'user:id,name,card_id,position,phone'])->findOrFail($id);
+            $clearInvoice = ClearInvoice::with(['cashRequest.user:id,name', 'user:id,name,card_id,position,phone,signature']) // Include 'signature' field
+                ->findOrFail($id);
 
             // Fetch approvals for the clear invoice
             $approvals = Approval::where('approval_id', $id)
