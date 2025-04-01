@@ -43,7 +43,7 @@ class CashRequestController extends Controller
                 'division' => 'required|string|max:255',
                 'department' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'currency' => 'required|string|max:10',
+                'currency' => 'required|integer|max:10',
                 'exchange_rate' => 'required|numeric|min:0',
                 'amount' => 'required|numeric|min:0',
                 'via' => 'required|string|max:255',
@@ -60,6 +60,11 @@ class CashRequestController extends Controller
 
         $validated['ref_no'] = CashRequest::generateRefNo($validated['request_type']);
         $validated['request_by'] = User::findOrFail($validated['user_id'])->name;
+
+        // Calculate amount_usd
+        $validated['amount_usd'] = $validated['currency'] == 1 
+            ? $validated['amount'] 
+            : $validated['amount'] / $validated['exchange_rate'];
 
         $cashRequest = CashRequest::create($validated);
 
@@ -91,7 +96,7 @@ class CashRequestController extends Controller
                 'division' => 'required|string|max:255',
                 'department' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'currency' => 'required|string|max:10',
+                'currency' => 'required|integer|max:10',
                 'exchange_rate' => 'required|numeric|min:0',
                 'amount' => 'required|numeric|min:0',
                 'via' => 'required|string|max:255',
@@ -105,6 +110,11 @@ class CashRequestController extends Controller
 
         // Update the request_by field
         $validated['request_by'] = User::findOrFail($validated['user_id'])->name;
+
+        // Calculate amount_usd
+        $validated['amount_usd'] = $validated['currency'] == 1 
+            ? $validated['amount'] 
+            : $validated['amount'] / $validated['exchange_rate'];
 
         // Update the cash request
         $cashRequest->update($validated);
@@ -201,6 +211,9 @@ class CashRequestController extends Controller
     public function show(CashRequest $cashRequest)
     {
         $cashRequest->load('user:id,name,position,card_id,campus,division,department,signature'); // Include 'signature' field
+
+        // Map currency to its string representation
+        $cashRequest->currency = $cashRequest->currency == 1 ? 'USD' : ($cashRequest->currency == 2 ? 'KHR' : 'Unknown');
 
         // Fetch approvals for the cash request
         $approvals = Approval::where('approval_id', $cashRequest->id)
