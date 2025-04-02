@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     InvoiceController,
     UserController,
     InvoiceAttachmentController,
-    DashboardController
+    DashboardController,
+    CancallationController
 };
 
 /*
@@ -94,6 +95,7 @@ Route::middleware('auth')->group(function () {
         'purchase-requests' => PurchaseRequestController::class,
         'purchase-orders' => PurchaseOrderController::class,
         'invoices' => InvoiceController::class,
+        'cancellations' => CancallationController::class,
     ]);
 
     Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
@@ -138,6 +140,10 @@ Route::middleware('auth')->group(function () {
 
     // Add route to fetch approvals for a specific ClearInvoice
     Route::get('/clear-invoice/{clearInvoice}/approvals', [ClearInvoiceController::class, 'getApprovals'])->name('clear-invoice.approvals');
+
+    // Additional routes for fetching PR and PO items
+    Route::get('/pr-items-cancellation', [CancallationController::class, 'getPrItems'])->name('pr-items-cancellation');
+    Route::get('/po-items-cancellation', [CancallationController::class, 'getPoItems'])->name('po-items-cancellation');
 });
 
 require __DIR__.'/auth.php';

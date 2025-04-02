@@ -558,18 +558,26 @@ onMounted(async () => {
                                 <p class="text-muted">Upload your signature and profile picture.</p>
                             </header>
 
-                            <div class="mt-4">
-                                <div id="signature-dropzone" class="dropzone needsclick">
-                                    <div class="dz-message needsclick">
-                                        Drop signature <b>here</b> or <b>click</b> to upload.
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mt-4">
+                                        <div id="signature-dropzone" class="dropzone needsclick">
+                                            <span>Signature</span>
+                                            <div class="dz-message needsclick">
+                                                Drop signature <b>here</b> or <b>click</b> to upload.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="mt-4">
-                                <div id="profile-dropzone" class="dropzone needsclick">
-                                    <div class="dz-message needsclick">
-                                        Drop profile picture <b>here</b> or <b>click</b> to upload.
+                                <div class="col-6">
+                                    <div class="mt-4">
+                                        <div id="profile-dropzone" class="dropzone needsclick">
+                                            <span>Profile Picture</span>
+                                            <div class="dz-message needsclick">
+                                                Drop profile picture <b>here</b> or <b>click</b> to upload.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
