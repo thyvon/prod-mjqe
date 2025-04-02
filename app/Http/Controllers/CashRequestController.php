@@ -43,7 +43,7 @@ class CashRequestController extends Controller
                 'division' => 'required|string|max:255',
                 'department' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'currency' => 'required|integer|max:10',
+                'currency' => 'required|integer', // Ensure currency is validated as an integer
                 'exchange_rate' => 'required|numeric|min:0',
                 'amount' => 'required|numeric|min:0',
                 'via' => 'required|string|max:255',
@@ -58,6 +58,9 @@ class CashRequestController extends Controller
         // Debugging: Log the validated data
         \Log::info('Validated Cash Request Data:', $validated);
 
+        // Ensure the currency is saved correctly
+        $validated['currency'] = (int) $validated['currency'];
+
         $validated['ref_no'] = CashRequest::generateRefNo($validated['request_type']);
         $validated['request_by'] = User::findOrFail($validated['user_id'])->name;
 
@@ -65,6 +68,8 @@ class CashRequestController extends Controller
         $validated['amount_usd'] = $validated['currency'] == 1 
             ? $validated['amount'] 
             : $validated['amount'] / $validated['exchange_rate'];
+
+        \Log::info('Final Validated Data:', $validated); // Debugging log
 
         $cashRequest = CashRequest::create($validated);
 
@@ -96,7 +101,7 @@ class CashRequestController extends Controller
                 'division' => 'required|string|max:255',
                 'department' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'currency' => 'required|integer|max:10',
+                'currency' => 'required|integer', // Ensure currency is validated as an integer
                 'exchange_rate' => 'required|numeric|min:0',
                 'amount' => 'required|numeric|min:0',
                 'via' => 'required|string|max:255',
@@ -107,6 +112,9 @@ class CashRequestController extends Controller
             \Log::error('Validation Errors:', $e->errors());
             return response()->json(['errors' => $e->errors()], 422);
         }
+
+        // Ensure the currency is saved correctly
+        $validated['currency'] = (int) $validated['currency'];
 
         // Update the request_by field
         $validated['request_by'] = User::findOrFail($validated['user_id'])->name;

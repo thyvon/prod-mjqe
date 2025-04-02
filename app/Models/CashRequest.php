@@ -26,6 +26,7 @@ class CashRequest extends Model
         'currency',
         'exchange_rate',
         'amount',
+        'amount_usd', // Add this field
         'via',
         'reason',
         'remark',
