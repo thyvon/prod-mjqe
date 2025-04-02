@@ -28,7 +28,7 @@ const cashRequestForm = reactive({
   division: '',
   department: '',
   description: '',
-  currency: '',
+  currency: '', // Ensure currency is initialized
   exchange_rate: '',
   amount: '',
   via: '',
@@ -136,13 +136,13 @@ const saveCashRequest = async () => {
 
   try {
     if (isEdit.value) {
-      const response = await axios.put(`/cash-request/${cashRequestForm.id}`, cashRequestForm);
+      const response = await axios.put(`/cash-request/${cashRequestForm.id}`, cashRequestForm); // Ensure currency is sent
       const updatedRequest = response.data;
       const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedRequest.id).index();
       dataTableInstance.row(rowIndex).data(updatedRequest).draw();
       swal('Success!', 'Cash request updated successfully!', 'success', { timer: 2000 });
     } else {
-      const response = await axios.post('/cash-request', cashRequestForm);
+      const response = await axios.post('/cash-request', cashRequestForm); // Ensure currency is sent
       dataTableInstance.row.add(response.data).draw();
       swal('Success!', 'Cash request created successfully!', 'success', { timer: 2000 });
     }
@@ -279,7 +279,7 @@ onMounted(() => {
           { data: 'request_by' },
           { data: 'campus' },
           {
-            data: 'request_type',
+            data: 'currency',
             render: (data) => {
               if (data == 1) return '<span class="badge bg-primary">USD</span>';
               if (data == 2) return '<span class="badge bg-success">KHR</span>';
