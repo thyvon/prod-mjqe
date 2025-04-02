@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('cash_requests', function (Blueprint $table) {
-            $table->decimal('amount_usd', 23, 15);
+        Schema::table('cancellation_items', function (Blueprint $table) {
+            $table->decimal('qty', 8, 4)->after('purchase_request_item_id')->default(1.00000000); // Define qty as decimal(15,8)
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('cash_requests', function (Blueprint $table) {
-            $table->decimal('amount_usd', 23, 15);
+        Schema::table('cancellation_items', function (Blueprint $table) {
+            $table->dropColumn('qty'); // Remove qty column
         });
     }
 };

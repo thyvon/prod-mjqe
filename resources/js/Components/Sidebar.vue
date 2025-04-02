@@ -37,7 +37,7 @@ const isActive = (targetRoute) => {
                             </div>
                             <!-- <div class="menu-caret ms-auto"></div> -->
                         </div>
-                        <small>Procurement Officer</small>
+                        <small>{{ $page.props.auth.user.position }}</small>
                     </div>
                 </a>
             </div>

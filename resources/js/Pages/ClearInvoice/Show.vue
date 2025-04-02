@@ -276,7 +276,10 @@ const rejectRequest = async (statusType) => {
                     <span class="fw-bold">{{ clearInvoice.cash_request?.ref_no }}</span>
                   </div>
                   <div class="row text-danger" style="font-size: 12;">
-                    <span class="fw-bold">{{ clearInvoice.ref_no }} ({{ clearInvoice.cash_request?.currency}})</span>
+                    <span class="fw-bold">
+                      {{ clearInvoice.ref_no }} 
+                      ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})
+                    </span>
                   </div>
                 </div>
               </div>
