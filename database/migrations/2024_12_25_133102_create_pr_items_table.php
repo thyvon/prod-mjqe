@@ -16,17 +16,17 @@ return new class extends Migration
             $table->foreignId('purchase_request_id')->constrained('purchase_requests')->onDelete('cascade'); // Foreign key to purchase_requests table
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade'); // Foreign key to products table
             $table->string('remark')->nullable();
-            $table->decimal('qty', 10, 2);
+            $table->decimal('qty', 10, 4);
             $table->string('uom');
-            $table->decimal('unit_price', 10, 2);
-            $table->decimal('total_price', 10, 2);
+            $table->decimal('unit_price', 10, 4);
+            $table->decimal('total_price', 10, 4);
             $table->string('campus');
             $table->string('division');
             $table->string('department');
-            $table->decimal('qty_cancel', 10, 2)->default(0);
-            $table->decimal('qty_po', 10, 2)->default(0);
-            $table->decimal('qty_purchase', 10, 2)->default(0);
-            $table->decimal('qty_pending', 10, 2)->default(0);
+            $table->decimal('qty_cancel', 10, 4)->default(0);
+            $table->decimal('qty_po', 10, 4)->default(0);
+            $table->decimal('qty_purchase', 10, 4)->default(0);
+            $table->decimal('qty_pending', 10, 4)->default(0);
             $table->string('status')->default('Pending');
             $table->boolean('force_close')->default(false);
             $table->boolean('is_cancel')->default(false);

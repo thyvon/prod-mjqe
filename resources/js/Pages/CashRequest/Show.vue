@@ -97,7 +97,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].name }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].name }}</span>
                 </div>
 
                 <div class="col-2 text-start">
@@ -106,7 +106,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].position }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].position }}</span>
                 </div>
 
                 <div class="col-1 text-start p-0">
@@ -115,7 +115,7 @@
                   </div>
                 </div>
                 <div class="col-1 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].card_id }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].card_id }}</span>
                 </div>
 
               </div>
@@ -131,7 +131,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].campus }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].campus }}</span>
                 </div>
 
                 <div class="col-3">
@@ -161,7 +161,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].division }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].division }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">
@@ -190,7 +190,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[2].department }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].department }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">

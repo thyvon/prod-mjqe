@@ -183,8 +183,8 @@ window.addEventListener('cancellation-saved', (event) => {
                 <th>#</th>
                 <th>Cancellation No</th>
                 <th>Date</th>
-                <th style="min-width: 600px;">Reason</th>
-                <th>Created By</th>
+                <th style="min-width: 500px;">Reason</th>
+                <th>Cancelled by</th>
                 <th>Actions</th>
               </tr>
             </thead>
