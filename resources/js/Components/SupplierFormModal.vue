@@ -38,6 +38,9 @@
                     <div v-if="validationErrors.number" class="text-danger">{{ validationErrors.number[0] }}</div>
                   </div>
                 </div>
+
+              </div>
+              <div class="col-md-6">
                 <div class="row mb-3 align-items-center">
                   <label for="payment_term" class="col-sm-4 col-form-label">Payment Term</label>
                   <div class="col-sm-8">
@@ -58,6 +61,16 @@
                   </div>
                 </div>
                 <div class="row mb-3 align-items-center">
+                  <label for="currency" class="col-sm-4 col-form-label">Currency</label>
+                  <div class="col-sm-8">
+                    <select v-model="supplierForm.currency" class="form-select" id="currency" required>
+                      <option value="1">USD</option>
+                      <option value="2">KHR</option>
+                    </select>
+                    <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3 align-items-center">
                   <label for="status" class="col-sm-4 col-form-label">Status</label>
                   <div class="col-sm-8">
                     <select v-model="supplierForm.status" class="form-select" id="status" required>
@@ -66,8 +79,6 @@
                     </select>
                   </div>
                 </div>
-              </div>
-              <div class="col-md-6">
                 <div class="row mb-3 align-items-center">
                   <label for="address" class="col-sm-4 col-form-label">Address</label>
                   <div class="col-sm-8">
@@ -107,6 +118,7 @@ const supplierForm = reactive({
   vat: null,
   address: '',
   status: 1,
+  currency: 1, // Add currency field with default value
 });
 
 const validationErrors = ref({});
@@ -115,7 +127,7 @@ watch(
   () => props.supplier,
   (newSupplier) => {
     if (newSupplier) {
-      Object.assign(supplierForm, newSupplier);
+      Object.assign(supplierForm, newSupplier, { currency: newSupplier.currency || 1 }); // Ensure currency is set
     }
   },
   { immediate: true }

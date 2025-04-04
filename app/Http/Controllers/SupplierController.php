@@ -32,6 +32,7 @@ class SupplierController extends Controller
             'email' => 'required|string|email|max:255',
             'address' => 'required|string',
             'payment_term' => 'required|string',
+            'currency' => 'required|integer', // Ensure currency is an integer
             'vat' => 'nullable|numeric', // Add vat field
             'status' => 'required|in:0,1', // Ensures status is either 0 or 1
         ]);
@@ -49,6 +50,7 @@ class SupplierController extends Controller
             'email' => 'required|string|email|max:255',
             'address' => 'required|string',
             'payment_term' => 'required|string',
+            'currency' => 'required|integer', // Ensure currency is an integer
             'vat' => 'nullable|numeric', // Add vat field
             'status' => 'required|in:0,1', // Ensures status is either 0 or 1
         ]);

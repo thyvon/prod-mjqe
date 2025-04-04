@@ -16,10 +16,16 @@ class Supplier extends Model
         'email',
         'address',
         'payment_term',
+        'currency',  // Ensure this is an integer
         'vat',
         'status',
     ];
     protected $casts = [
         'status' => 'integer',  // Make sure status is treated as an integer
     ];
+
+    public static function search($query)
+    {
+        return self::where('name', 'like', '%' . $query . '%')->get();
+    }
 }

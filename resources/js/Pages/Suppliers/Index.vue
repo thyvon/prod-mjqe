@@ -19,6 +19,7 @@ const supplierForm = reactive({
   vat: null, // Add vat field
   address: '', // Move address field to the bottom
   status: 1,
+  currency: 1, // Add currency field with default value
 });
 
 const validationErrors = ref({});
@@ -112,6 +113,7 @@ const clearForm = () => {
     vat: null, // Add vat field
     address: '', // Move address field to the bottom
     status: 1,
+    currency: 1, // Reset currency field
   });
   validationErrors.value = {};
 };
@@ -133,7 +135,7 @@ onMounted(() => {
           { data: 'email' },
           { data: 'payment_term' },
           { data: 'vat' }, // Add vat column
-          { data: 'address' }, // Move address column to the bottom
+          { data: 'address', className: 'text-wrap' }, // Enable text wrapping for address column
           { data: 'status', render: (data) => {return `<span class="badge ${data === 1 ? 'bg-primary' : 'bg-danger'}">${data === 1 ? 'Active' : 'Inactive'}</span>`;}, className: 'text-center' },
           {
             data: null,
@@ -196,23 +198,27 @@ onMounted(() => {
       <div class="panel-body">
         <button @click="openCreateModal" class="btn btn-primary btn-sm mb-4">Add New Supplier</button>
 
-        <!-- Supplier Table -->
-        <table id="supplier-table" class="table table-bordered align-middle text-nowrap" width="100%">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Khmer Name</th>
-              <th>Phone Number</th>
-              <th>Email Address</th>
-              <th>Payment Term</th>
-              <th>VAT(%)</th> <!-- Add VAT column -->
-              <th>Address</th> <!-- Move Address column to the bottom -->
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-        </table>
+        <!-- Table Responsive Wrapper -->
+        <div class="table-responsive">
+          <!-- Supplier Table -->
+          <table id="supplier-table" class="table table-bordered align-middle text-nowrap" width="100%">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Khmer Name</th>
+                <th>Phone Number</th>
+                <th>Email Address</th>
+                <th>Payment Term</th>
+                <th>VAT(%)</th> <!-- Add VAT column -->
+                <th class="text-wrap" style="min-width: 100px;">Address</th> <!-- Enable text wrapping -->
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <!-- End Table Responsive Wrapper -->
 
         <!-- Supplier Form Modal -->
         <div class="modal fade" id="supplierFormModal" tabindex="-1" aria-labelledby="supplierFormModalLabel" aria-hidden="true">
@@ -254,6 +260,9 @@ onMounted(() => {
                           <div v-if="validationErrors.number" class="text-danger">{{ validationErrors.number[0] }}</div>
                         </div>
                       </div>
+
+                    </div>
+                    <div class="col-md-6">
                       <div class="row mb-3 align-items-center">
                         <label for="payment_term" class="col-sm-4 col-form-label">Payment Term</label>
                         <div class="col-sm-8">
@@ -274,6 +283,16 @@ onMounted(() => {
                         </div>
                       </div>
                       <div class="row mb-3 align-items-center">
+                        <label for="currency" class="col-sm-4 col-form-label">Currency</label>
+                        <div class="col-sm-8">
+                          <select v-model="supplierForm.currency" class="form-select" id="currency" required>
+                            <option value="1">USD</option>
+                            <option value="2">KHR</option>
+                          </select>
+                          <div v-if="validationErrors.currency" class="text-danger">{{ validationErrors.currency[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="row mb-3 align-items-center">
                         <label for="status" class="col-sm-4 col-form-label">Status</label>
                         <div class="col-sm-8">
                           <select v-model="supplierForm.status" class="form-select" id="status" required>
@@ -282,8 +301,6 @@ onMounted(() => {
                           </select>
                         </div>
                       </div>
-                    </div>
-                    <div class="col-md-6">
                       <div class="row mb-3 align-items-center">
                         <label for="address" class="col-sm-4 col-form-label">Address</label>
                         <div class="col-sm-8">

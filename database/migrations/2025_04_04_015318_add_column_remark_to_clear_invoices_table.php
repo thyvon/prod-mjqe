@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('cash_requests', function (Blueprint $table) {
-            $table->decimal('amount_usd', 23, 15);
+        Schema::table('clear_invoices', function (Blueprint $table) {
+            $table->string('remark')->nullable()->after('description'); // Foreign key to pr_items or po_items table
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('cash_requests', function (Blueprint $table) {
-            $table->dropColumn('amount_usd', 23, 15);
+        Schema::table('clear_invoices', function (Blueprint $table) {
+            $table->dropColumn('remark'); // Drop the column instead of re-adding it
         });
     }
 };

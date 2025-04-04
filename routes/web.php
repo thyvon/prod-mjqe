@@ -15,7 +15,8 @@ use App\Http\Controllers\{
     UserController,
     InvoiceAttachmentController,
     DashboardController,
-    CancallationController
+    CancallationController,
+    StatementController
 };
 
 /*
@@ -96,6 +97,7 @@ Route::middleware('auth')->group(function () {
         'purchase-orders' => PurchaseOrderController::class,
         'invoices' => InvoiceController::class,
         'cancellations' => CancallationController::class,
+        'statements' => StatementController::class,
     ]);
 
     Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
@@ -144,6 +146,13 @@ Route::middleware('auth')->group(function () {
     // Additional routes for fetching PR and PO items
     Route::get('/pr-items-cancellation', [CancallationController::class, 'getPrItems'])->name('pr-items-cancellation');
     Route::get('/po-items-cancellation', [CancallationController::class, 'getPoItems'])->name('po-items-cancellation');
+
+    Route::get('/search-suppliers', [StatementController::class, 'searchSuppliers'])->name('suppliers.search');
+
+    // Add a route for fetching PurchaseInvoice data
+    Route::get('/statements-purchase-invoices', [StatementController::class, 'getPurchaseInvoices'])->name('statements.purchase-invoices');
 });
+// Routes for Statement Invoices
+
 
 require __DIR__.'/auth.php';

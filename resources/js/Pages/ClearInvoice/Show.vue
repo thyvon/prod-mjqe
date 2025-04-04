@@ -227,60 +227,93 @@ const rejectRequest = async (statusType) => {
           </div>
 
           <!-- Personal Information Section -->
-          <div class="row mb-3">
-            <div class="col-12 col-sm-6 col-md-4">
+
+          <div class="row mb-1">
+            <div class="col-12">
               <div class="row">
-                <div class="col-5 text-start p-0">
-                  <div class="row" style="font-size: 12;">
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
                     <span>ឈ្មោះ/Name:</span>
                   </div>
-                  <div class="row" style="font-size: 12;">
-                    <span>អត្តលេខ/ID Card:</span>
-                  </div>
-                  <div class="row" style="font-size: 12;">
-                    <span>ទូរស័ព/Phone:</span>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.name}}</span>
+                </div>
+
+                <div class="col-2">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
                   </div>
                 </div>
-                <div class="col-7 text-start p-0">
-                  <div class="row" style="font-size: 12;">
-                    <span class="fw-bold">{{ clearInvoice.user?.name}}</span>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>កាលបរិច្ឆេទ/Date:</span>
                   </div>
-                  <div class="row" style="font-size: 12;">
-                    <span class="fw-bold">{{ clearInvoice.user?.card_id}}</span>
-                  </div>
-                  <div class="row" style="font-size: 12;">
-                    <span class="fw-bold">{{ clearInvoice.user?.phone}}</span>
-                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{  formatDate(clearInvoice.clear_date) }}</span>
                 </div>
               </div>
             </div>
-            <div class="col-12 col-sm-6 col-md-3"></div>
-            <div class="col-12 col-sm-6 col-md-5">
+          </div>
+
+          <div class="row mb-1">
+            <div class="col-12">
               <div class="row">
-                <div class="col-5 text-start p-0">
-                  <div class="row" style="font-size: 12;">
-                    <span>កាលបរិច្ឆេទ/Date:</span>
-                  </div>
-                  <div class="row" style="font-size: 12;">
-                    <span>លេខស្នើ/Adv. Ref.:</span>
-                  </div>
-                  <div class="row" style="font-size: 12;">
-                    <span>លេខទូទាត់/Clear Ref.:</span>
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>អត្តលេខ/Card ID:</span>
                   </div>
                 </div>
-                <div class="col-7 text-start p-0">
-                  <div class="row" style="font-size: 12;">
-                    <span class="fw-bold">{{  formatDate(clearInvoice.clear_date) }}</span>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.card_id}}</span>
+                </div>
+
+                <div class="col-2">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
                   </div>
-                  <div class="row text-danger" style="font-size: 12;">
-                    <span class="fw-bold">{{ clearInvoice.cash_request?.ref_no }}</span>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>លេខសំណើរ/Adv. Ref:</span>
                   </div>
-                  <div class="row text-danger" style="font-size: 12;">
-                    <span class="fw-bold">
-                      {{ clearInvoice.ref_no }} 
-                      ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})
-                    </span>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.ref_no }} 
+                    ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-1">
+            <div class="col-12">
+              <div class="row">
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>លេខទូរស័ព្ទ/Phone:</span>
                   </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.phone}}</span>
+                </div>
+
+                <div class="col-2">
+                  <div class="row">
+                    <!-- <span>TK</span> -->
+                  </div>
+                </div>
+
+                <div class="col-2 text-start p-0">
+                  <div class="row mt-2">
+                    <span>លេខទូទាត់/Liq. Ref:</span>
+                  </div>
+                </div>
+                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.cash_request?.ref_no }} </span>
                 </div>
               </div>
             </div>
@@ -312,7 +345,7 @@ const rejectRequest = async (statusType) => {
                     <td></td>
                   </tr>
                   <tr>
-                    <td colspan="2" rowspan="3">Procurement Remark: Hello testing</td>
+                    <td colspan="2" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>
                     <td class="fw-bold">Actual Expense</td>
                     <td class="fw-bold">{{ actualExpense.toFixed(4) }}</td>
                   </tr>
