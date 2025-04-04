@@ -16,6 +16,7 @@ class Cancellation extends Model
         'cancellation_date',
         'cancellation_docs',
         'cancellation_reason',
+        'pr_po_id', // Add this to allow mass assignment
         'cancellation_by',
     ];
 

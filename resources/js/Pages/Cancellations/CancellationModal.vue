@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed } from 'vue';
 import axios from 'axios';
 import swal from 'sweetalert';
 import toastr from 'toastr';
@@ -32,33 +32,43 @@ let editItemModalInstance = null;
 const poItems = ref([]);
 let poItemsTableInstance = null;
 
-const filterPrNumber = ref('');
-const filterPoNumber = ref('');
+const filterPrNumber = ref(''); // Initialize as an empty string
+const filterPoNumber = ref(''); // Initialize as an empty string
 
 const applyPrFilter = () => {
   if (prItemsTableInstance) {
-    prItemsTableInstance.column(0).search(filterPrNumber.value).draw(); // Filter by PR Number (column index 0)
+    const filterValue = String(filterPrNumber.value).trim(); // Ensure value is a string
+    if (filterValue) {
+      prItemsTableInstance.column(0).search(filterValue, false, false).draw(); // Filter by purchase_request.id
+    } else {
+      prItemsTableInstance.search('').draw(); // Clear the filter
+    }
   }
 };
 
 const applyPoFilter = () => {
   if (poItemsTableInstance) {
-    poItemsTableInstance.column(0).search(filterPoNumber.value).draw(); // Filter by PO Number (column index 0)
+    const filterValue = String(filterPoNumber.value).trim(); // Ensure value is a string
+    if (filterValue) {
+      poItemsTableInstance.column(0).search(filterValue, false, false).draw(); // Filter by purchase_order.id
+    } else {
+      poItemsTableInstance.search('').draw(); // Clear the filter
+    }
   }
 };
 
 const fetchPrItems = async () => {
   try {
     const response = await axios.get(route('pr-items-cancellation')); // Use the named route
-    prItems.value = response.data;
+    prItems.value = response.data; // Assign the fetched data to `prItems`
   } catch (error) {
-    console.error('Failed to fetch PR items:', error);
+    console.error('Failed to fetch PR items:', error); // Log any errors
   }
 };
 
 const fetchPoItems = async () => {
   try {
-    const response = await axios.get(route('po-items-cancellation')); // Use the named routeme matches
+    const response = await axios.get(route('po-items-cancellation')); // Use the named route
     poItems.value = response.data; // Assign the fetched data to `poItems`
   } catch (error) {
     console.error('Failed to fetch PO items:', error); // Log any errors
@@ -109,7 +119,7 @@ const initializePoItemsTable = () => {
       poItemsTableInstance = table.DataTable({
         responsive: true,
         autoWidth: true,
-        data: poItems.value, // Ensure `poItems.value` contains the fetched data
+        data: poItems.value,
         columns: [
           { data: 'purchase_order.po_number', title: 'PO Number' },
           { data: 'product.sku', title: 'SKU' },
@@ -200,6 +210,7 @@ const selectPrItem = (item) => {
     qty: item.qty, // Updated to use 'qty'
     purchase_request_id: item.purchase_request.id, // Use ID
     pr_number: item.purchase_request.pr_number, // Add pr_number directly
+    po_number: null, // Add pr_number directly
     sku: item.product.sku,
     purchase_request_item_id: item.id,
   });
@@ -349,22 +360,34 @@ const openEditModal = (cancellation) => {
 
   // Map the cancellation data to the form
   Object.assign(cancellationForm, {
-    id: cancellation.id,
-    cancellation_date: cancellation.cancellation_date,
-    cancellation_reason: cancellation.cancellation_reason,
-    cancellation_docs: cancellation.cancellation_docs,
-    cancellation_by: cancellation.cancellation_by,
-    items: cancellation.items.map((item) => ({
+    id: cancellation.cancellation.id, // Ensure the correct ID is assigned
+    cancellation_date: cancellation.cancellation.cancellation_date,
+    cancellation_reason: cancellation.cancellation.cancellation_reason,
+    cancellation_docs: cancellation.cancellation.cancellation_docs,
+    cancellation_by: cancellation.cancellation.cancellation_by,
+    items: cancellation.cancellation.items.map((item) => ({
       id: item.id,
-      name: item.purchase_request_item?.product?.product_description || '',
-      pr_number: item.purchase_request_item?.purchase_request?.pr_number || '',
-      po_number: item.purchase_request_item?.purchase_order?.po_number || '',
-      sku: item.purchase_request_item?.product?.sku || '',
+      name: item.name,
+      pr_number: item.pr_number,
+      po_number: item.po_number,
+      sku: item.sku,
       qty: item.qty,
       purchase_request_id: item.purchase_request_id,
       purchase_request_item_id: item.purchase_request_item_id,
+      purchase_order_id: item.purchase_order_id,
+      purchase_order_item_id: item.purchase_order_item_id,
     })),
   });
+
+  // Set the filter fields based on cancellation_docs and pr_po_id
+  if (cancellation.cancellation_docs === '1') {
+    filterPrNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPrNumber
+  } else if (cancellation.cancellation_docs === '2') {
+    filterPoNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPoNumber
+  } else {
+    filterPrNumber.value = '';
+    filterPoNumber.value = '';
+  }
 
   validationErrors.value = {};
 
@@ -385,6 +408,28 @@ const saveCancellation = async () => {
       ...item,
       qty: parseFloat(item.qty).toFixed(8), // Convert qty to a decimal with 8 places
     }));
+
+    // Dynamically set the pr_po_id field based on cancellation_docs
+    if (cancellationForm.cancellation_docs === '1') {
+      if (!filterPrNumber.value) {
+        toastr.error('Please select a valid PR Number.', 'Error');
+        return;
+      }
+      cancellationForm.pr_po_id = filterPrNumber.value;
+    } else if (cancellationForm.cancellation_docs === '2') {
+      if (!filterPoNumber.value) {
+        toastr.error('Please select a valid PO Number.', 'Error');
+        return;
+      }
+      cancellationForm.pr_po_id = filterPoNumber.value;
+    } else {
+      cancellationForm.pr_po_id = null;
+    }
+
+    if (!cancellationForm.pr_po_id) {
+      toastr.error('Please select a valid PR or PO number.', 'Error');
+      return;
+    }
 
     const url = isEdit.value ? `/cancellations/${cancellationForm.id}` : '/cancellations';
     const method = isEdit.value ? 'put' : 'post';
@@ -420,6 +465,10 @@ const saveCancellation = async () => {
 };
 
 const openAddItemModal = () => {
+  // if (!filterPrNumber.value.trim()) {
+  //   toastr.warning('Please input a PR Number to select items.', 'Warning');
+  //   return;
+  // }
   Object.assign(newItem, { name: '', quantity: 1 });
   if (addItemModalInstance) {
     addItemModalInstance.show();
@@ -464,6 +513,10 @@ const confirmEditItem = () => {
 };
 
 const openPoItemModal = () => {
+  if (!filterPoNumber.value.trim()) {
+    toastr.warning('Please input a PO Number to select items.', 'Warning');
+    return;
+  }
   const poItemModalElement = document.getElementById('poItemModal');
   if (poItemModalElement) {
     const poItemModalInstance = new bootstrap.Modal(poItemModalElement); // Initialize Bootstrap modal
@@ -472,6 +525,15 @@ const openPoItemModal = () => {
     console.error('PO Item Modal element not found.');
   }
 };
+
+// Computed properties to get unique PR and PO numbers
+const uniquePrNumbers = computed(() => {
+  return [...new Set(prItems.value.map(item => item.purchase_request.pr_number))];
+});
+
+const uniquePoNumbers = computed(() => {
+  return [...new Set(poItems.value.map(item => item.purchase_order.po_number))];
+});
 
 onMounted(() => {
   const modalElement = document.getElementById('cancellationModal');
@@ -531,6 +593,34 @@ onMounted(() => {
               <div v-if="validationErrors.cancellation_by" class="text-danger">{{ validationErrors.cancellation_by[0] }}</div>
             </div>
             <div class="mb-3">
+              <label for="filter-pr-number" class="form-label">Filter by PR Number</label>
+              <select
+                id="filter-pr-number"
+                class="form-select"
+                v-model="filterPrNumber"
+                @change="applyPrFilter"
+              >
+                <option value="">Select PR Number</option>
+                <option v-for="prItem in prItems" :key="prItem.purchase_request.id" :value="prItem.purchase_request.id">
+                  {{ prItem.purchase_request.pr_number }}
+                </option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="filter-po-number" class="form-label">Filter by PO Number</label>
+              <select
+                id="filter-po-number"
+                class="form-select"
+                v-model="filterPoNumber"
+                @change="applyPoFilter"
+              >
+                <option value="">Select PO Number</option>
+                <option v-for="poItem in poItems" :key="poItem.purchase_order.id" :value="poItem.purchase_order.id">
+                  {{ poItem.purchase_order.po_number }}
+                </option>
+              </select>
+            </div>
+            <div class="mb-3">
               <label class="form-label">Items to Cancel</label>
               <div class="table-responsive">
                 <table id="cancellation-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
@@ -557,17 +647,6 @@ onMounted(() => {
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="filter-pr-number" class="form-label">Filter by PR Number</label>
-            <input
-              id="filter-pr-number"
-              type="text"
-              class="form-control"
-              v-model="filterPrNumber"
-              @input="applyPrFilter"
-              placeholder="Enter PR Number"
-            />
-          </div>
           <div class="table-responsive">
             <table id="pr-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
           </div>
@@ -600,17 +679,6 @@ onMounted(() => {
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="filter-po-number" class="form-label">Filter by PO Number</label>
-            <input
-              id="filter-po-number"
-              type="text"
-              class="form-control"
-              v-model="filterPoNumber"
-              @input="applyPoFilter"
-              placeholder="Enter PO Number"
-            />
-          </div>
           <div class="table-responsive">
             <table id="po-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
           </div>
