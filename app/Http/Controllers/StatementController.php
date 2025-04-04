@@ -7,9 +7,11 @@ use App\Models\StatementIvoice;
 use App\Models\User;
 use App\Models\Supplier;
 use App\Models\PurchaseInvoice; // Import the PurchaseInvoice model
+use App\Models\Approval; // Import Approval model
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log; // Import Log facade
+use Illuminate\Support\Facades\Auth; // Import Auth facade
 
 class StatementController extends Controller
 {
@@ -18,7 +20,7 @@ class StatementController extends Controller
         $statements = Statement::with([
             'invoices.purchaseInvoice', // Include the purchase_invoice relationship
             'supplier', 
-            'clearedBy'
+            'clearedBy' // Use 'clearedBy' relationship
         ])
         ->select(
             'id', 
@@ -84,12 +86,49 @@ class StatementController extends Controller
 
     public function show($id)
     {
-        $statement = Statement::with(['supplier', 'clearedBy']) // Exclude 'invoices' relationship
-            ->findOrFail($id);
+        try {
+            $statement = Statement::with([
+                'supplier:id,name,currency',
+                'clearedBy:id,name,position,signature' // Load clearedBy relationship to get user details
+            ])->findOrFail($id);
 
-        return Inertia::render('ClearInvoice/StatementShow', [
-            'statement' => $statement,
-        ]);
+            // Fetch approvals for the statement
+            $approvals = Approval::where('approval_id', $id)
+                ->where('docs_type', 5) // Filter by docs_type for statements
+                ->with('user:id,name,position,card_id,signature') // Include user details
+                ->get()
+                ->map(function ($approval) {
+                    $labels = [
+                        1 => 'Checked By',
+                        2 => 'Approved By',
+                    ];
+
+                    return [
+                        'label' => $labels[$approval->status_type] ?? 'Unknown',
+                        'user_id' => $approval->user_id,
+                        'name' => $approval->user->name ?? '',
+                        'position' => $approval->user->position ?? '',
+                        'card_id' => $approval->user->card_id ?? '',
+                        'signature' => $approval->user->signature ?? null,
+                        'status_type' => $approval->status_type,
+                        'status' => $approval->status,
+                        'click_date' => $approval->click_date,
+                    ];
+                })
+                ->values(); // Reindex the collection
+
+            return Inertia::render('ClearInvoice/ShowStatement', [
+                'statement' => $statement,
+                'approvals' => $approvals, // Pass approvals to the view
+                'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in show method:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return redirect()->back()->with('error', 'Error fetching statement details.');
+        }
     }
 
     public function store(Request $request)
@@ -158,7 +197,7 @@ class StatementController extends Controller
             }
 
             // Load the supplier relationship
-            $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']); // Ensure currency is included
+            $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']); // Use 'clearedBy' relationship
 
             return response()->json($statement, 201); // Return the statement with the supplier relationship
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -295,6 +334,57 @@ class StatementController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             return response()->json(['error' => 'Failed to fetch statement data.'], 500);
+        }
+    }
+
+    public function approve(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+
+            // Determine docs_type for statements
+            $docsType = 5; // Assign a unique docs_type for statements
+
+            // Find or create the approval record for the current user, status type, and docs_type
+            $approval = Approval::firstOrCreate(
+                [
+                    'approval_id' => $id,
+                    'status_type' => $request->status_type,
+                    'user_id' => $currentUser->id,
+                    'docs_type' => $docsType,
+                ],
+                [
+                    'approval_name' => 'Statement Approval',
+                    'status' => 0, // Default status
+                ]
+            );
+
+            // Update the approval status
+            $approval->update([
+                'status' => 1, // Update the status to 'approved'
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            // Update the statement's status based on status_type
+            $statement = Statement::findOrFail($id);
+            if ($request->status_type == 1) {
+                $statement->status = 1; // Checked
+            } elseif ($request->status_type == 2) {
+                $statement->status = 2; // Approved
+            }
+            $statement->save();
+
+            return response()->json(['message' => 'Approval successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Approval Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
         }
     }
 }
