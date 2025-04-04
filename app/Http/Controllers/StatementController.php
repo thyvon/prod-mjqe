@@ -67,6 +67,7 @@ class StatementController extends Controller
             $invoices = PurchaseInvoice::where('supplier', $supplierId)
                 ->whereMonth('invoice_date', $month)
                 ->whereYear('invoice_date', $year)
+                ->where('transaction_type', 2) // Add condition for transaction_type = 2
                 ->get();
 
             \Log::info('Fetched Purchase Invoices:', $invoices->toArray()); // Debug log
