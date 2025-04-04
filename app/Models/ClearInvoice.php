@@ -13,6 +13,7 @@ class ClearInvoice extends Model
     protected $fillable = [
         'ref_no', // Ensure 'ref_no' is fillable
         'description',
+        'remark',
         'clear_type',
         'clear_by',
         'status',

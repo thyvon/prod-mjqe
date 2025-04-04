@@ -87,7 +87,7 @@ const isActive = (targetRoute) => {
                 </div>
             </div>
 
-            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices') || isActive('/invoice-items') || isActive('/clear-invoice')}">
+            <div class="menu-item has-sub" :class="{'active': isActive('/cash-request') || isActive('/purchase-requests') || isActive('/purchase-orders') || isActive('/invoices') || isActive('/invoice-items') || isActive('/clear-invoice') || isActive('/statements')}">
                 <a href="javascript:;" class="menu-link">
                     <div class="menu-icon">
                         <i class="fa fa-money-check-dollar"></i>
@@ -119,7 +119,7 @@ const isActive = (targetRoute) => {
                         <div class="menu-submenu">
                             <div class="menu-item" :class="{'active': isActive('/invoices')}">
                                 <Link href="/invoices" class="menu-link">
-                                    <div class="menu-text">Invoice List</div>
+                                    <div class="menu-text">Invoice Entry</div>
                                 </Link>
                             </div>
                             <div class="menu-item" :class="{'active': isActive('/invoice-items')}">
@@ -133,6 +133,12 @@ const isActive = (targetRoute) => {
                     <div class="menu-item" :class="{'active': isActive('/clear-invoice')}">
                         <Link href="/clear-invoice" class="menu-link">
                             <div class="menu-text">Clear Invoice</div>
+                        </Link>
+                    </div>
+
+                    <div class="menu-item" :class="{'active': isActive('/statements')}">
+                        <Link href="/statements" class="menu-link">
+                            <div class="menu-text">Clear Statement</div>
                         </Link>
                     </div>
 

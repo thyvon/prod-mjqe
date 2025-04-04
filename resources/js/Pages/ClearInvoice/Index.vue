@@ -31,6 +31,7 @@ const clearInvoiceForm = reactive({
   clear_by: '',
   description: '',
   status: '',
+  remark: '', // Added remark field
 });
 
 const validationErrors = ref({});
@@ -79,8 +80,6 @@ const openCreateModal = () => {
 const openEditModal = async (clearInvoice) => {
   isEdit.value = true;
   Object.assign(clearInvoiceForm, clearInvoice);
-  clearInvoiceForm.clear_date = new Date(clearInvoiceForm.clear_date).toISOString().split('T')[0]; // Ensure date format is "yyyy-MM-dd"
-
   try {
     // Fetch approval data for the clear invoice
     const response = await axios.get(`/clear-invoice/${clearInvoice.id}/approvals`);
@@ -417,6 +416,13 @@ onMounted(() => {
                         <div class="col-sm-8">
                           <textarea v-model="clearInvoiceForm.description" class="form-control" id="description"></textarea>
                           <div v-if="validationErrors.description" class="text-danger">{{ validationErrors.description[0] }}</div>
+                        </div>
+                      </div>
+                      <div class="mb-3 row">
+                        <label for="remark" class="col-sm-4 col-form-label">Remark</label>
+                        <div class="col-sm-8">
+                          <textarea v-model="clearInvoiceForm.remark" class="form-control" id="remark"></textarea>
+                          <div v-if="validationErrors.remark" class="text-danger">{{ validationErrors.remark[0] }}</div>
                         </div>
                       </div>
                     </div>

@@ -16,7 +16,7 @@ class ClearInvoiceController extends Controller
     public function index()
     {
         $clearInvoices = ClearInvoice::with(['cashRequest:id,ref_no', 'user:id,name']) // Adjust relationships as needed
-            ->select('id', 'ref_no', 'description', 'clear_type', 'clear_by', 'status', 'clear_date', 'cash_id') // Ensure 'cash_id' is selected
+            ->select('id', 'ref_no', 'description', 'remark', 'clear_type', 'clear_by', 'status', 'clear_date', 'cash_id') // Ensure 'cash_id' is selected
             ->get();
 
         $cashRequests = CashRequest::with('user:id,name')->select('id', 'ref_no', 'request_type', 'status', 'user_id','request_date','amount')->get(); // Include 'request_type' in the selection
@@ -97,7 +97,8 @@ class ClearInvoiceController extends Controller
             'clear_date' => 'required|date',
             'cash_id' => 'required|exists:cash_requests,id|unique:clear_invoices,cash_id', // Ensure cash_id is unique
             'clear_by' => 'required',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
+            'remark' => 'nullable|string',
         ]);
 
         // Check if related PurchaseInvoiceItem count is greater than 0
@@ -126,8 +127,8 @@ class ClearInvoiceController extends Controller
             'clear_date' => 'required|date',
             'cash_id' => 'required|exists:cash_requests,id|unique:clear_invoices,cash_id,' . $id, // Ensure cash_id is unique, excluding the current record
             'clear_by' => 'required',
-            'description' => 'nullable|string',
-            // 'status' => 'required',
+            'description' => 'required|string',
+            'remark' => 'nullable|string',
         ]);
 
         // Check if related PurchaseInvoiceItem count is greater than 0
@@ -299,7 +300,7 @@ class ClearInvoiceController extends Controller
     public function getClearInvoices()
     {
         $clearInvoices = ClearInvoice::with(['cashRequest', 'user'])
-            ->select('id', 'ref_no', 'description', 'clear_type', 'clear_by', 'status', 'clear_date', 'cash_id')
+            ->select('id', 'ref_no', 'description', 'remark', 'clear_type', 'clear_by', 'status', 'clear_date', 'cash_id')
             ->get();
 
         return response()->json($clearInvoices); // Return the clear invoices as JSON
