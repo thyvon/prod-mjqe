@@ -15,6 +15,7 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  users: Array,
   currentUser: {
     type: Object,
     required: true,
@@ -205,8 +206,14 @@ const openCreateModal = () => {
 
 const openEditModal = async (statement) => {
   try {
-    const response = await axios.get(`/statements/${statement.id}/edit`);
-    const data = response.data;
+    // Fetch both statement data and approvals data
+    const [statementResponse, approvalsResponse] = await Promise.all([
+      axios.get(`/statements/${statement.id}/edit`),
+      axios.get(`/statements/${statement.id}/approvals`)
+    ]);
+    
+    const data = statementResponse.data;
+    const approvals = approvalsResponse.data;
 
     isEdit.value = true;
     Object.assign(statementForm, {
@@ -215,14 +222,17 @@ const openEditModal = async (statement) => {
       clear_date: data.clear_date,
       description: data.description,
       status: data.status,
+      // Map approvals to corresponding fields
+      checked_by: approvals.find(a => a.status_type === 1)?.user_id || '',
+      approved_by: approvals.find(a => a.status_type === 2)?.user_id || '',
       invoices: data.invoices.map((invoice) => ({
-        id: invoice.invoice_id, // Use `invoice_id` as per the controller's relationship
-        invoice_no: invoice.purchase_invoice?.invoice_no || 'N/A', // Handle missing invoice_no
-        pi_number: invoice.purchase_invoice?.pi_number || 'N/A', // Handle missing pi_number
-        invoice_date: invoice.purchase_invoice?.invoice_date || 'N/A', // Handle missing invoice_date
-        total_amount: invoice.purchase_invoice?.total_amount || 0, // Default to 0
-        paid_amount: invoice.purchase_invoice?.paid_amount || 0, // Default to 0
-        hasError: false, // Default to no error for existing invoices
+        id: invoice.invoice_id,
+        invoice_no: invoice.purchase_invoice?.invoice_no || 'N/A',
+        pi_number: invoice.purchase_invoice?.pi_number || 'N/A',
+        invoice_date: invoice.purchase_invoice?.invoice_date || 'N/A',
+        total_amount: invoice.purchase_invoice?.total_amount || 0,
+        paid_amount: invoice.purchase_invoice?.paid_amount || 0,
+        hasError: false,
       })),
     });
 
@@ -232,8 +242,11 @@ const openEditModal = async (statement) => {
 
     nextTick(() => {
       initializeSelect2();
+      // Update all Select2 fields with their values
       $('#supplier_id').val(statementForm.supplier_id).trigger('change');
-      initializeStatementInvoiceTable(); // Initialize the table with existing invoices
+      $('#checked_by').val(statementForm.checked_by).trigger('change');
+      $('#approved_by').val(statementForm.approved_by).trigger('change');
+      initializeStatementInvoiceTable();
     });
   } catch (error) {
     console.error('Failed to fetch statement data for editing:', error);
@@ -594,6 +607,32 @@ onMounted(() => {
                   </tbody>
                 </table>
               </div>
+
+              <div class="row">
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="checked_by" class="form-label">Checked By</label>
+                    <select v-model="statementForm.checked_by" class="form-select select2" id="checked_by" style="width: 100%;">
+                      <option value="">Select User</option>
+                      <option v-for="user in props.users" :key="user.id" :value="user.id">
+                        {{ user.name }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="approved_by" class="form-label">Approved By</label>
+                    <select v-model="statementForm.approved_by" class="form-select select2" id="approved_by" style="width: 100%;">
+                      <option value="">Select User</option>
+                      <option v-for="user in props.users" :key="user.id" :value="user.id">
+                        {{ user.name }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Save' }}</button>

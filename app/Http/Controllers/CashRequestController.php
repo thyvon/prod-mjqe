@@ -227,6 +227,7 @@ class CashRequestController extends Controller
         $approvals = Approval::where('approval_id', $cashRequest->id)
             ->whereIn('docs_type', [1, 2]) // Filter by docs_type (1 or 2)
             ->with('user:id,name,position,card_id,campus,division,department,signature') // Include 'signature' field
+            ->orderBy('status_type', 'asc') // Add this line to sort by status_type
             ->get()
             ->map(function ($approval) {
                 $labels = [
@@ -238,7 +239,7 @@ class CashRequestController extends Controller
 
                 return [
                     'label' => $labels[$approval->status_type] ?? 'Unknown',
-                    'user_id' => $approval->user_id, // Ensure user_id is included
+                    'user_id' => $approval->user_id,
                     'name' => $approval->user->name ?? '',
                     'position' => $approval->user->position ?? '',
                     'card_id' => $approval->user->card_id ?? '',
@@ -246,10 +247,10 @@ class CashRequestController extends Controller
                     'division' => $approval->user->division ?? '',
                     'department' => $approval->user->department ?? '',
                     'date' => $approval->updated_at->format('Y-m-d'),
-                    'signature' => $approval->user->signature ?? null, // Include 'signature'
-                    'status_type' => $approval->status_type, // Include status_type for button logic
+                    'signature' => $approval->user->signature ?? null,
+                    'status_type' => $approval->status_type,
                     'status' => $approval->status,
-                    'click_date' => $approval->click_date, // Include click_date
+                    'click_date' => $approval->click_date,
                 ];
             })
             ->values(); // Reindex the collection

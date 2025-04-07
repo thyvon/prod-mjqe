@@ -151,6 +151,9 @@ Route::middleware('auth')->group(function () {
 
     // Add a route for fetching PurchaseInvoice data
     Route::get('/statements-purchase-invoices', [StatementController::class, 'getPurchaseInvoices'])->name('statements.purchase-invoices');
+    Route::get('/statements/{statement}/approvals', [StatementController::class, 'getApprovals'])->name('statements.approvals');
+    Route::post('/statements/{statement}/approve', [StatementController::class, 'approve'])->name('statements.approve');
+    Route::post('/statements/{statement}/reject', [StatementController::class, 'reject'])->name('statements.reject');
 });
 // Routes for Statement Invoices
 
