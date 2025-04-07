@@ -44,7 +44,7 @@
                     </div>
                   </div>
                   <div class="col-4 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold">DDDDDDDDDDDDDDD</span>
+                    <span class="w-100 text-start ps-1 fw-bold">{{ statement.supplier?.name || 'N/A' }}</span>
                   </div>
   
                   <div class="col-1">
@@ -59,7 +59,7 @@
                     </div>
                   </div>
                   <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold"></span>
+                    <span class="w-100 text-start ps-1 fw-bold">{{ statement.statement_number || 'N/A' }}</span>
                   </div>
                 </div>
               </div>
@@ -89,7 +89,7 @@
                     </div>
                   </div>
                   <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold"> 
+                    <span class="w-100 text-start ps-1 fw-bold">{{ formatDate(statement.clear_date) || 'N/A' }} 
                       </span>
                   </div>
                 </div>
@@ -133,27 +133,17 @@
                   <thead style="font-size: 12px;">
                     <tr class="text-center">
                       <th>ល.រ.<br>No.</th>
-                      <th>បរិយាយ<br>Description</th>
+                      <th>លេខវិក្កយបត្រ<br>PI Number</th>
                       <th>សាខា<br>Campus</th>
                       <th>ទឹកប្រាក់<br>Total Amount</th>
                     </tr>
                   </thead>
                   <tbody class="table-group-divider" style="font-size: 12px;">
-                    <tr>
-                      <td class="text-center"></td>
-                      <td class="text-start"></td>
-                      <td class="text-center"></td>
-                      <td class="text-end"></td>
-                    </tr>
-                    <tr style="height: 200px;">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" rowspan="3" class="text-center fw-bold">សរុប/Total</td>
-                      <td class="fw-bold"></td>
+                    <tr v-for="(item, index) in statement.invoices.flatMap(invoice => invoice.purchase_invoice.items)" :key="item.id">
+                      <td class="text-center">{{ index + 1 }}</td>
+                      <td class="text-center">{{ item.purchase_invoice?.pi_number || 'N/A' }}</td>
+                      <td class="text-center">{{ item.campus || 'N/A' }}</td>
+                      <td class="text-end">{{ item.total_price || '0.00' }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -264,15 +254,130 @@
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', options);
   };
-  
+
+  const getStatusTypeString = (statusType) => {
+    switch (statusType) {
+      case 1:
+        return 'Check';
+      case 2:
+        return 'Approve';
+      default:
+        return 'Unknown';
+    }
+  };
+
   const approveRequest = async (statusType) => {
-    // ...existing code for approval logic...
+    const confirmResult = await swal({
+      title: 'Confirm',
+      text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
+      icon: 'warning',
+      buttons: {
+        cancel: {
+          text: 'No',
+          value: null,
+          visible: true,
+          className: 'btn btn-secondary',
+          closeModal: true,
+        },
+        confirm: {
+          text: 'Yes',
+          value: true,
+          visible: true,
+          className: 'btn btn-primary',
+          closeModal: true,
+        },
+      },
+      dangerMode: true,
+    });
+
+    if (!confirmResult) {
+      return;
+    }
+
+    try {
+      await axios.post(`/statements/${props.statement.id}/approve`, {
+        status_type: statusType,
+      });
+      await swal({
+        title: 'Success',
+        text: `The Request is successfully ${getStatusTypeString(statusType)}.`,
+        icon: 'success',
+        button: {
+          text: 'OK',
+          className: 'btn btn-primary',
+        },
+      });
+      window.location.reload(); // Reload the page after showing the alert
+    } catch (error) {
+      console.error('Approval Error:', error);
+      await swal({
+        title: 'Error',
+        text: `The request failed to ${getStatusTypeString(statusType)}.`,
+        icon: 'error',
+        button: {
+          text: 'OK',
+          className: 'btn btn-danger',
+        },
+      });
+    }
   };
-  
+
   const rejectRequest = async (statusType) => {
-    // ...existing code for rejection logic...
+    const confirmResult = await swal({
+      title: 'Confirm',
+      text: `Are you sure you want to Reject?`,
+      icon: 'warning',
+      buttons: {
+        cancel: {
+          text: 'No, cancel!',
+          value: null,
+          visible: true,
+          className: 'btn btn-secondary',
+          closeModal: true,
+        },
+        confirm: {
+          text: 'Yes, reject it!',
+          value: true,
+          visible: true,
+          className: 'btn btn-danger',
+          closeModal: true,
+        },
+      },
+      dangerMode: true,
+    });
+
+    if (!confirmResult) {
+      return;
+    }
+
+    try {
+      await axios.post(`/statements/${props.statement.id}/reject`, {
+        status_type: statusType,
+      });
+      await swal({
+        title: 'Success',
+        text: `Request has been rejected for ${getStatusTypeString(statusType)} step.`,
+        icon: 'success',
+        button: {
+          text: 'OK',
+          className: 'btn btn-primary',
+        },
+      });
+      window.location.reload(); // Reload the page after showing the alert
+    } catch (error) {
+      console.error('Rejection Error:', error);
+      await swal({
+        title: 'Error',
+        text: `Failed to reject request for ${getStatusTypeString(statusType)} step.`,
+        icon: 'error',
+        button: {
+          text: 'OK',
+          className: 'btn btn-danger',
+        },
+      });
+    }
   };
-  </script>
+</script>
   
   <style scoped>
   .a4-size {

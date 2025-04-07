@@ -84,52 +84,119 @@ class StatementController extends Controller
         }
     }
 
+    // public function show($id)
+    // {
+    //     try {
+    //         $statement = Statement::with([
+    //             'supplier:id,name,currency',
+    //             'clearedBy:id,name,position,signature', // Load clearedBy relationship to get user details
+    //             'invoices.purchaseInvoice:id,pi_number,invoice_no,invoice_date,total_amount,paid_amount', // Include related invoices
+    //             'invoices.purchaseInvoice.items:id,pi_number,description,qty,unit_price,total_price,campus', // Include items
+    //         ])->findOrFail($id);
+
+    //         // Fetch approvals for the statement
+    //         $approvals = Approval::where('approval_id', $id)
+    //             ->where('docs_type', 5) // Filter by docs_type for statements
+    //             ->with('user:id,name,position,card_id,signature') // Include user details
+    //             ->get()
+    //             ->map(function ($approval) {
+    //                 $labels = [
+    //                     1 => 'Checked By',
+    //                     2 => 'Approved By',
+    //                 ];
+
+    //                 return [
+    //                     'label' => $labels[$approval->status_type] ?? 'Unknown',
+    //                     'user_id' => $approval->user_id,
+    //                     'name' => $approval->user->name ?? '',
+    //                     'position' => $approval->user->position ?? '',
+    //                     'card_id' => $approval->user->card_id ?? '',
+    //                     'signature' => $approval->user->signature ?? null,
+    //                     'status_type' => $approval->status_type,
+    //                     'status' => $approval->status,
+    //                     'click_date' => $approval->click_date,
+    //                 ];
+    //             })
+    //             ->values(); // Reindex the collection
+
+    //         return Inertia::render('ClearInvoice/ShowStatement', [
+    //             'statement' => $statement,
+    //             'approvals' => $approvals, // Pass approvals to the view
+    //             'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         \Log::error('Error in show method:', [
+    //             'message' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString(),
+    //         ]);
+    //         return redirect()->back()->with('error', 'Error fetching statement details.');
+    //     }
+    // }
+
     public function show($id)
-    {
-        try {
-            $statement = Statement::with([
-                'supplier:id,name,currency',
-                'clearedBy:id,name,position,signature' // Load clearedBy relationship to get user details
-            ])->findOrFail($id);
+        {
+            try {
+                $statement = Statement::with([
+                    'supplier:id,name,currency',
+                    'clearedBy:id,name,position,signature', // Load clearedBy relationship to get user details
+                    'invoices.purchaseInvoice:id,pi_number,invoice_no,invoice_date,total_amount,paid_amount', // Include related invoices
+                    'invoices.purchaseInvoice.items:id,pi_number,description,qty,unit_price,total_price,campus', // Include items
+                ])->findOrFail($id);
 
-            // Fetch approvals for the statement
-            $approvals = Approval::where('approval_id', $id)
-                ->where('docs_type', 5) // Filter by docs_type for statements
-                ->with('user:id,name,position,card_id,signature') // Include user details
-                ->get()
-                ->map(function ($approval) {
-                    $labels = [
-                        1 => 'Checked By',
-                        2 => 'Approved By',
-                    ];
-
+                // Calculate total amount grouped by campus
+                $totalsByCampus = $statement->invoices->flatMap(function ($invoice) {
+                    return $invoice->purchaseInvoice->items->map(function ($item) {
+                        return [
+                            'campus' => $item->campus,
+                            'total_price' => $item->total_price,
+                        ];
+                    });
+                })->groupBy('campus')->map(function ($items, $campus) {
                     return [
-                        'label' => $labels[$approval->status_type] ?? 'Unknown',
-                        'user_id' => $approval->user_id,
-                        'name' => $approval->user->name ?? '',
-                        'position' => $approval->user->position ?? '',
-                        'card_id' => $approval->user->card_id ?? '',
-                        'signature' => $approval->user->signature ?? null,
-                        'status_type' => $approval->status_type,
-                        'status' => $approval->status,
-                        'click_date' => $approval->click_date,
+                        'campus' => $campus,
+                        'total_amount' => $items->sum('total_price'),
                     ];
-                })
-                ->values(); // Reindex the collection
+                })->values();
 
-            return Inertia::render('ClearInvoice/ShowStatement', [
-                'statement' => $statement,
-                'approvals' => $approvals, // Pass approvals to the view
-                'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in show method:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return redirect()->back()->with('error', 'Error fetching statement details.');
+                // Fetch approvals for the statement
+                $approvals = Approval::where('approval_id', $id)
+                    ->where('docs_type', 5) // Filter by docs_type for statements
+                    ->with('user:id,name,position,card_id,signature') // Include user details
+                    ->get()
+                    ->map(function ($approval) {
+                        $labels = [
+                            1 => 'Checked By',
+                            2 => 'Approved By',
+                        ];
+
+                        return [
+                            'label' => $labels[$approval->status_type] ?? 'Unknown',
+                            'user_id' => $approval->user_id,
+                            'name' => $approval->user->name ?? '',
+                            'position' => $approval->user->position ?? '',
+                            'card_id' => $approval->user->card_id ?? '',
+                            'signature' => $approval->user->signature ?? null,
+                            'status_type' => $approval->status_type,
+                            'status' => $approval->status,
+                            'click_date' => $approval->click_date,
+                        ];
+                    })
+                    ->values(); // Reindex the collection
+
+                return Inertia::render('ClearInvoice/ShowStatement', [
+                    'statement' => $statement,
+                    'totalsByCampus' => $totalsByCampus, // Pass totals by campus to the view
+                    'approvals' => $approvals, // Pass approvals to the view
+                    'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error in show method:', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return redirect()->back()->with('error', 'Error fetching statement details.');
+            }
         }
-    }
 
     public function store(Request $request)
     {
@@ -196,6 +263,7 @@ class StatementController extends Controller
                 ]);
             }
 
+            $this->storeApprovals($statement->id, $request);
             // Load the supplier relationship
             $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']); // Use 'clearedBy' relationship
 
@@ -289,6 +357,7 @@ class StatementController extends Controller
                 ]);
             }
 
+            $this->storeApprovals($statement->id, $request);
             // Load the supplier relationship
             $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']); // Ensure currency is included
 
@@ -298,6 +367,46 @@ class StatementController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         }
     }
+
+    private function storeApprovals($statementId, $request)
+    {
+        // Set docs_type based on clear_type
+        $docsType = 5;
+
+        $approvalData = [
+            ['status_type' => 1, 'user_id' => $request->checked_by], // Checked By
+            ['status_type' => 2, 'user_id' => $request->approved_by], // Approved By
+        ];
+
+        foreach ($approvalData as $data) {
+            if ($data['user_id']) {
+                // Check if an approval record already exists
+                $approval = Approval::where('approval_id', $statementId)
+                    ->where('status_type', $data['status_type']) // Correctly chain the where conditions
+                    ->where('docs_type', $docsType) // Add docs_type condition
+                    ->first();
+
+                if ($approval) {
+                    // Update the existing record
+                    $approval->update([
+                        'user_id' => $data['user_id'],
+                        'docs_type' => $docsType, // Update docs_type
+                        'approval_name' => 'Clear Statement', // Set approval_name based on docs_type
+                    ]);
+                } else {
+                    // Create a new record if it doesn't exist
+                    Approval::create([
+                        'approval_id' => $statementId,
+                        'status_type' => $data['status_type'],
+                        'docs_type' => $docsType, // Set docs_type
+                        'user_id' => $data['user_id'],
+                        'approval_name' => 'Clear Statement', // Set approval_name based on docs_type
+                    ]);
+                }
+            }
+        }
+    }
+
 
     public function destroy($id)
     {
@@ -346,8 +455,9 @@ class StatementController extends Controller
 
             $currentUser = Auth::user();
 
-            // Determine docs_type for statements
-            $docsType = 5; // Assign a unique docs_type for statements
+            // Determine docs_type based on clear_type
+            $statement = Statement::findOrFail($id);
+            $docsType = 5;
 
             // Find or create the approval record for the current user, status type, and docs_type
             $approval = Approval::firstOrCreate(
@@ -358,7 +468,7 @@ class StatementController extends Controller
                     'docs_type' => $docsType,
                 ],
                 [
-                    'approval_name' => 'Statement Approval',
+                    'approval_name' => 'Clear Statement',
                     'status' => 0, // Default status
                 ]
             );
@@ -369,8 +479,7 @@ class StatementController extends Controller
                 'click_date' => now(), // Capture the current date
             ]);
 
-            // Update the statement's status based on status_type
-            $statement = Statement::findOrFail($id);
+            // Update the clear invoice's status based on status_type
             if ($request->status_type == 1) {
                 $statement->status = 1; // Checked
             } elseif ($request->status_type == 2) {
@@ -386,5 +495,60 @@ class StatementController extends Controller
             ]);
             return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
         }
+    }
+
+    public function reject(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+
+            // Find the approval record for the current user and status type
+            $approval = Approval::where('approval_id', $id)
+                ->where('status_type', $request->status_type)
+                ->where('user_id', $currentUser->id)
+                ->first();
+
+            if (!$approval) {
+                \Log::warning('Approval record not found or unauthorized.', [
+                    'statementId' => $id,
+                    'statusType' => $request->status_type,
+                    'userId' => $currentUser->id,
+                ]);
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+
+            // Update the approval status to rejected
+            $approval->update([
+                'status' => -1, // Set status to -1 for rejection
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            $statement = Statement::findOrFail($id);
+            $statement->status = -1; // Rejected
+            $statement->save();
+
+            return response()->json(['message' => 'Rejection successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Rejection Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the rejection.'], 500);
+        }
+    }
+
+    public function getApprovals(Statement $statement)
+    {
+        // Fetch approvals for the specific statement
+        $approvals = Approval::where('approval_id', $statement->id)
+            ->whereIn('docs_type', [5]) // Filter by docs_type for statements
+            ->select('status_type', 'user_id')
+            ->get();
+
+        return response()->json($approvals);
     }
 }

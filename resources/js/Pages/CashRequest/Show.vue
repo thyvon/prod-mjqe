@@ -97,7 +97,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].name }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.name }}</span>
                 </div>
 
                 <div class="col-2 text-start">
@@ -106,7 +106,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].position }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.position }}</span>
                 </div>
 
                 <div class="col-1 text-start p-0">
@@ -115,9 +115,8 @@
                   </div>
                 </div>
                 <div class="col-1 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].card_id }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.card_id }}</span>
                 </div>
-
               </div>
             </div>
           </div>
@@ -131,7 +130,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].campus }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.campus }}</span>
                 </div>
 
                 <div class="col-3">
@@ -161,7 +160,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].division }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.division }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">
@@ -190,7 +189,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals[3].department }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.department }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">
@@ -291,7 +290,7 @@
                     (
                       (approval.label === 'Checked By') ||
                       (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
-                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
+                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1)) && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
                       (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
                     )"
                 >
@@ -304,7 +303,7 @@
                     (
                       (approval.label === 'Checked By') ||
                       (approval.label === 'Acknowledged By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1))) ||
-                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
+                      (approval.label === 'Approved By' && (!approvals.find(a => a.label === 'Checked By') || approvals.find(a => a.label === 'Checked By' && a.status === 1)) && (!approvals.find(a => a.label === 'Acknowledged By') || approvals.find(a => a.label === 'Acknowledged By' && a.status === 1))) ||
                       (approval.label === 'Received By' && approvals.find(a => a.label === 'Approved By' && a.status === 1))
                     )"
                 >
