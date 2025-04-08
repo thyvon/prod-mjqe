@@ -262,7 +262,7 @@ onMounted(() => {
             data: null,
             render: (data) => `
               <div class="btn-group">
-                <a href="#" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
+                <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -346,21 +346,23 @@ onMounted(() => {
         <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Create New</button>
 
         <!-- Clear Invoice Table -->
-        <table id="clear-invoice" class="table table-bordered align-middle text-wrap" width="100%">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Ref No.</th>
-              <th>Cash No.</th>
-              <th>Description</th>
-              <th>Type</th>
-              <th>Clear By</th>
-              <th>Status</th>
-              <th>Clear Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-        </table>
+        <div class="table-responsive">
+          <table id="clear-invoice" class="table table-bordered table-sm align-middle text-wrap" width="100%">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Ref No.</th>
+                <th>Cash No.</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Clear By</th>
+                <th>Status</th>
+                <th>Clear Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
 
         <!-- Modal for Create/Edit Clear Invoice -->
         <div class="modal fade" id="clearInvoiceModal" tabindex="-1" aria-labelledby="clearInvoiceModalLabel" aria-hidden="true">
