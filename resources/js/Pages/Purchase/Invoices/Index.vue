@@ -48,7 +48,7 @@ const form = reactive({
   service_charge: 0,
   discount_total: 0,
   attachments: [],
-  purchased_by: null, // Initialize purchased_by as null to be set by the dropdown
+  purchased_by: props.currentUser?.id || null, // Initialize purchased_by as null to be set by the dropdown
 });
 
 const calculateTotalDiscount = () => {
@@ -153,6 +153,7 @@ const editItemForm = reactive({
   paid_amount: 0.0,
   total_price: 0,
   uom: '',
+  product_price: 0.0,
   service_charge_overwritten: false,
   deposit: 0.0,
   stop_purchase: 0,
@@ -304,6 +305,7 @@ const updateInvoiceListTable = (invoices) => {
       paid_usd: invoice.paid_usd || 0,
       transaction_type: invoice.transaction_type || 0,
       payment_type: invoice.payment_type || 0,
+      status: invoice.status || 0,
     }));
     invoiceListTableInstance.value.clear().rows.add(formattedInvoices).draw(); // Update the table
   } catch (error) {
@@ -535,6 +537,7 @@ const selectPrItem = (prItem) => {
       qty: qty,
       uom: prItem.uom,
       unit_price: unit_price,
+      product_price: prItem.product.price,
       discount: discount,
       vat: form.vat_rate,
       return: 0,
@@ -600,6 +603,7 @@ const selectPoItem = (poItem) => {
       remark: '',
       qty: qty,
       uom: poItem.uom,
+      product_price: poItem.product.price,
       unit_price: unit_price,
       discount: discount,
       vat: form.vat_rate,
@@ -738,6 +742,7 @@ const editInvoice = async (invoiceId) => {
         remark: item.remark,
         qty: formatNumber(item.qty),
         uom: item.uom,
+        product_price: formatNumber(item.product?.price || 0),
         unit_price: formatNumber(item.unit_price),
         discount: formatNumber(item.discount), // Ensure discount is formatted correctly
         vat: formatNumber(item.vat),
@@ -1219,8 +1224,24 @@ onMounted(() => {
         { data: 'currency', render: (data) => (data === 1 ? 'USD' : data === 2 ? 'KHR' : 'Unknown') }, // Corrected currency rendering
         { data: 'currency_rate', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
         { data: 'paid_usd', render: (data) => (data ? parseFloat(data).toFixed(2) : '0.00') },
-        { data: 'transaction_type', render: (data) => getTransactionType(data) },
+        { 
+          data: 'transaction_type', 
+          render: (data) => {
+            const transactionTypes = {
+              1: 'Petty Cash',
+              2: 'Credit',
+              3: 'Advance',
+            };
+            const badgeClasses = {
+              1: 'badge bg-primary',
+              2: 'badge bg-warning',
+              3: 'badge bg-success',
+            };
+            return `<span class="${badgeClasses[data] || 'badge bg-secondary'}">${transactionTypes[data] || 'Unknown'}</span>`;
+          } 
+        },
         { data: 'payment_type', render: (data) => getPaymentType(data) },
+        { data: 'status', render: (data) => data === 1 ? '<span class="badge bg-success">Cleared</span>' : '<span class="badge bg-danger">Pending</span>' },
         { data: null, render: (data) => `
             <div class="btn-group">
               <a href="#" class="btn btn-default btn-sm dropdown-toggle" data-bs-toggle="dropdown">
@@ -1293,6 +1314,16 @@ onMounted(() => {
         window.location.href = `/invoices/${rowData.id}`;
       }
     });
+
+    if (form.purchased_by) {
+      const selectedOption = new Option(
+        props.users.find(user => user.id === form.purchased_by)?.name || 'Unknown',
+        form.purchased_by,
+        true,
+        true
+      );
+      $('#purchased_by').append(selectedOption).trigger('change');
+    }
 
     $('#invoice_date').datepicker({
       todayHighlight: true,
@@ -1395,7 +1426,15 @@ onMounted(() => {
         { data: 'pr_item', render: (data) => getPrNumberById(data) },
         { data: 'po_item', render: (data) => getPoNumberById(data) },
         { data: 'item_code' },
-        { data: null, render: (data) => `<div>${data.description}</div>` },
+        {
+          data: null,
+          render: (data) => `
+            <div>
+              <span class="badge bg-primary">${formatNumber(data.product_price, 2)} $</span>
+              ${data.description}
+            </div>
+          `,
+        },
         { data: 'remark', render: (data) => `<div>${data}</div>` },
         { data: 'qty' },
         { data: 'uom' },
@@ -1564,6 +1603,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <th>Paid USD</th>
                 <th>Transaction Type</th>
                 <th>Payment Type</th>
+                <th>Payment Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1689,7 +1729,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div class="row mb-1 align-items-center">
                       <label for="purchased_by" class="col-sm-4 col-form-label">Purchased By</label>
                       <div class="col-sm-8">
-                        <select id="purchased_by" class="form-select" style="width: 100%;"></select>
+                        <select id="purchased_by" class="form-select" v-model="form.purchased_by" style="width: 100%;"></select>
                         <div v-if="formErrors.purchased_by" class="text-danger">{{ formErrors.purchased_by }}</div>
                       </div>
                     </div>
@@ -1932,6 +1972,26 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <label for="editUom" class="col-sm-4 col-form-label">UoM</label>
                     <div class="col-sm-8">
                       <input type="text" v-model="editItemForm.uom" class="form-control bg-light" id="editUom" disabled>
+                    </div>
+                  </div>
+                  <div class="row mb-2 align-items-center">
+                    <label for="editProductPrice" class="col-sm-4 col-form-label">
+                      Previous Price
+                      <i 
+                        class="fas fa-exclamation-circle text-warning ms-2" 
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="top" 
+                        title="This is just the previous price of the Product. It will not be updated in the database."
+                      ></i>
+                    </label>
+                    <div class="col-sm-8">
+                      <input 
+                        type="text" 
+                        v-model="editItemForm.product_price" 
+                        class="form-control bg-light text-danger" 
+                        id="editProductPrice" 
+                        disabled
+                      >
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">

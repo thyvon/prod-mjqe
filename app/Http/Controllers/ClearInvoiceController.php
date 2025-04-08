@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClearInvoice;
 use App\Models\User;
 use App\Models\CashRequest;
+use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Approval; // Import Approval model
 use Illuminate\Http\Request;
@@ -75,7 +76,7 @@ class ClearInvoiceController extends Controller
             ->orderBy('pi_number') // Then by pi_number
             ->orderBy('created_at') // Finally by created_at
             ->get();
-            
+
             // Sum paid_amount and group by campus
             $groupedByCampus = PurchaseInvoiceItem::selectRaw('campus, SUM(paid_amount) as total_paid')
                 ->where('cash_ref', $clearInvoice->cash_id)
@@ -220,6 +221,10 @@ class ClearInvoiceController extends Controller
     {
         $clearInvoice = ClearInvoice::findOrFail($id);
 
+        // Update related PurchaseInvoice records where cash_ref matches clearInvoice cash_id
+        PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
+        ->update(['status' => 0]); // Update PurchaseInvoice status to 0 (Reset)
+
         // Delete related approval records where docs_type is 3 or 4
         Approval::where('approval_id', $id)
             ->whereIn('docs_type', [3, 4])
@@ -269,6 +274,9 @@ class ClearInvoiceController extends Controller
                 $clearInvoice->status = 1; // Checked
             } elseif ($request->status_type == 2) {
                 $clearInvoice->status = 2; // Approved
+                // Update related PurchaseInvoice records when statement status is approved
+                PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
+                ->update(['status' => 1]); // Update PurchaseInvoice status to 2 (Approved)
             }
             $clearInvoice->save();
 

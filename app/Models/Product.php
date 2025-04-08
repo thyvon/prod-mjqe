@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PurchaseInvoiceItem;
 
 class Product extends Model
 {
@@ -52,5 +53,18 @@ class Product extends Model
     public function group()
     {
         return $this->belongsTo(ProductGroup::class);
+    }
+
+    public function updatePriceFromLatestPurchase()
+    {
+        $latestPurchase = PurchaseInvoiceItem::where('item_code', $this->id)
+            ->where('payment_type', 1)
+            ->latest('id') // Assuming 'id' is the primary key or timestamp column
+            ->first();
+
+        if ($latestPurchase) {
+            $this->price = $latestPurchase->unit_price;
+            $this->save();
+        }
     }
 }

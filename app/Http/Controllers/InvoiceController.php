@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, CashRequest, PurchaseRequest, PurchaseOrder, Supplier, InvoiceAttachment};
+use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, CashRequest, PurchaseRequest, PurchaseOrder, Supplier, InvoiceAttachment, Product};
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
@@ -16,8 +16,8 @@ class InvoiceController extends Controller
             'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])
                 ->get(['id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']), // Include paid_usd and other necessary fields
             'users' => User::all(),
-            'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
-            'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
+            'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])->get(),
+            'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
             'cashRequests' => CashRequest::all(),
             'purchaseRequests' => PurchaseRequest::all(),
             'purchaseOrders' => PurchaseOrder::all(),
@@ -29,7 +29,7 @@ class InvoiceController extends Controller
     public function getPrItems(Request $request)
     {
         return response()->json(
-            PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])
+            PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])
                 ->whereHas('purchaseRequest', fn($query) => $query->where('pr_number', $request->query('pr_number')))
                 ->get()
         );
@@ -38,7 +38,7 @@ class InvoiceController extends Controller
     public function getPoItems(Request $request)
     {
         return response()->json(
-            PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
+            PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
                 ->whereHas('purchaseOrder', fn($query) => $query->where('po_number', $request->query('po_number')))
                 ->get()
         );
@@ -203,6 +203,14 @@ class InvoiceController extends Controller
                     $prItem->recalculateQtyPurchase();
                     $prItem->calculateForceClose();
                 }
+            }
+        }
+
+        // Update product prices before deleting items
+        foreach ($invoiceItems as $item) {
+            $product = Product::find($item->item_code);
+            if ($product) {
+                $product->updatePriceFromLatestPurchase();
             }
         }
 
@@ -647,6 +655,14 @@ class InvoiceController extends Controller
             } else {
                 $newItem = PurchaseInvoiceItem::create($itemData);
                 $updatedItemIds[] = $newItem->id;
+            }
+
+            // Update product price
+            if (isset($itemData['item_code'])) {
+                $product = Product::find($itemData['item_code']);
+                if ($product) {
+                    $product->updatePriceFromLatestPurchase();
+                }
             }
         }
 

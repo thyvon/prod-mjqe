@@ -224,81 +224,6 @@ const rejectRequest = async (statusType) => {
               </div>
             </div>
           </div>
-
-          <!-- Personal Information Section -->
-
-          <!-- <div class="row mb-1">
-            <div class="col-12">
-              <div class="row">
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>ឈ្មោះ/Name:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.name}}</span>
-                </div>
-
-                <div class="col-2">
-                  <div class="row">
-                  </div>
-                </div>
-
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>កាលបរិច្ឆេទ/Date:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{  formatDate(clearInvoice.clear_date) }}</span>
-                </div>
-              </div>
-            </div>
-          </div> -->
-
-          <!-- Table Section -->
-          <!-- <div class="row mb-3">
-            <div class="table-responsive width-full p-0">
-              <table class="table table-bordered border-dark table-sm">
-                <thead style="font-size: 12px;">
-                  <tr class="text-center">
-                    <th>ល.រ.<br>No.</th>
-                    <th>បរិយាយ<br>Description</th>
-                    <th>សាខា<br>Campus</th>
-                    <th>ទឹកប្រាក់<br>Total Amount</th>
-                  </tr>
-                </thead>
-                <tbody class="table-group-divider" style="font-size: 12px;">
-                  <tr v-for="(group, index) in groupedByCampus" :key="index">
-                    <td class="text-center">{{ index + 1 }}</td>
-                    <td class="text-start">{{ clearInvoice.description }}</td>
-                    <td class="text-center">{{ group.campus }}</td>
-                    <td class="text-end">{{ parseFloat(group.total_paid).toFixed(4) }}</td>
-                  </tr>
-                  <tr style="height: 200px;">
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td colspan="2" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>
-                    <td class="fw-bold">Actual Expense</td>
-                    <td class="fw-bold">{{ actualExpense.toFixed(4) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="fw-bold">Cash Advance</td>
-                    <td class="fw-bold">{{ parseFloat(clearInvoice.cash_request?.amount || 0).toFixed(4) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="fw-bold">Remaining Cash</td>
-                    <td class="fw-bold">{{ balance.toFixed(4) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div> -->
-
           <div class="row mb-3">
             <div class="table-responsive width-full p-0">
             <table class="table table-bordered border-dark table-sm">
@@ -375,14 +300,14 @@ const rejectRequest = async (statusType) => {
                 <div>Date: {{ formatDate(clearInvoice.clear_date) }}</div>
               </div>
             </div>
+            <div class="col-4 text-center px-2 mb-3"></div>
             <!-- Loop through approvals -->
             <div 
               v-for="approval in approvals" 
               :key="approval.status_type" 
               class="col-4 text-center px-2 mb-3"
             >
-              <div v-if="approval.label === 'Checked By'">ពិនិត្យដោយ</div>
-              <div v-else-if="approval.label === 'Approved By'">អនុម័តដោយ</div>
+              <div v-if="approval.label === 'Approved By'">អនុម័តដោយ</div>
               <div>{{ approval.label }}</div>
               <img
                 v-if="approval.status === 1"
@@ -401,8 +326,7 @@ const rejectRequest = async (statusType) => {
                   @click="approveRequest(approval.status_type)"
                   v-if="approval.user_id === currentUser.id && approval.status === 0 &&
                     (
-                      (approval.label === 'Checked By') ||
-                      (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1))
+                      (approval.label === 'Approved By')
                     )"
                 >
                   Sign
@@ -412,8 +336,7 @@ const rejectRequest = async (statusType) => {
                   @click="rejectRequest(approval.status_type)"
                   v-if="approval.user_id === currentUser.id && approval.status === 0 &&
                     (
-                      (approval.label === 'Checked By') ||
-                      (approval.label === 'Approved By' && approvals.find(a => a.label === 'Checked By' && a.status === 1))
+                      (approval.label === 'Approved By')
                     )"
                 >
                   Reject
