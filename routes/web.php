@@ -65,6 +65,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
     Route::get('/expense-data', [DashboardController::class, 'getExpenseData'])->name('expense-data');
     Route::get('/total-paid-by-month', [DashboardController::class, 'getTotalPaidByMonth']);
     Route::get('/expense-data-by-month', [DashboardController::class, 'getExpenseDataByMonth'])->name('expense-data-by-month');
+
+    // Campus Data
+    Route::get('/campus-expense', [DashboardController::class, 'getPurchaseInvoiceItemData'])->name('campus-expense');
 });
 
 // Auth routes (login, logout, registration)
