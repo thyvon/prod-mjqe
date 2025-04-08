@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick, watch } from 'vue';
+import { ref, reactive,computed, onMounted, nextTick, watch } from 'vue';
 import axios from 'axios';
 import swal from 'sweetalert';
 import { Head } from '@inertiajs/vue3';
@@ -31,6 +31,14 @@ const statementForm = reactive({
   description: '',
   status: 0,
   invoices: [], // Add invoices to the statementForm
+});
+
+const totalPaidAmount = computed(() => {
+  return statementForm.invoices.reduce((sum, invoice) => sum + parseFloat(invoice.paid_amount || 0), 0).toFixed(4);
+});
+
+const totalInvoices = computed(() => {
+  return statementForm.invoices.length;
 });
 
 const isEdit = ref(false);
@@ -172,12 +180,31 @@ const initializeDataTable = () => {
 };
 
 const initializeSelect2 = () => {
+  // Initialize Select2 for supplier_id
   $('#supplier_id').select2({
     dropdownParent: $('#statementModal'),
     placeholder: 'Select a supplier',
     allowClear: true,
   }).on('change', function () {
     statementForm.supplier_id = $(this).val();
+  });
+
+  // Initialize Select2 for checked_by
+  $('#checked_by').select2({
+    dropdownParent: $('#statementModal'),
+    placeholder: 'Select a user',
+    allowClear: true,
+  }).on('change', function () {
+    statementForm.checked_by = $(this).val();
+  });
+
+  // Initialize Select2 for approved_by
+  $('#approved_by').select2({
+    dropdownParent: $('#statementModal'),
+    placeholder: 'Select a user',
+    allowClear: true,
+  }).on('change', function () {
+    statementForm.approved_by = $(this).val();
   });
 };
 
@@ -187,10 +214,11 @@ const viewStatement = (statementId) => {
 
 const openCreateModal = () => {
   isEdit.value = false;
+  const today = new Date().toISOString().split('T')[0]; // Format as 'YYYY-MM-DD'
   Object.assign(statementForm, {
     id: null,
     supplier_id: '',
-    clear_date: '',
+    clear_date: today,
     description: '',
     status: 0,
     invoices: [], // Reset invoices
@@ -507,6 +535,14 @@ watch(
 
 onMounted(() => {
   initializeDataTable(); // Initialize the DataTable on mount
+
+  // Initialize the date picker for clear_date
+  $("#datepicker-autoClose").datepicker({
+    todayHighlight: true,
+    autoclose: true,
+  }).on("changeDate", function (e) {
+    statementForm.clear_date = e.format("yyyy-mm-dd"); // Update the reactive property
+  });
 });
 </script>
 
@@ -578,7 +614,14 @@ onMounted(() => {
                   <div class="col-6">
                     <div class="mb-3">
                       <label for="clear_date" class="form-label">Clear Date</label>
-                      <input v-model="statementForm.clear_date" type="date" class="form-control" id="clear_date" required />
+                      <input
+                        v-model="statementForm.clear_date"
+                        type="text"
+                        class="form-control"
+                        id="datepicker-autoClose"
+                        placeholder="Select a date"
+                        required
+                      />
                     </div>
                   </div>
                 </div>
@@ -606,6 +649,13 @@ onMounted(() => {
                     <!-- Data will be dynamically populated -->
                   </tbody>
                 </table>
+                <!-- filepath: c:\xampp\htdocs\prod-mjqe\resources\js\Pages\ClearInvoice\Statement.vue -->
+                <div class="mt-2 text-end">
+                  <strong>Total Invoices: </strong> {{ totalInvoices }}
+                </div>
+                <div class="mt-2 text-end">
+                  <strong>Total Paid Amount: </strong> {{ totalPaidAmount }}
+                </div>
               </div>
 
               <div class="row">

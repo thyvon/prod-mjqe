@@ -14,7 +14,7 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])
-                ->get(['id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type']), // Include paid_usd and other necessary fields
+                ->get(['id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']), // Include paid_usd and other necessary fields
             'users' => User::all(),
             'prItems' => PrItem::with(['product:id,product_description,sku', 'purchaseRequest:id,pr_number,purpose'])->get(),
             'poItems' => PoItems::with(['product:id,product_description,sku', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),

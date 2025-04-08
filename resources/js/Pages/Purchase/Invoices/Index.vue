@@ -1202,6 +1202,7 @@ onMounted(() => {
       paid_usd: invoice.paid_usd || 0,
       currency: invoice.currency || 0,
       currency_rate: invoice.currency_rate || 0,
+      status: invoice.status || 0,
     }));
 
     invoiceListTableInstance.value = initializeDataTable('#invoice-list-table', {
@@ -1226,8 +1227,8 @@ onMounted(() => {
                 <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
               </a>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
-                <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                <li><a class="dropdown-item btn-edit ${data.status === 1 ? 'disabled' : ''}"><i class="fas fa-edit"></i> Edit</a></li>
+                <li><a class="dropdown-item btn-delete ${data.status === 1 ? 'disabled' : ''}"><i class="fas fa-trash-alt"></i> Delete</a></li>
                 <li><a class="dropdown-item btn-view-pdf"><i class="fas fa-file-pdf"></i> View PDF</a></li>
                 <li><a class="dropdown-item btn-show"><i class="fas fa-eye"></i> Show</a></li>
               </ul>
