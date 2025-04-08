@@ -2,14 +2,20 @@
 // Import usePage from Inertia to get the current route
 import { usePage, Link } from '@inertiajs/vue3';
 
-// Get the current page's URL
-const { url } = usePage();
+// Get the current page's URL and props
+const { url, props } = usePage();
 
 // Helper function to check if the menu item is active
 const isActive = (targetRoute) => {
   // Check if the current URL starts with the target route
   return url.startsWith(targetRoute);
-}
+};
+
+// Flatten grouped approvals into a single array
+const flattenedApprovals = Object.values(props.approvals || {}).flat();
+
+// Get the count of pending approvals
+const pendingApprovalsCount = flattenedApprovals.filter(approval => approval.status === 0).length;
 </script>
 
 
@@ -42,6 +48,15 @@ const isActive = (targetRoute) => {
                 </a>
             </div>
             <div class="menu-header">Navigation</div>
+            <div class="menu-item" :class="{'active': isActive('/approvals')}">
+                <Link href="/approvals" class="menu-link">
+                    <div class="menu-icon">
+                        <i class="fa fa-bell"></i>
+                    </div>
+                    <div class="menu-text">Notifications</div>
+                    <span v-if="pendingApprovalsCount > 0" class="badge bg-danger ms-auto">{{ pendingApprovalsCount }}</span>
+                </Link>
+            </div>
             <div class="menu-item" :class="{'active': isActive('/dashboard')}">
                 <Link href="/dashboard" class="menu-link">
                     <div class="menu-icon">

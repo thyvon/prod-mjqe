@@ -15,31 +15,13 @@
               <tr>
                 <th>#</th>
                 <th>Approval Name</th>
+                <th>Reference</th>
                 <th>Requested Date</th>
+                <th>Request Type</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="(approval, index) in approvals" :key="approval.id">
-                <td>{{ index + 1 }}</td>
-                <td>{{ approval.approval_name }}</td>
-                <td>{{ formatDate(approval.created_at) }}</td>
-                <td>
-                  <span v-if="approval.status === 0" class="badge bg-warning">Pending</span>
-                  <span v-else-if="approval.status === 1" class="badge bg-success">Approved</span>
-                  <span v-else class="badge bg-danger">Rejected</span>
-                </td>
-                <td>
-                  <div class="btn-group">
-                    <button class="btn btn-primary btn-sm">View</button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="approvals.length === 0">
-                <td colspan="8" class="text-center">No approvals found.</td>
-              </tr>
-            </tbody>
           </table>
         </div>
       </div>
@@ -50,9 +32,9 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
-import { onMounted } from 'vue';
+import { onMounted, nextTick } from 'vue';
 
-defineProps({
+const props = defineProps({
   approvals: {
     type: Array,
     required: true,
@@ -60,16 +42,89 @@ defineProps({
   }
 });
 
+let dataTableInstance;
+
+onMounted(() => {
+  nextTick(() => {
+    const table = $('#approvals-table');
+    if (table.length) {
+      dataTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: props.approvals, // Use the approvals prop directly
+        columns: [
+          { data: null, render: (data, type, row, meta) => meta.row + 1 }, // Row index
+          { data: 'approval_name' }, // Approval name
+          { data: 'reference' }, // Reference column
+          { data: 'created_at', render: (data) => formatDate(data) }, // Requested date
+          {
+            data: 'status_type',
+            render: (data) => {
+              switch (data) {
+                case 1: return '<span class="badge bg-info">To Check</span>';
+                case 2: return '<span class="badge bg-primary">To Acknowledge</span>';
+                case 3: return '<span class="badge bg-success">To Approve</span>';
+                case 4: return '<span class="badge bg-warning">To Receive</span>';
+                default: return '<span class="badge bg-secondary">Unknown</span>';
+              }
+            }
+          }, // Render status_type with badges
+          {
+            data: 'status',
+            render: (data) => {
+              if (data === 0) return '<span class="badge bg-warning">Pending</span>';
+              if (data === 1) return '<span class="badge bg-success">Approved</span>';
+              return '<span class="badge bg-danger">Rejected</span>';
+            }
+          }, // Status with badge
+          {
+            data: null,
+            render: (data) => `
+              <div class="btn-group">
+                <button class="btn btn-primary btn-sm btn-view">Open</button>
+              </div>
+            `,
+          }, // Actions
+        ],
+      });
+
+      // Attach event listeners to the table
+      $('#approvals-table').on('click', '.btn-view', function () {
+        const rowData = dataTableInstance.row($(this).closest('tr')).data();
+        if (rowData) {
+          viewApproval(rowData.docs_type, rowData.approval_id); // Pass docs_type and approval_id
+        }
+      });
+    }
+  });
+});
+
+// Helper function to format dates
 function formatDate(date) {
   if (!date) return 'N/A';
   const options = { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true };
   return new Intl.DateTimeFormat('en-US', options).format(new Date(date));
 }
 
-onMounted(() => {
-  const table = document.querySelector('#approvals-table');
-  if (table) {
-    $(table).DataTable(); // Initialize DataTable
+// Function to view approval details based on docs_type
+function viewApproval(docsType, approvalId) {
+  let url = '';
+  switch (docsType) {
+    case 1:
+    case 2:
+      url = `/cash-request/${approvalId}`;
+      break;
+    case 3:
+    case 4:
+      url = `/clear-invoice/${approvalId}`;
+      break;
+    case 5:
+      url = `/statements/${approvalId}`;
+      break;
+    default:
+      console.error('Unknown docs_type:', docsType);
+      return;
   }
-});
+  window.location.href = url; // Navigate to the URL in the same tab
+}
 </script>
