@@ -84,83 +84,16 @@ class StatementController extends Controller
         }
     }
 
-    // public function show($id)
-    // {
-    //     try {
-    //         $statement = Statement::with([
-    //             'supplier:id,name,currency',
-    //             'clearedBy:id,name,position,signature', // Load clearedBy relationship to get user details
-    //             'invoices.purchaseInvoice:id,pi_number,invoice_no,invoice_date,total_amount,paid_amount', // Include related invoices
-    //             'invoices.purchaseInvoice.items:id,pi_number,description,qty,unit_price,total_price,campus', // Include items
-    //         ])->findOrFail($id);
-
-    //         // Fetch approvals for the statement
-    //         $approvals = Approval::where('approval_id', $id)
-    //             ->where('docs_type', 5) // Filter by docs_type for statements
-    //             ->with('user:id,name,position,card_id,signature') // Include user details
-    //             ->get()
-    //             ->map(function ($approval) {
-    //                 $labels = [
-    //                     1 => 'Checked By',
-    //                     2 => 'Approved By',
-    //                 ];
-
-    //                 return [
-    //                     'label' => $labels[$approval->status_type] ?? 'Unknown',
-    //                     'user_id' => $approval->user_id,
-    //                     'name' => $approval->user->name ?? '',
-    //                     'position' => $approval->user->position ?? '',
-    //                     'card_id' => $approval->user->card_id ?? '',
-    //                     'signature' => $approval->user->signature ?? null,
-    //                     'status_type' => $approval->status_type,
-    //                     'status' => $approval->status,
-    //                     'click_date' => $approval->click_date,
-    //                 ];
-    //             })
-    //             ->values(); // Reindex the collection
-
-    //         return Inertia::render('ClearInvoice/ShowStatement', [
-    //             'statement' => $statement,
-    //             'approvals' => $approvals, // Pass approvals to the view
-    //             'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         \Log::error('Error in show method:', [
-    //             'message' => $e->getMessage(),
-    //             'trace' => $e->getTraceAsString(),
-    //         ]);
-    //         return redirect()->back()->with('error', 'Error fetching statement details.');
-    //     }
-    // }
-
     public function show($id)
         {
             try {
                 $statement = Statement::with([
                     'supplier:id,name,currency',
-                    'clearedBy:id,name,position,signature', // Load clearedBy relationship to get user details
-                    'invoices.purchaseInvoice:id,pi_number,invoice_no,invoice_date,total_amount,paid_amount', // Include related invoices
-                    'invoices.purchaseInvoice.items:id,pi_number,description,qty,unit_price,total_price,campus', // Include items
+                    'clearedBy:id,name,position,signature',
+                    'invoices.purchaseInvoice.items:id,pi_number,paid_amount,campus,department,division', // Include items
                 ])->findOrFail($id);
-
-                // Calculate total amount grouped by campus
-                $totalsByCampus = $statement->invoices->flatMap(function ($invoice) {
-                    return $invoice->purchaseInvoice->items->map(function ($item) {
-                        return [
-                            'campus' => $item->campus,
-                            'total_price' => $item->total_price,
-                        ];
-                    });
-                })->groupBy('campus')->map(function ($items, $campus) {
-                    return [
-                        'campus' => $campus,
-                        'total_amount' => $items->sum('total_price'),
-                    ];
-                })->values();
-
-                // Fetch approvals for the statement
                 $approvals = Approval::where('approval_id', $id)
-                    ->where('docs_type', 5) // Filter by docs_type for statements
+                    ->where('docs_type', 5) 
                     ->with('user:id,name,position,card_id,signature') // Include user details
                     ->get()
                     ->map(function ($approval) {
@@ -185,9 +118,8 @@ class StatementController extends Controller
 
                 return Inertia::render('ClearInvoice/ShowStatement', [
                     'statement' => $statement,
-                    'totalsByCampus' => $totalsByCampus, // Pass totals by campus to the view
-                    'approvals' => $approvals, // Pass approvals to the view
-                    'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']), // Pass current user details
+                    'approvals' => $approvals,
+                    'currentUser' => auth()->user()->only(['id', 'name', 'position', 'signature']),
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Error in show method:', [
@@ -407,17 +339,50 @@ class StatementController extends Controller
         }
     }
 
-
     public function destroy($id)
     {
-        $statement = Statement::findOrFail($id);
+        try {
+            // Start a database transaction
+            \DB::beginTransaction();
 
-        // Delete related invoices
-        StatementIvoice::where('clear_statement_id', $id)->delete();
+            $statement = Statement::with('invoices')->findOrFail($id);
 
-        $statement->delete();
+            // Check if the statement has related invoices
+            if ($statement->invoices->isNotEmpty()) {
+                $invoiceIds = $statement->invoices->pluck('invoice_id')->toArray();
 
-        return response()->json(['message' => 'Statement and related invoices deleted successfully']);
+                // Perform a bulk update for all related PurchaseInvoice records
+                $updated = PurchaseInvoice::whereIn('id', $invoiceIds)->update(['status' => 0]);
+
+                \Log::info('Updated PurchaseInvoice statuses to 0', [
+                    'invoice_ids' => $invoiceIds,
+                    'updated_count' => $updated,
+                ]);
+            }
+            // Delete related StatementIvoice records
+            StatementIvoice::where('clear_statement_id', $id)->delete();
+
+            // Delete related approvals
+            Approval::where('approval_id', $statement->id)->delete();
+
+            // Delete the statement
+            $statement->delete();
+
+            // Commit the transaction
+            \DB::commit();
+
+            return response()->json(['message' => 'Statement and related invoices deleted successfully']);
+        } catch (\Exception $e) {
+            // Rollback the transaction in case of an error
+            \DB::rollBack();
+
+            \Log::error('Error deleting statement:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['error' => 'Failed to delete statement.'], 500);
+        }
     }
 
     public function searchSuppliers(Request $request)
@@ -484,6 +449,13 @@ class StatementController extends Controller
                 $statement->status = 1; // Checked
             } elseif ($request->status_type == 2) {
                 $statement->status = 2; // Approved
+            // Update related PurchaseInvoice records when statement status is approved
+                foreach ($statement->invoices as $statementInvoice) { // Using the invoices relationship
+                    $purchaseInvoice = PurchaseInvoice::find($statementInvoice->invoice_id);
+                    if ($purchaseInvoice) {
+                        $purchaseInvoice->update(['status' => 1]); // Update PurchaseInvoice status to 2 (Approved)
+                    }
+                }
             }
             $statement->save();
 

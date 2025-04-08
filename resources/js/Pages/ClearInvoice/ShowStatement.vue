@@ -5,8 +5,8 @@
         <!-- Add a back button -->
         <div class="row">
           <div class="col text-end">
-            <button class="btn btn-secondary">Back</button>
-            <button class="btn btn-primary">Print</button>
+            <button @click="goBack" class="btn btn-secondary">Back</button>
+            <button @click="printPage" class="btn btn-primary">Print</button>
           </div>
         </div>
         <!-- Wrap the content in a unique ID -->
@@ -74,7 +74,7 @@
                     </div>
                   </div>
                   <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold"></span>
+                    <span class="w-100 text-start ps-1 fw-bold">{{ campuses }}</span>
                   </div>
   
                   <div class="col-2">
@@ -105,7 +105,7 @@
                     </div>
                   </div>
                   <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold"></span>
+                    <span class="w-100 text-start ps-1 fw-bold">{{ divisions }}</span>
                   </div>
   
                   <div class="col-2">
@@ -120,7 +120,7 @@
                     </div>
                   </div>
                   <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                    <span class="w-100 text-start ps-1 fw-bold"></span>
+                    <span class="w-100 text-start ps-1 fw-bold">{{ departments }}</span>
                   </div>
                 </div>
               </div>
@@ -132,18 +132,24 @@
                 <table class="table table-bordered border-dark table-sm">
                   <thead style="font-size: 12px;">
                     <tr class="text-center">
-                      <th>ល.រ.<br>No.</th>
-                      <th>លេខវិក្កយបត្រ<br>PI Number</th>
-                      <th>សាខា<br>Campus</th>
-                      <th>ទឹកប្រាក់<br>Total Amount</th>
+                      <th style="width: 5%;">ល.រ.<br>No.</th>
+                      <th style="width: 50%;">បរិយាយ<br>Description</th>
+                      <th style="width: 10%;">សាខា<br>Campus</th>
+                      <th style="width: 20%;">ទឹកប្រាក់<br>Total Amount</th>
                     </tr>
                   </thead>
                   <tbody class="table-group-divider" style="font-size: 12px;">
                     <tr v-for="(item, index) in statement.invoices.flatMap(invoice => invoice.purchase_invoice.items)" :key="item.id">
                       <td class="text-center">{{ index + 1 }}</td>
-                      <td class="text-center">{{ item.purchase_invoice?.pi_number || 'N/A' }}</td>
+                      <td class="text-center">{{ statement.description || 'N/A' }}</td>
                       <td class="text-center">{{ item.campus || 'N/A' }}</td>
-                      <td class="text-end">{{ item.total_price || '0.00' }}</td>
+                      <td class="text-end">{{ parseFloat(item.paid_amount || 0).toFixed(4) }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="3" class="text-end fw-bold">សរុប/Total:</td>
+                      <td class="text-end fw-bold">
+                        {{ statement.invoices.flatMap(invoice => invoice.purchase_invoice.items).reduce((total, item) => total + parseFloat(item.paid_amount || 0), 0).toFixed(4) || '0.0000' }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -243,6 +249,39 @@
       required: true,
     },
   });
+
+  const goBack = () => {
+  window.history.back(); // Navigate to the previous page
+};
+
+const printPage = () => {
+  const printableArea = document.getElementById('printable-area');
+  const originalContent = document.body.innerHTML;
+
+  // Replace the body content with the printable area
+  document.body.innerHTML = printableArea.innerHTML;
+
+  // Trigger the print dialog
+  window.print();
+
+  // Restore the original content
+  document.body.innerHTML = originalContent;
+
+  // Reload the page to restore functionality
+  window.location.reload();
+};
+
+  const getUniqueValues = (key) => {
+    return computed(() => {
+      const items = props.statement.invoices.flatMap(invoice => invoice.purchase_invoice.items);
+      const uniqueValues = [...new Set(items.map(item => item[key] || 'N/A'))]; // Ensure unique values
+      return uniqueValues.join(', ');
+    });
+  };
+
+  const departments = getUniqueValues('department');
+  const divisions = getUniqueValues('division');
+  const campuses = getUniqueValues('campus');
   
   // Helper functions
   const getSignatureUrl = (signature) => {
