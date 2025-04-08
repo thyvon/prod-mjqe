@@ -156,6 +156,7 @@ onMounted(() => {
           { data: 'category.name', defaultContent: 'N/A' },
           { data: 'group.name', defaultContent: 'N/A' },
           { data: 'uom' },
+          { data: 'price' },
           { data: 'status', render: (data) => {return `<span class="badge ${data === 1 ? 'bg-primary' : 'bg-danger'}">${data === 1 ? 'Active' : 'Inactive'}</span>`;},className: 'text-center'},
           {
             data: null,
@@ -229,6 +230,7 @@ onMounted(() => {
               <th>Category</th>
               <th>Group</th>
               <th>UoM</th>
+              <th>Price</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
