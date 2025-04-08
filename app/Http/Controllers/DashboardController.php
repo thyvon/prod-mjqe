@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseInvoice;
+use App\Models\PurchaseInvoiceItem;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
@@ -285,6 +286,17 @@ class DashboardController extends Controller
         }
 
         return response()->json($result);
+    }
+    public function getPurchaseInvoiceItemData(Request $request)
+    {
+        ['start_date' => $startDate, 'end_date' => $endDate] = $this->validateDateRange($request);
+
+        $data = PurchaseInvoiceItem::selectRaw('campus, SUM(total_usd) as total_usd')
+            ->whereBetween('invoice_date', [$startDate, $endDate]) // Ensure 'date' is the correct column
+            ->groupBy('campus')
+            ->get();
+
+        return response()->json($data);
     }
 
     public function index()
