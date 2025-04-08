@@ -99,7 +99,7 @@ class StatementController extends Controller
                     ->map(function ($approval) {
                         $labels = [
                             1 => 'Checked By',
-                            2 => 'Approved By',
+                            3 => 'Approved By',
                         ];
 
                         return [
@@ -307,7 +307,7 @@ class StatementController extends Controller
 
         $approvalData = [
             ['status_type' => 1, 'user_id' => $request->checked_by], // Checked By
-            ['status_type' => 2, 'user_id' => $request->approved_by], // Approved By
+            ['status_type' => 3, 'user_id' => $request->approved_by], // Approved By
         ];
 
         foreach ($approvalData as $data) {
