@@ -36,7 +36,7 @@ class ClearInvoiceController extends Controller
         try {
             $clearInvoice = ClearInvoice::with(['cashRequest.user:id,name', 'user:id,name,card_id,position,phone,signature']) // Include 'signature' field
                 ->findOrFail($id);
-
+    
             // Fetch approvals for the clear invoice
             $approvals = Approval::where('approval_id', $id)
                 ->whereIn('docs_type', [3, 4]) // Filter by docs_type for ClearInvoice
@@ -47,7 +47,7 @@ class ClearInvoiceController extends Controller
                         1 => 'Checked By',
                         2 => 'Approved By',
                     ];
-
+    
                     return [
                         'label' => $labels[$approval->status_type] ?? 'Unknown',
                         'user_id' => $approval->user_id, // Include user_id for button logic
@@ -61,29 +61,48 @@ class ClearInvoiceController extends Controller
                     ];
                 })
                 ->values(); // Reindex the collection
-
+    
             $users = User::select('id', 'name')->get();
             $cashRequests = CashRequest::with('user:id,name')->select('id', 'ref_no', 'request_type', 'status', 'user_id', 'request_date', 'amount')->get();
             $purchaseInvoiceItems = PurchaseInvoiceItem::with('product:id,product_description,sku')->where('cash_ref', $clearInvoice->cash_id)->get();
-
+    
             // Sum paid_amount and group by campus
             $groupedByCampus = PurchaseInvoiceItem::selectRaw('campus, SUM(paid_amount) as total_paid')
                 ->where('cash_ref', $clearInvoice->cash_id)
                 ->groupBy('campus')
                 ->get();
-
-            return Inertia::render('ClearInvoice/Show', [
-                'clearInvoice' => $clearInvoice,
-                'users' => $users,
-                'cashRequests' => $cashRequests,
-                'purchaseInvoiceItems' => $purchaseInvoiceItems,
-                'groupedByCampus' => $groupedByCampus,
-                'approvals' => $approvals,
-                'currentUser' => [
-                    'id' => Auth::id(), // Pass the authenticated user's ID
-                    'user' => Auth::user(), // Pass the authenticated user
-                ],
-            ]);
+    
+            // Conditional rendering based on clear_type
+            if ($clearInvoice->clear_type == 1) {
+                return Inertia::render('ClearInvoice/ShowPettyCash', [
+                    'clearInvoice' => $clearInvoice,
+                    'users' => $users,
+                    'cashRequests' => $cashRequests,
+                    'purchaseInvoiceItems' => $purchaseInvoiceItems,
+                    'groupedByCampus' => $groupedByCampus,
+                    'approvals' => $approvals,
+                    'currentUser' => [
+                        'id' => Auth::id(), // Pass the authenticated user's ID
+                        'user' => Auth::user(), // Pass the authenticated user
+                    ],
+                ]);
+            } elseif ($clearInvoice->clear_type == 2) {
+                return Inertia::render('ClearInvoice/ShowAdvance', [
+                    'clearInvoice' => $clearInvoice,
+                    'users' => $users,
+                    'cashRequests' => $cashRequests,
+                    'purchaseInvoiceItems' => $purchaseInvoiceItems,
+                    'groupedByCampus' => $groupedByCampus,
+                    'approvals' => $approvals,
+                    'currentUser' => [
+                        'id' => Auth::id(), // Pass the authenticated user's ID
+                        'user' => Auth::user(), // Pass the authenticated user
+                    ],
+                ]);
+            }
+    
+            // Default fallback (optional)
+            return redirect()->back()->with('error', 'Invalid clear type.');
         } catch (\Exception $e) {
             \Log::error('Error in show method:', ['message' => $e->getMessage(), 'stack_trace' => $e->getTraceAsString()]);
             return redirect()->back()->with('error', 'Error fetching clear invoice details.');

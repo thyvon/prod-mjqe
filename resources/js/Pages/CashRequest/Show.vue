@@ -97,7 +97,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.name }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.name || 'N/A' }}</span>
                 </div>
 
                 <div class="col-2 text-start">
@@ -106,7 +106,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.position }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.position || 'N/A' }}</span>
                 </div>
 
                 <div class="col-1 text-start p-0">
@@ -115,7 +115,7 @@
                   </div>
                 </div>
                 <div class="col-1 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.card_id }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.card_id || 'N/A' }}</span>
                 </div>
               </div>
             </div>
@@ -130,7 +130,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.campus }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.campus || 'N/A' }}</span>
                 </div>
 
                 <div class="col-3">
@@ -160,7 +160,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.division }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.division || 'N/A' }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">
@@ -189,7 +189,7 @@
                   </div>
                 </div>
                 <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.user?.department }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.department || 'N/A' }}</span>
                 </div>
                 <div class="col-3">
                   <div class="row">
