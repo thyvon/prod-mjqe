@@ -17,12 +17,12 @@ class ApprovalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($approval) {
-                // Add a column to show ref_no or statement_number based on docs_type
-                if (in_array($approval->docs_type, [1, 2]) && $approval->cashRequest) {
+                // Add a column to show ref_no or statement_number
+                if ($approval->cashRequest) {
                     $approval->reference = $approval->cashRequest->ref_no;
-                } elseif (in_array($approval->docs_type, [3, 4]) && $approval->clearInvoice) {
+                } elseif ($approval->clearInvoice) {
                     $approval->reference = $approval->clearInvoice->ref_no;
-                } elseif ($approval->docs_type == 5 && $approval->clearStatment) {
+                } elseif ($approval->clearStatment) {
                     $approval->reference = $approval->clearStatment->statement_number;
                 } else {
                     $approval->reference = 'N/A';
