@@ -16,7 +16,10 @@ class ClearInvoiceController extends Controller
 {
     public function index()
     {
-        $clearInvoices = ClearInvoice::with(['cashRequest:id,ref_no', 'user:id,name']) // Adjust relationships as needed
+        $clearInvoices = ClearInvoice::with([
+            'cashRequest:id,ref_no',
+            // 'cashRequest.purchaseInvoice:id,pi_number,currency,paid_amount',
+            'user:id,name']) // Adjust relationships as needed
             ->select('id', 'ref_no', 'description', 'remark', 'clear_type', 'clear_by', 'status', 'clear_date', 'cash_id') // Ensure 'cash_id' is selected
             ->get();
 
@@ -351,5 +354,29 @@ class ClearInvoiceController extends Controller
             ->get();
 
         return response()->json($approvals);
+    }
+
+    public function getPurchaseInvoices(Request $request)
+    {
+        $request->validate([
+            'cash_ref' => 'required|exists:cash_requests,id', // Validate that cash_ref exists in cash_requests
+        ]);
+    
+        try {
+            // Fetch purchase invoices with the purchasedBy relationship
+            $purchaseInvoices = PurchaseInvoice::where('cash_ref', $request->cash_ref)
+                ->with('purchasedBy:id,name') // Include the purchasedBy relationship and select only necessary fields
+                ->select('id', 'pi_number', 'currency', 'paid_amount', 'purchased_by') // Select only the necessary fields
+                ->get();
+    
+            return response()->json($purchaseInvoices, 200); // Return the purchase invoices as JSON
+        } catch (\Exception $e) {
+            \Log::error('Error fetching purchase invoices:', [
+                'message' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json(['message' => 'An error occurred while fetching purchase invoices.'], 500);
+        }
     }
 }

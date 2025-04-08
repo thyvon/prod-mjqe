@@ -33,4 +33,14 @@ class Approval extends Model
     {
         return $this->belongsTo(CashRequest::class, 'approval_id');
     }
+
+    public function clearInvoice()
+    {
+        return $this->belongsTo(ClearInvoice::class, 'approval_id');
+    }
+
+    public function clearStatment()
+    {
+        return $this->belongsTo(Statement::class, 'approval_id');
+    }
 }
