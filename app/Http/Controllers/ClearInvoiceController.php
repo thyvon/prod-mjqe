@@ -49,7 +49,7 @@ class ClearInvoiceController extends Controller
                 ->map(function ($approval) {
                     $labels = [
                         1 => 'Checked By',
-                        2 => 'Approved By',
+                        3 => 'Approved By',
                     ];
     
                     return [
