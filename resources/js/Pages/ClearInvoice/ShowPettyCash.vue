@@ -212,7 +212,7 @@ const rejectRequest = async (statusType) => {
             </div>
             <div class="col-6 pt-5">
               <div class="row font-monospace">
-                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំទូទាត់ប្រាក់បុរេប្រទាន</h5>
+                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំទូទាត់ប្រាក់បន្ទាប់បន្សំ</h5>
                 <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Clear Petty Cash</h5>
               </div>
             </div>
