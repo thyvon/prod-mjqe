@@ -313,7 +313,7 @@ const rejectRequest = async (statusType) => {
                     <th style="width: 5%;">Campus</th>
                     <th style="width: 5%;">Qty</th>
                     <th style="width: 5%;">UoM</th>
-                    <th style="width: 5%;">Unit Price</th>
+                    <th style="width: 5%;">Price</th>
                     <th style="width: 5%;">Discount</th>
                     <th style="width: 5%;">Delivery</th>
                     <th style="width: 5%;">Deposit</th>
@@ -338,8 +338,8 @@ const rejectRequest = async (statusType) => {
                     <td>{{ parseFloat(item.service_charge).toFixed(2) }}</td>
                     <td>{{ parseFloat(item.deposit).toFixed(2) }}</td>
                     <td>{{ parseFloat(item.vat).toFixed(2) }}</td>
-                    <td>{{ parseFloat(item.total_khr).toFixed(2) }}</td>
-                    <td>{{ parseFloat(item.total_usd).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.total_khr).toFixed(4) }}</td>
+                    <td>{{ parseFloat(item.total_usd).toFixed(4) }}</td>
                 </tr>
                 <tr>
                     <td colspan="11" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>

@@ -64,8 +64,18 @@ class ClearInvoiceController extends Controller
     
             $users = User::select('id', 'name')->get();
             $cashRequests = CashRequest::with('user:id,name')->select('id', 'ref_no', 'request_type', 'status', 'user_id', 'request_date', 'amount')->get();
-            $purchaseInvoiceItems = PurchaseInvoiceItem::with('product:id,product_description,sku', 'purchaseRequest:id,pr_number','supplier:id,name', 'purchasedBy:id,name')->where('cash_ref', $clearInvoice->cash_id)->get();
-    
+            $purchaseInvoiceItems = PurchaseInvoiceItem::with(
+                'product:id,product_description,sku', 
+                'purchaseRequest:id,pr_number', 
+                'supplier:id,name', 
+                'purchasedBy:id,name'
+            )
+            ->where('cash_ref', $clearInvoice->cash_id)
+            ->orderBy('campus') // Sort by campus
+            ->orderBy('pi_number') // Then by pi_number
+            ->orderBy('created_at') // Finally by created_at
+            ->get();
+            
             // Sum paid_amount and group by campus
             $groupedByCampus = PurchaseInvoiceItem::selectRaw('campus, SUM(paid_amount) as total_paid')
                 ->where('cash_ref', $clearInvoice->cash_id)
