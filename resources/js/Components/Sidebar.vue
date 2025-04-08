@@ -130,18 +130,24 @@ const isActive = (targetRoute) => {
                         </div>
                     </div>
 
-                    <div class="menu-item" :class="{'active': isActive('/clear-invoice')}">
-                        <Link href="/clear-invoice" class="menu-link">
+                    <div class="menu-item has-sub" :class="{'active': isActive('/clear-invoice') || isActive('/statements')}">
+                        <a href="javascript:;" class="menu-link">
                             <div class="menu-text">Clear Invoice</div>
-                        </Link>
+                            <div class="menu-caret"></div>
+                        </a>
+                        <div class="menu-submenu">
+                            <div class="menu-item" :class="{'active': isActive('/clear-invoice')}">
+                                <Link href="/clear-invoice" class="menu-link">
+                                    <div class="menu-text">Clear Cash</div>
+                                </Link>
+                            </div>
+                            <div class="menu-item" :class="{'active': isActive('/statements')}">
+                                <Link href="/statements" class="menu-link">
+                                    <div class="menu-text">Clear Statement</div>
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="menu-item" :class="{'active': isActive('/statements')}">
-                        <Link href="/statements" class="menu-link">
-                            <div class="menu-text">Clear Statement</div>
-                        </Link>
-                    </div>
-
                 </div>
             </div>
 
