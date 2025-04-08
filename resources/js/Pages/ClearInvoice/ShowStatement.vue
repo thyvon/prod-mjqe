@@ -127,7 +127,7 @@
             </div>
   
             <!-- Table Section -->
-            <div class="row mb-3">
+            <!-- <div class="row mb-3">
               <div class="table-responsive width-full p-0">
                 <table class="table table-bordered border-dark table-sm">
                   <thead style="font-size: 12px;">
@@ -149,6 +149,35 @@
                       <td colspan="3" class="text-end fw-bold">សរុប/Total:</td>
                       <td class="text-end fw-bold">
                         {{ statement.invoices.flatMap(invoice => invoice.purchase_invoice.items).reduce((total, item) => total + parseFloat(item.paid_amount || 0), 0).toFixed(4) || '0.0000' }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div> -->
+
+            <div class="row mb-3">
+              <div class="table-responsive width-full p-0">
+                <table class="table table-bordered border-dark table-sm">
+                  <thead style="font-size: 12px;">
+                    <tr class="text-center">
+                      <th style="width: 5%;">ល.រ.<br>No.</th>
+                      <th style="width: 50%;">បរិយាយ<br>Description</th>
+                      <th style="width: 10%;">សាខា<br>Campus</th>
+                      <th style="width: 20%;">ទឹកប្រាក់<br>Total Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody class="table-group-divider" style="font-size: 12px;">
+                    <tr v-for="(group, index) in groupedByCampus" :key="group.campus">
+                      <td class="text-center">{{ index + 1 }}</td>
+                      <td class="text-center">{{ statement.description || 'N/A' }}</td>
+                      <td class="text-center">{{ group.campus }}</td>
+                      <td class="text-end">{{ group.totalAmount.toFixed(4) }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="3" class="text-end fw-bold">សរុប/Total:</td>
+                      <td class="text-end fw-bold">
+                        {{ groupedByCampus.reduce((total, group) => total + group.totalAmount, 0).toFixed(4) || '0.0000' }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}
                       </td>
                     </tr>
                   </tbody>
@@ -282,6 +311,21 @@ const printPage = () => {
   const departments = getUniqueValues('department');
   const divisions = getUniqueValues('division');
   const campuses = getUniqueValues('campus');
+
+
+  const groupedByCampus = computed(() => {
+    const items = props.statement.invoices.flatMap(invoice => invoice.purchase_invoice.items);
+    const grouped = items.reduce((acc, item) => {
+      const campus = item.campus || 'N/A';
+      if (!acc[campus]) {
+        acc[campus] = { campus, totalAmount: 0, items: [] };
+      }
+      acc[campus].totalAmount += parseFloat(item.paid_amount || 0);
+      acc[campus].items.push(item);
+      return acc;
+    }, {});
+    return Object.values(grouped);
+  });
   
   // Helper functions
   const getSignatureUrl = (signature) => {
