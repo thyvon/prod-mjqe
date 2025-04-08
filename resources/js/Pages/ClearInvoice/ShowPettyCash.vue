@@ -24,9 +24,7 @@ const props = defineProps({
 const clearInvoice = reactive(props.clearInvoice);
 const purchaseInvoiceItems = ref(props.purchaseInvoiceItems);
 
-const getClearTypeHeading = (clearType) => {
-  return clearType === 1 ? 'Clear Petty Cash' : 'Clear Advance';
-};
+
 
 const formatDate = (dateString) => {
   const options = { year: 'numeric', month: 'short', day: '2-digit' };
@@ -36,7 +34,7 @@ const formatDate = (dateString) => {
 
 // Computed property to calculate the total actual expense (sum of the "paid_amount" column) with 4 decimal places
 const actualExpense = computed(() => {
-  const total = purchaseInvoiceItems.value.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
+  const total = purchaseInvoiceItems.value.reduce((sum, item) => sum + (parseFloat(item.total_usd) || 0), 0);
   return parseFloat(total.toFixed(4));
 });
 
@@ -206,7 +204,7 @@ const rejectRequest = async (statusType) => {
       <div id="printable-area">
         <div class="row justify-content-center">
           <!-- Header Section -->
-          <div class="row mb-3">
+          <div class="row mb-0">
             <div class="col-3">
               <a class="d-block text-start" href="#!">
                 <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="BootstrapBrain Logo" width="135" height="44">
@@ -215,20 +213,21 @@ const rejectRequest = async (statusType) => {
             <div class="col-6 pt-5">
               <div class="row font-monospace">
                 <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំទូទាត់ប្រាក់បុរេប្រទាន</h5>
-                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Liquidation of Advance</h5>
+                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Clear Petty Cash</h5>
               </div>
             </div>
             <div class="col-3">
               <div class="row font-monospace">
-                <span class="text-sm-end" style="font-size: x-small;">Code: MJQE0166</span>
-                <span class="text-sm-end" style="font-size: x-small;">Version 1.0</span>
+                <span class="text-sm-end" style="font-size: x-small;">Cash Ref: {{ clearInvoice.cash_request?.ref_no }} ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})</span>
+                <span class="text-sm-end" style="font-size: x-small;">Clear Ref: {{ clearInvoice.ref_no }}</span>
+                <span class="text-sm-end" style="font-size: x-small;">Date: {{ formatDate(clearInvoice.clear_date) }}</span>
               </div>
             </div>
           </div>
 
           <!-- Personal Information Section -->
 
-          <div class="row mb-1">
+          <!-- <div class="row mb-1">
             <div class="col-12">
               <div class="row">
                 <div class="col-2 text-start p-0">
@@ -242,7 +241,6 @@ const rejectRequest = async (statusType) => {
 
                 <div class="col-2">
                   <div class="row">
-                    <!-- <span>TK</span> -->
                   </div>
                 </div>
 
@@ -256,71 +254,10 @@ const rejectRequest = async (statusType) => {
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="row mb-1">
-            <div class="col-12">
-              <div class="row">
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>អត្តលេខ/Card ID:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.card_id}}</span>
-                </div>
-
-                <div class="col-2">
-                  <div class="row">
-                    <!-- <span>TK</span> -->
-                  </div>
-                </div>
-
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>លេខសំណើរ/Adv. Ref:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.ref_no }} 
-                    ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="row mb-1">
-            <div class="col-12">
-              <div class="row">
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>លេខទូរស័ព្ទ/Phone:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.phone}}</span>
-                </div>
-
-                <div class="col-2">
-                  <div class="row">
-                    <!-- <span>TK</span> -->
-                  </div>
-                </div>
-
-                <div class="col-2 text-start p-0">
-                  <div class="row mt-2">
-                    <span>លេខទូទាត់/Liq. Ref:</span>
-                  </div>
-                </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.cash_request?.ref_no }} </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </div> -->
 
           <!-- Table Section -->
-          <div class="row mb-3">
+          <!-- <div class="row mb-3">
             <div class="table-responsive width-full p-0">
               <table class="table table-bordered border-dark table-sm">
                 <thead style="font-size: 12px;">
@@ -360,8 +297,67 @@ const rejectRequest = async (statusType) => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </div> -->
 
+          <div class="row mb-3">
+            <div class="table-responsive width-full p-0">
+            <table class="table table-bordered border-dark table-sm">
+                <thead style="font-size: 11px; font-family: 'TW Cen MT';">
+                <tr class="text-center">
+                    <th style="width: 3%;">No.</th>
+                    <th style="width: 8%;">Date Invoice</th>
+                    <th style="width: 12%;">Ref: PR</th>
+                    <th style="width: 9%;">Purchaser</th>
+                    <th style="width: 20%;">Description (English/Khmer)</th>
+                    <th style="width: 10%;">Vendor</th>
+                    <th style="width: 5%;">Campus</th>
+                    <th style="width: 5%;">Qty</th>
+                    <th style="width: 5%;">UoM</th>
+                    <th style="width: 5%;">Unit Price</th>
+                    <th style="width: 5%;">Discount</th>
+                    <th style="width: 5%;">Delivery</th>
+                    <th style="width: 5%;">Deposit</th>
+                    <th style="width: 5%;">VAT</th>
+                    <th style="width: 10%;">Total KHR</th>
+                    <th style="width: 10%;">Total USD</th>
+                </tr>
+                </thead>
+                <tbody class="table-group-divider" style="font-size: 10px;">
+                <tr v-for="(item, index) in purchaseInvoiceItems" :key="index">
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ formatDate(item.invoice_date) }}</td>
+                    <td>{{ item.purchase_request?.pr_number }}</td>
+                    <td>{{ item.purchased_by?.name }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.supplier?.name }}</td>
+                    <td>{{ item.campus }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ item.uom }}</td>
+                    <td>{{ parseFloat(item.unit_price).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.discount).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.service_charge).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.deposit).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.vat).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.total_khr).toFixed(2) }}</td>
+                    <td>{{ parseFloat(item.total_usd).toFixed(2) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="11" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>
+                    <td colspan="2"class="fw-bold">Actual Expense</td>
+                    <td colspan="3"class="fw-bold text-end">{{ actualExpense.toFixed(4) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2"class="fw-bold">Cash Request</td>
+                    <td colspan="3" class="fw-bold text-end">{{ parseFloat(clearInvoice.cash_request?.amount || 0).toFixed(4) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2"class="fw-bold">Remaining Cash</td>
+                    <td colspan="3"class="fw-bold text-end">{{ balance.toFixed(4) }}</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
           <!-- Footer Section -->
           <div class="row mb-3" style="height: 150px;">
 
@@ -438,17 +434,17 @@ const rejectRequest = async (statusType) => {
 
 <style scoped>
 .a4-size {
-  width: 210mm;
-  height: 297mm;
-  margin: 10mm auto; /* Updated margin for A4 paper */
+  width: 297mm; /* Landscape width */
+  height: 210mm; /* Landscape height */
+  margin: 10mm auto; /* Center the content */
   padding: 10mm;
   background: white;
 }
 
 @media print {
   .a4-size {
-    width: 210mm;
-    height: 297mm;
+    width: 297mm; /* Landscape width for print */
+    height: 210mm; /* Landscape height for print */
     margin: 10mm auto; /* Ensure margin is applied during printing */
     padding: 20mm !important; /* Enforce padding for print */
     box-shadow: none; /* Remove any shadow for clean printing */
@@ -456,6 +452,11 @@ const rejectRequest = async (statusType) => {
 
   #printable-area {
     padding: 20mm !important; /* Ensure padding is applied to the printable area */
+  }
+
+  @page {
+    size: A4 landscape; /* Set the page size to A4 landscape */
+    margin: 0; /* Remove default margins */
   }
 }
 </style>
