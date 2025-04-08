@@ -38,7 +38,7 @@ function formatToK(value) {
     if (value >= 1000) {
         return (value / 1000).toFixed(1) + 'K';
     }
-    return value;
+    return value.toFixed(2);
 }
 
 async function fetchPurchaseInvoiceItemData(startDate, endDate) {
@@ -74,7 +74,7 @@ function updateColumnChart(data) {
                 {
                     label: 'Expense USD',
                     data: values,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    backgroundColor: 'rgba(229, 231, 233, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
                 },
@@ -86,6 +86,9 @@ function updateColumnChart(data) {
                 legend: {
                     display: true,
                     position: 'top',
+                    labels: {
+                        color: 'white', // Set legend label color to white
+                    },
                 },
             },
             scales: {
@@ -93,12 +96,26 @@ function updateColumnChart(data) {
                     title: {
                         display: true,
                         text: 'Campus',
+                        color: 'white', // White text for axis title
+                    },
+                    ticks: {
+                        color: 'white', // White text for axis labels
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)', // Subtle grid lines
                     },
                 },
                 y: {
                     title: {
                         display: true,
                         text: 'Total Expense (USD)',
+                        color: 'white', // White text for axis title
+                    },
+                    ticks: {
+                        color: 'white', // White text for axis labels
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)', // Subtle grid lines
                     },
                     beginAtZero: true,
                 },
@@ -584,8 +601,8 @@ onMounted(async () => {
             type: 'line',
             data: {
                 labels: [
-                    'January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December'
+                    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                 ],
                 datasets: [
                     {
@@ -1039,32 +1056,16 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 			<!-- BEGIN row -->
 			<div class="row">
 				<!-- BEGIN col-8 -->
-				<div class="col-xl-8 col-lg-6">
+				<div class="col-xl-8 col-lg-8">
 					<!-- BEGIN card -->
 					<div class="card border-0 mb-3 bg-gray-800 text-white">
-						<!-- <div class="card-body">
-							<div class="mb-3 text-gray-500 "><b>VISITORS ANALYTICS</b> <span class="ms-2"><i class="fa fa-info-circle" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Top products with units sold" data-bs-placement="top" data-bs-content="Products with the most individual units sold. Includes orders from all sales channels." data-original-title="" title=""></i></span></div>
-							<div class="row">
-								<div class="col-xl-3 col-4">
-									<h3 class="mb-1"><span data-animation="number" data-value="127.1">0</span>K</h3>
-									<div>New Visitors</div>
-									<div class="text-gray-500 small text-truncate"><i class="fa fa-caret-up"></i> <span data-animation="number" data-value="25.5">0.00</span>% from previous 7 days</div>
-								</div>
-								<div class="col-xl-3 col-4">
-									<h3 class="mb-1"><span data-animation="number" data-value="179.9">0</span>K</h3>
-									<div>Returning Visitors</div>
-									<div class="text-gray-500 small text-truncate"><i class="fa fa-caret-up"></i> <span data-animation="number" data-value="5.33">0.00</span>% from previous 7 days</div>
-								</div>
-								<div class="col-xl-3 col-4">
-									<h3 class="mb-1"><span data-animation="number" data-value="766.8">0</span>K</h3>
-									<div>Total Page Views</div>
-									<div class="text-gray-500 small text-truncate"><i class="fa fa-caret-up"></i> <span data-animation="number" data-value="0.323">0.00</span>% from previous 7 days</div>
-								</div>
+						<div class="card-body">
+                            <div class="mb-2 text-gray-500">
+								<b>COMPARATION</b>
+								<span class="ms-2"><i class="fa fa-hand-holding-dollar" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-title="Expense Comparation" data-bs-placement="top"></i></span>
 							</div>
-						</div> -->
-						<div class="card-body p-0">
-							<div style="height: 392px"> <!-- Match height with EXPENSE BY TYPE -->
-								<canvas id="line-chart" style="height: 330px"></canvas>
+							<div> <!-- Match height with EXPENSE BY TYPE -->
+								<canvas id="line-chart" style="height: 337px"></canvas>
 							</div>
 						</div>
 					</div>
@@ -1072,7 +1073,7 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 				</div>
 				<!-- END col-8 -->
 				<!-- BEGIN col-4 -->
-				<div class="col-xl-4 col-lg-6">
+				<div class="col-xl-4 col-lg-4">
 					<!-- BEGIN card -->
 					<div class="card border-0 mb-3 bg-gray-800 text-white">
 						<div class="card-body">
@@ -1092,7 +1093,7 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 			<!-- END row -->
 			<!-- BEGIN row -->
 			<div class="row">
-				<div class="col-md-12">
+				<div class="col-md-8">
 						<div class="card border-0 mb-3 bg-gray-800 text-white">
 							<div class="card-body">
 								<div class="mb-3 text-gray-500">

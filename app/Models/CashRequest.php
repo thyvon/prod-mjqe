@@ -50,6 +50,11 @@ class CashRequest extends Model
         return $this->hasOne(ClearInvoice::class);
     }
 
+    public function purchaseInvoice()
+    {
+        return $this->hasMany(PurchaseInvoice::class, 'cash_ref');
+    }
+
     public static function generateRefNo($requestType)
     {
         $date = now()->format('Ymd');

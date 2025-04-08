@@ -16,7 +16,8 @@ use App\Http\Controllers\{
     InvoiceAttachmentController,
     DashboardController,
     CancallationController,
-    StatementController
+    StatementController,
+    ApprovalController
 };
 
 /*
@@ -127,6 +128,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoices/attachments/{id}/update-file', [InvoiceController::class, 'updateFile'])->name('invoices.updateFile');
     Route::get('/purchase/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/clear-invoices', [ClearInvoiceController::class, 'getClearInvoices']);
+    Route::get('/clear-invoices-invoice', [ClearInvoiceController::class, 'getPurchaseInvoices'])->name('clear-invoices-invoice.fetch');
 
     // Add route to fetch approvals for a specific cash request
     Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
@@ -157,6 +159,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/statements/{statement}/approvals', [StatementController::class, 'getApprovals'])->name('statements.approvals');
     Route::post('/statements/{statement}/approve', [StatementController::class, 'approve'])->name('statements.approve');
     Route::post('/statements/{statement}/reject', [StatementController::class, 'reject'])->name('statements.reject');
+
+    // Add a route for the index method of the ApprovalController
+    Route::get('/approvals', [ApprovalController::class, 'index'])->name('approvals.index');
 });
 // Routes for Statement Invoices
 

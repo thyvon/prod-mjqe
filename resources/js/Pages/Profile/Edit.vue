@@ -575,7 +575,7 @@ onMounted(async () => {
                                         <div id="profile-dropzone" class="dropzone needsclick">
                                             <span>Profile Picture</span>
                                             <div class="dz-message needsclick">
-                                                Drop profile picture <b>here</b> or <b>click</b> to upload.
+                                                Drop profile picture or <b>click</b> to upload.
                                             </div>
                                         </div>
                                     </div>

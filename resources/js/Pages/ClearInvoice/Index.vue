@@ -21,6 +21,26 @@ const props = defineProps({
   },
 });
 
+const purchaseInvoices = ref([]); // Ensure this is reactive
+// Currency mapping
+const currencyMap = {
+  1: 'USD',
+  2: 'KHR',
+  // Add more currencies as needed
+};
+
+const fetchPurchaseInvoices = async (cashRef) => {
+  try {
+    const response = await axios.get('/clear-invoices-invoice', {
+      params: { cash_ref: cashRef },
+    });
+    purchaseInvoices.value = response.data; // Update the reactive array
+  } catch (error) {
+    console.error('Error fetching purchase invoices:', error);
+    purchaseInvoices.value = []; // Clear the array on error
+  }
+};
+
 // Local state for clear invoices
 const isEdit = ref(false);
 const clearInvoiceForm = reactive({
@@ -56,6 +76,13 @@ watch(() => clearInvoiceForm.clear_type, () => {
   });
 });
 
+// Watch for changes in cash_id and fetch purchaseInvoice data
+watch(() => clearInvoiceForm.cash_id, (newCashId) => {
+  if (newCashId) {
+    fetchPurchaseInvoices(newCashId);
+  }
+});
+
 // Functions
 const openCreateModal = () => {
   isEdit.value = false;
@@ -68,6 +95,7 @@ const openCreateModal = () => {
     description: '',
     status: 'pending',
   });
+  purchaseInvoices.value = [];
   filterCashRequests(); // Filter cash requests based on clear type
   const modalElement = document.getElementById('clearInvoiceModal');
   const modal = new bootstrap.Modal(modalElement);
@@ -88,6 +116,9 @@ const openEditModal = async (clearInvoice) => {
     // Map approvals to the corresponding fields
     clearInvoiceForm.checked_by = approvals.find(a => a.status_type === 1)?.user_id || null;
     clearInvoiceForm.approved_by = approvals.find(a => a.status_type === 2)?.user_id || null;
+
+    // Fetch purchaseInvoice data based on cash_id
+    await fetchPurchaseInvoices(clearInvoice.cash_id);
   } catch (error) {
     console.error('Failed to fetch approval data:', error);
   }
@@ -451,6 +482,38 @@ onMounted(() => {
                         </select>
                         <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- New Table for Purchase Invoices -->
+                  <div class="row mt-4">
+                    <div class="col-12">
+                      <h5>Purchase Invoices</h5>
+                      <table class="table table-bordered table-sm">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>PI Number</th>
+                            <th>Currency</th>
+                            <th>Paid Amount</th>
+                            <th>Purchaser</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Loop through purchaseInvoices and display each invoice -->
+                          <tr v-for="(invoice, index) in purchaseInvoices" :key="invoice.id">
+                            <td>{{ index + 1 }}</td>
+                            <td>{{ invoice.pi_number || 'N/A' }}</td> <!-- Handle missing data with fallback -->
+                            <td>{{ currencyMap[invoice.currency] || 'Unknown' }}</td> <!-- Map currency ID to name -->
+                            <td>{{ invoice.paid_amount ? parseFloat(invoice.paid_amount).toFixed(4) : '0.0000' }}</td> <!-- Format numbers to 4 decimal places -->
+                            <td>{{ invoice.purchased_by?.name || 'N/A' }}</td> <!-- Handle missing data with fallback -->
+                          </tr>
+                          <!-- Show a message if no purchase invoices are found -->
+                          <tr v-if="purchaseInvoices.length === 0">
+                            <td colspan="4" class="text-center">No purchase invoices found.</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                   <div class="modal-footer">

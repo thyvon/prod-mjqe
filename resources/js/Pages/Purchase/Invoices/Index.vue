@@ -666,10 +666,23 @@ const initializeSupplierSelect = () => {
     },
   }).on('select2:select', function (e) {
     form.supplier = e.params.data.id;
+    form.purchased_by = e.params.data.id; // Update v-model
   }).on('select2:unselect', function () {
     form.supplier = '';
     form.vat_rate = 0;
+    form.purchased_by = null; // Clear v-model when unselected
   });
+
+    // Set the default value for the dropdown
+    if (form.purchased_by) {
+    const selectedOption = new Option(
+      props.users.find(user => user.id === form.purchased_by)?.name || 'Unknown',
+      form.purchased_by,
+      true,
+      true
+    );
+    $('#purchased_by').append(selectedOption).trigger('change');
+  }
 };
 
 watch(() => form.supplier, (newSupplierId) => {
@@ -1874,7 +1887,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="clearForm">Clear</button>
+              <button type="button" class="btn btn-secondary mr-5 btn-danger" @click="clearForm">Clear</button>
               <button type="submit" class="btn btn-primary">Submit</button>
             </div>
           </form>

@@ -85,4 +85,9 @@ class PurchaseInvoice extends Model
     {
         return $this->hasMany(InvoiceAttachment::class, 'purchase_invoice_id');
     }
+
+    public function purchasedBy ()
+    {
+        return $this->belongsTo(User::class, 'purchased_by');
+    }
 }
