@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('/clear-invoices', [ClearInvoiceController::class, 'getClearInvoices']);
     Route::get('/clear-invoices-invoice', [ClearInvoiceController::class, 'getPurchaseInvoices'])->name('clear-invoices-invoice.fetch');
+    Route::get('/clear-invoices-invoice-edit', [ClearInvoiceController::class, 'getPurchaseInvoicesEdit'])->name('clear-invoices-invoice.fetch-edit');
 
     // Add route to fetch approvals for a specific cash request
     Route::get('/cash-request/{cashRequest}/approvals', [CashRequestController::class, 'getApprovals'])->name('cash-request.approvals');
@@ -145,9 +146,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/clear-invoice/{clearInvoice}/approve', [ClearInvoiceController::class, 'approve'])->name('clear-invoice.approve');
     Route::post('/clear-invoice/{clearInvoice}/reject', [ClearInvoiceController::class, 'reject'])->name('clear-invoice.reject');
 
-    // Add route to fetch approvals for a specific ClearInvoice
+    // Add route to fetch approvals for a specific ClearInvoice for create form
     Route::get('/clear-invoice/{clearInvoice}/approvals', [ClearInvoiceController::class, 'getApprovals'])->name('clear-invoice.approvals');
-
+    
     // Additional routes for fetching PR and PO items
     Route::get('/pr-items-cancellation', [CancallationController::class, 'getPrItems'])->name('pr-items-cancellation');
     Route::get('/po-items-cancellation', [CancallationController::class, 'getPoItems'])->name('po-items-cancellation');

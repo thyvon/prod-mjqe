@@ -29,9 +29,26 @@ const currencyMap = {
   // Add more currencies as needed
 };
 
+const statusMap = {
+  1: 'Cleared',
+  0: 'Pending',
+};
+
 const fetchPurchaseInvoices = async (cashRef) => {
   try {
     const response = await axios.get('/clear-invoices-invoice', {
+      params: { cash_ref: cashRef },
+    });
+    purchaseInvoices.value = response.data; // Update the reactive array
+  } catch (error) {
+    console.error('Error fetching purchase invoices:', error);
+    purchaseInvoices.value = []; // Clear the array on error
+  }
+};
+
+const fetchPurchaseInvoicesEdit = async (cashRef) => {
+  try {
+    const response = await axios.get('/clear-invoices-invoice-edit', {
       params: { cash_ref: cashRef },
     });
     purchaseInvoices.value = response.data; // Update the reactive array
@@ -80,6 +97,7 @@ watch(() => clearInvoiceForm.clear_type, () => {
 watch(() => clearInvoiceForm.cash_id, (newCashId) => {
   if (newCashId) {
     fetchPurchaseInvoices(newCashId);
+    // fetchPurchaseInvoicesEdit(newCashId);
   }
 });
 
@@ -118,7 +136,14 @@ const openEditModal = async (clearInvoice) => {
     clearInvoiceForm.approved_by = approvals.find(a => a.status_type === 3)?.user_id || null;
 
     // Fetch purchaseInvoice data based on cash_id
-    await fetchPurchaseInvoices(clearInvoice.cash_id);
+    await fetchPurchaseInvoicesEdit(clearInvoice.cash_id);
+      watch(() => clearInvoiceForm.cash_id, (newCashId) => {
+        if (newCashId) {
+          fetchPurchaseInvoicesEdit(newCashId);
+          // fetchPurchaseInvoicesEdit(newCashId);
+        }
+      });
+
   } catch (error) {
     console.error('Failed to fetch approval data:', error);
   }
@@ -465,7 +490,7 @@ onMounted(() => {
                   <div class="row mt-4">
                     <div class="col-12">
                       <h5>Purchase Invoices</h5>
-                      <table class="table table-bordered table-sm">
+                      <table class="table table-bordered table-sm table-responsive">
                         <thead>
                           <tr>
                             <th>#</th>
@@ -473,6 +498,7 @@ onMounted(() => {
                             <th>Currency</th>
                             <th>Paid Amount</th>
                             <th>Purchaser</th>
+                            <th>Payment Status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -483,6 +509,7 @@ onMounted(() => {
                             <td>{{ currencyMap[invoice.currency] || 'Unknown' }}</td> <!-- Map currency ID to name -->
                             <td>{{ invoice.paid_amount ? parseFloat(invoice.paid_amount).toFixed(4) : '0.0000' }}</td> <!-- Format numbers to 4 decimal places -->
                             <td>{{ invoice.purchased_by?.name || 'N/A' }}</td> <!-- Handle missing data with fallback -->
+                            <td>{{ statusMap[invoice.status] || 'Unknown' }}</td> 
                           </tr>
                           <!-- Show a message if no purchase invoices are found -->
                           <tr v-if="purchaseInvoices.length === 0">

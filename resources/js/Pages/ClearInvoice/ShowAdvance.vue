@@ -325,9 +325,9 @@ const rejectRequest = async (statusType) => {
               <table class="table table-bordered border-dark table-sm">
                 <thead style="font-size: 12px;">
                   <tr class="text-center">
-                    <th>ល.រ.<br>No.</th>
-                    <th>បរិយាយ<br>Description</th>
-                    <th>សាខា<br>Campus</th>
+                    <th style="width: 5%;">ល.រ.<br>No.</th>
+                    <th style="width: 60%;">បរិយាយ<br>Description</th>
+                    <th style="width: 13%;">សាខា<br>Campus</th>
                     <th>ទឹកប្រាក់<br>Total Amount</th>
                   </tr>
                 </thead>
@@ -336,7 +336,7 @@ const rejectRequest = async (statusType) => {
                     <td class="text-center">{{ index + 1 }}</td>
                     <td class="text-start">{{ clearInvoice.description }}</td>
                     <td class="text-center">{{ group.campus }}</td>
-                    <td class="text-end">{{ parseFloat(group.total_paid).toFixed(4) }}</td>
+                    <td class="text-end">{{ parseFloat(group.total_paid).toFixed(4) }} {{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }}</td>
                   </tr>
                   <tr style="height: 200px;">
                     <td></td>
@@ -347,15 +347,15 @@ const rejectRequest = async (statusType) => {
                   <tr>
                     <td colspan="2" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>
                     <td class="fw-bold">Actual Expense</td>
-                    <td class="fw-bold">{{ actualExpense.toFixed(4) }}</td>
+                    <td class="fw-bold text-end">{{ actualExpense.toFixed(4) }} {{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }}</td>
                   </tr>
                   <tr>
                     <td class="fw-bold">Cash Advance</td>
-                    <td class="fw-bold">{{ parseFloat(clearInvoice.cash_request?.amount || 0).toFixed(4) }}</td>
+                    <td class="fw-bold text-end">{{ parseFloat(clearInvoice.cash_request?.amount || 0).toFixed(4) }} {{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }}</td>
                   </tr>
                   <tr>
                     <td class="fw-bold">Remaining Cash</td>
-                    <td class="fw-bold">{{ balance.toFixed(4) }}</td>
+                    <td class="fw-bold text-end">{{ balance.toFixed(4) }} {{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }}</td>
                   </tr>
                 </tbody>
               </table>

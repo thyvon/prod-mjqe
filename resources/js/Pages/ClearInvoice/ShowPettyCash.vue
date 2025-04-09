@@ -34,7 +34,7 @@ const formatDate = (dateString) => {
 
 // Computed property to calculate the total actual expense (sum of the "paid_amount" column) with 4 decimal places
 const actualExpense = computed(() => {
-  const total = purchaseInvoiceItems.value.reduce((sum, item) => sum + (parseFloat(item.total_usd) || 0), 0);
+  const total = purchaseInvoiceItems.value.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
   return parseFloat(total.toFixed(4));
 });
 
@@ -243,8 +243,8 @@ const rejectRequest = async (statusType) => {
                     <th style="width: 5%;">Delivery</th>
                     <th style="width: 5%;">Deposit</th>
                     <th style="width: 5%;">VAT</th>
-                    <th style="width: 10%;">Total KHR</th>
-                    <th style="width: 10%;">Total USD</th>
+                    <!-- <th style="width: 10%;">Total KHR</th> -->
+                    <th style="width: 10%;">Total</th>
                 </tr>
                 </thead>
                 <tbody class="table-group-divider" style="font-size: 10px;">
@@ -263,8 +263,8 @@ const rejectRequest = async (statusType) => {
                     <td>{{ parseFloat(item.service_charge).toFixed(2) }}</td>
                     <td>{{ parseFloat(item.deposit).toFixed(2) }}</td>
                     <td>{{ parseFloat(item.vat).toFixed(2) }}</td>
-                    <td>{{ parseFloat(item.total_khr).toFixed(4) }}</td>
-                    <td>{{ parseFloat(item.total_usd).toFixed(4) }}</td>
+                    <!-- <td>{{ parseFloat(item.total_khr).toFixed(4) }}</td> -->
+                    <td>{{ parseFloat(item.paid_amount).toFixed(4) }}</td>
                 </tr>
                 <tr>
                     <td colspan="11" rowspan="3">Procurement Remark: {{ clearInvoice.remark }}</td>

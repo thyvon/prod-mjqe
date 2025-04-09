@@ -228,6 +228,9 @@ class ClearInvoiceController extends Controller
         PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
         ->update(['status' => 0]); // Update PurchaseInvoice status to 0 (Reset)
 
+        CashRequest::where('id', $clearInvoice->cash_id)
+        ->update(['status' => 0]);
+
         // Delete related approval records where docs_type is 3 or 4
         Approval::where('approval_id', $id)
             ->whereIn('docs_type', [3, 4])
@@ -280,6 +283,8 @@ class ClearInvoiceController extends Controller
                 // Update related PurchaseInvoice records when statement status is approved
                 PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
                 ->update(['status' => 1]); // Update PurchaseInvoice status to 2 (Approved)
+                CashRequest::where('id', $clearInvoice->cash_id)
+                ->update(['status' => 1]);
             }
             $clearInvoice->save();
 
@@ -365,8 +370,34 @@ class ClearInvoiceController extends Controller
         try {
             // Fetch purchase invoices with the purchasedBy relationship
             $purchaseInvoices = PurchaseInvoice::where('cash_ref', $request->cash_ref)
+                ->where('status', 0)
                 ->with('purchasedBy:id,name') // Include the purchasedBy relationship and select only necessary fields
-                ->select('id', 'pi_number', 'currency', 'paid_amount', 'purchased_by') // Select only the necessary fields
+                ->select('id', 'pi_number', 'currency', 'paid_amount', 'purchased_by','status') // Select only the necessary fields
+                ->get();
+    
+            return response()->json($purchaseInvoices, 200); // Return the purchase invoices as JSON
+        } catch (\Exception $e) {
+            \Log::error('Error fetching purchase invoices:', [
+                'message' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json(['message' => 'An error occurred while fetching purchase invoices.'], 500);
+        }
+    }
+
+    public function getPurchaseInvoicesEdit(Request $request)
+    {
+        $request->validate([
+            'cash_ref' => 'required|exists:cash_requests,id', // Validate that cash_ref exists in cash_requests
+        ]);
+    
+        try {
+            // Fetch purchase invoices with the purchasedBy relationship
+            $purchaseInvoices = PurchaseInvoice::where('cash_ref', $request->cash_ref)
+                // ->where('status', 1)
+                ->with('purchasedBy:id,name') // Include the purchasedBy relationship and select only necessary fields
+                ->select('id', 'pi_number', 'currency', 'paid_amount', 'purchased_by', 'status') // Select only the necessary fields
                 ->get();
     
             return response()->json($purchaseInvoices, 200); // Return the purchase invoices as JSON
