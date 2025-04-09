@@ -115,7 +115,7 @@ const openEditModal = async (clearInvoice) => {
 
     // Map approvals to the corresponding fields
     clearInvoiceForm.checked_by = approvals.find(a => a.status_type === 1)?.user_id || null;
-    clearInvoiceForm.approved_by = approvals.find(a => a.status_type === 2)?.user_id || null;
+    clearInvoiceForm.approved_by = approvals.find(a => a.status_type === 3)?.user_id || null;
 
     // Fetch purchaseInvoice data based on cash_id
     await fetchPurchaseInvoices(clearInvoice.cash_id);
@@ -460,30 +460,6 @@ onMounted(() => {
                       </div>
                     </div>
                   </div>
-                  <div class="row mb-2">
-                    <div class="col-6 border">
-                      <div class="row">
-                        <span class="text-center">Checked By</span>
-                      </div>
-                      <div class="col-sm-12">
-                        <select v-model="clearInvoiceForm.checked_by" class="form-select select2" id="checked_by">
-                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                        </select>
-                        <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
-                      </div>
-                    </div>
-                    <div class="col-6 border">
-                      <div class="row">
-                        <span class="text-center">Approved By</span>
-                      </div>
-                      <div class="col-sm-12">
-                        <select v-model="clearInvoiceForm.approved_by" class="form-select select2" id="approved_by">
-                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                        </select>
-                        <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
-                      </div>
-                    </div>
-                  </div>
 
                   <!-- New Table for Purchase Invoices -->
                   <div class="row mt-4">
@@ -516,6 +492,32 @@ onMounted(() => {
                       </table>
                     </div>
                   </div>
+
+                  <div class="row mb-2">
+                    <div class="col-6 border">
+                      <div class="row">
+                        <span class="text-center">Checked By</span>
+                      </div>
+                      <div class="col-sm-12">
+                        <select v-model="clearInvoiceForm.checked_by" class="form-select select2" id="checked_by">
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
+                      </div>
+                    </div>
+                    <div class="col-6 border">
+                      <div class="row">
+                        <span class="text-center">Approved By</span>
+                      </div>
+                      <div class="col-sm-12">
+                        <select v-model="clearInvoiceForm.approved_by" class="form-select select2" id="approved_by">
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Create' }}</button>
