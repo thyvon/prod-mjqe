@@ -302,6 +302,15 @@ onMounted(() => {
             defaultContent: '<span class="badge bg-secondary">Requested</span>', // Handle missing approval_status
           },
           {
+            data: 'status',
+            render: (data) => {
+              if (data == 0) return '<span class="badge bg-warning">Pending</span>';
+              if (data == 1) return '<span class="badge bg-success">Done</span>';
+              return '<span class="badge bg-warning">Pending</span>'; // Default case
+            },
+            defaultContent: '<span class="badge bg-warning">Pending</span>', // Handle missing approval_status
+          },
+          {
             data: null,
             render: () => `
               <div class="btn-group">
@@ -379,7 +388,8 @@ onMounted(() => {
         <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Create New</button>
 
         <!-- Cash Request Table -->
-        <table id="cash-request" class="table table-bordered align-middle text-nowrap" width="100%">
+        <div class="table-responsive">
+          <table id="cash-request" class="table table-bordered table-sm align-middle text-nowrap" width="100%">
           <thead>
             <tr>
               <th>#</th>
@@ -393,10 +403,12 @@ onMounted(() => {
               <th>Remark</th>
               <th>Request Date</th>
               <th>Approval Status</th>
+              <th>Clear Payment</th>
               <th>Actions</th>
             </tr>
           </thead>
         </table>
+        </div>
 
         <!-- Modal for Create/Edit Cash Request -->
         <div class="modal fade" id="cashRequestModal" tabindex="-1" aria-labelledby="cashRequestModalLabel" aria-hidden="true">
