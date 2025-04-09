@@ -127,7 +127,7 @@ const initializeDataTable = () => {
         data: 'status',
         render: (data) => {
           if (data === 1) return '<span class="badge bg-primary">Checked</span>';
-          if (data === 2) return '<span class="badge bg-success">Approved</span>';
+          if (data === 3) return '<span class="badge bg-success">Approved</span>';
           return '<span class="badge bg-warning">Pending</span>';
         },
       },

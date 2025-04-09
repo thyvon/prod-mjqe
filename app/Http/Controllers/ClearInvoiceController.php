@@ -275,8 +275,8 @@ class ClearInvoiceController extends Controller
             // Update the clear invoice's status based on status_type
             if ($request->status_type == 1) {
                 $clearInvoice->status = 1; // Checked
-            } elseif ($request->status_type == 2) {
-                $clearInvoice->status = 2; // Approved
+            } elseif ($request->status_type == 3) {
+                $clearInvoice->status = 3; // Approved
                 // Update related PurchaseInvoice records when statement status is approved
                 PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
                 ->update(['status' => 1]); // Update PurchaseInvoice status to 2 (Approved)
