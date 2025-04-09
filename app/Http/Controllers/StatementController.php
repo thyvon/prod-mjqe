@@ -447,8 +447,8 @@ class StatementController extends Controller
             // Update the clear invoice's status based on status_type
             if ($request->status_type == 1) {
                 $statement->status = 1; // Checked
-            } elseif ($request->status_type == 2) {
-                $statement->status = 2; // Approved
+            } elseif ($request->status_type == 3) {
+                $statement->status = 3; // Approved
             // Update related PurchaseInvoice records when statement status is approved
                 foreach ($statement->invoices as $statementInvoice) { // Using the invoices relationship
                     $purchaseInvoice = PurchaseInvoice::find($statementInvoice->invoice_id);
