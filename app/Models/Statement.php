@@ -18,6 +18,7 @@ class Statement extends Model
         'total_amount',
         'total_invoices',
         'description',
+        'remark',
         'status',
         'statement_number', // Add this to the fillable attributes
     ];

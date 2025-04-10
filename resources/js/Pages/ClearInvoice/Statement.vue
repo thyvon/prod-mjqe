@@ -29,6 +29,7 @@ const statementForm = reactive({
   supplier_id: '',
   clear_date: '',
   description: '',
+  remark: '',
   status: 0,
   invoices: [], // Add invoices to the statementForm
 });
@@ -220,6 +221,7 @@ const openCreateModal = () => {
     supplier_id: '',
     clear_date: today,
     description: '',
+    remark: '',
     status: 0,
     invoices: [], // Reset invoices
   });
@@ -249,6 +251,7 @@ const openEditModal = async (statement) => {
       supplier_id: data.supplier_id,
       clear_date: data.clear_date,
       description: data.description,
+      remark: data.remark,
       status: data.status,
       // Map approvals to corresponding fields
       checked_by: approvals.find(a => a.status_type === 1)?.user_id || '',
@@ -288,6 +291,7 @@ const resetStatementForm = () => {
     supplier_id: '',
     clear_date: '',
     description: '',
+    remark: '',
     status: 0,
     invoices: [], // Reset invoices
   });
@@ -641,6 +645,10 @@ onMounted(() => {
               <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
                 <textarea v-model="statementForm.description" class="form-control" id="description"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="remark" class="form-label">Remarks</label>
+                <textarea v-model="statementForm.remark" class="form-control" id="remark"></textarea>
               </div>
               <!-- Add DataTable for statement_invoice -->
               <div class="mt-4">
