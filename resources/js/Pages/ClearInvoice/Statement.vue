@@ -478,8 +478,16 @@ const initializeStatementInvoiceTable = () => {
       { data: 'pi_number', title: 'PI Ref' },
       { data: 'invoice_no', title: 'Invoice No' },
       { data: 'invoice_date', title: 'Invoice Date' },
-      { data: 'total_amount', title: 'Total Amount' },
-      { data: 'paid_amount', title: 'Paid Amount' },
+      { 
+        data: 'total_amount', 
+        title: 'Total Amount',
+        render: (data) => parseFloat(data).toFixed(4) 
+      },
+      { 
+        data: 'paid_amount', 
+        title: 'Paid Amount',
+        render: (data) => parseFloat(data).toFixed(4) 
+      },
       {
         data: null,
         title: 'Actions',
