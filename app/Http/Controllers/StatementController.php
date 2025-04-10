@@ -137,6 +137,7 @@ class StatementController extends Controller
                 'supplier_id' => 'required|exists:suppliers,id',
                 'clear_date' => 'required|date',
                 'description' => 'nullable|string',
+                'remark' => 'nullable|string',
                 'status' => 'required|integer',
                 'invoices' => 'array', // Validate invoices array
                 'invoices.*.id' => 'required|exists:purchase_invoices,id', // Validate each invoice ID
@@ -214,6 +215,7 @@ class StatementController extends Controller
                 'supplier_id' => 'sometimes|exists:suppliers,id',
                 'clear_date' => 'sometimes|date',
                 'description' => 'nullable|string',
+                'remark' => 'nullable|string',
                 'status' => 'sometimes|integer',
                 'invoices' => 'array', // Validate invoices array
                 'invoices.*.id' => 'required|exists:purchase_invoices,id', // Validate each invoice ID

@@ -126,35 +126,7 @@
               </div>
             </div>
   
-            <!-- Table Section -->
-            <!-- <div class="row mb-3">
-              <div class="table-responsive width-full p-0">
-                <table class="table table-bordered border-dark table-sm">
-                  <thead style="font-size: 12px;">
-                    <tr class="text-center">
-                      <th style="width: 5%;">ល.រ.<br>No.</th>
-                      <th style="width: 50%;">បរិយាយ<br>Description</th>
-                      <th style="width: 10%;">សាខា<br>Campus</th>
-                      <th style="width: 20%;">ទឹកប្រាក់<br>Total Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody class="table-group-divider" style="font-size: 12px;">
-                    <tr v-for="(item, index) in statement.invoices.flatMap(invoice => invoice.purchase_invoice.items)" :key="item.id">
-                      <td class="text-center">{{ index + 1 }}</td>
-                      <td class="text-center">{{ statement.description || 'N/A' }}</td>
-                      <td class="text-center">{{ item.campus || 'N/A' }}</td>
-                      <td class="text-end">{{ parseFloat(item.paid_amount || 0).toFixed(4) }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}</td>
-                    </tr>
-                    <tr>
-                      <td colspan="3" class="text-end fw-bold">សរុប/Total:</td>
-                      <td class="text-end fw-bold">
-                        {{ statement.invoices.flatMap(invoice => invoice.purchase_invoice.items).reduce((total, item) => total + parseFloat(item.paid_amount || 0), 0).toFixed(4) || '0.0000' }} {{ statement.supplier?.currency === 1 ? 'USD' : statement.supplier?.currency === 2 ? 'KHR' : 'N/A' }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div> -->
+
 
             <div class="row mb-3">
               <div class="table-responsive width-full p-0">
@@ -182,6 +154,14 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <!-- Remark -->
+            <div class="row mb-3">
+              <label class="col-12 text-start">សម្គាល់/Remark:</label>
+              <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <span class="w-100 text-start ps-1">{{ statement.remark || 'N/A' }}</span>
               </div>
             </div>
   
