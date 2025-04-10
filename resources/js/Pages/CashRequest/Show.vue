@@ -96,7 +96,7 @@
                     <span>អ្នកទទួល/Receiver:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.name || 'N/A' }}</span>
                 </div>
 
@@ -105,7 +105,7 @@
                     <span>តួនាទី/Position:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.position || 'N/A' }}</span>
                 </div>
 
@@ -114,7 +114,7 @@
                     <span>អត្តលេខ/ID:</span>
                   </div>
                 </div>
-                <div class="col-1 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-1 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.card_id || 'N/A' }}</span>
                 </div>
               </div>
@@ -129,7 +129,7 @@
                     <span>សាខា/Campus:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.campus || 'N/A' }}</span>
                 </div>
 
@@ -144,7 +144,7 @@
                     <span>ចំនួនទឹកប្រាក់/Amount:</span>
                   </div>
                 </div>
-                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-2 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.amount}}</span>
                 </div>
               </div>
@@ -159,7 +159,7 @@
                     <span>អាជីវកម្ម/Division:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.division || 'N/A' }}</span>
                 </div>
                 <div class="col-3">
@@ -173,7 +173,7 @@
                     <span>រូបិយបណ្ណ/Currency:</span>
                   </div>
                 </div>
-                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-2 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.currency}}</span>
                 </div>
               </div>
@@ -188,7 +188,7 @@
                     <span>ផ្នែក/Department:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ approvals.find(approval => approval.label === 'Received By')?.department || 'N/A' }}</span>
                 </div>
                 <div class="col-3">
@@ -202,7 +202,7 @@
                     <span>តាមរយៈ/Via:</span>
                   </div>
                 </div>
-                <div class="col-2 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-2 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.via}}</span>
                 </div>
               </div>
@@ -215,7 +215,7 @@
                 <span>សម្រាប់/Advance for:</span>
               </div>
             </div>
-            <div class="col-5 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+            <div class="col-5 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
               <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.reason}}</span>
             </div>
           </div>
@@ -223,21 +223,21 @@
           <!-- Additional Information Section -->
           <div class="row mb-2 mt-3"  v-show="cashRequest.request_type === 1">
             <span class="text-start p-0">បរិយាយ/Description:</span>
-            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+            <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
               <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.description}}</span>
             </div>
           </div>
 
           <div class="row mb-2 mt-3" v-show="cashRequest.request_type === 2">
             <span class="text-start p-0">មូលហេតុ/Reason:</span>
-            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+            <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
               <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.description}}</span>
             </div>
           </div>
 
           <div class="row mb-5">
             <span class="text-start p-0">កំណត់សម្គាល់/Remark:</span>
-            <div class="col-12 border border-dark px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
+            <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 50px; height: auto;">
               <span class="w-100 text-start ps-1 fw-bold">{{cashRequest.remark}}</span>
             </div>
           </div>
@@ -508,7 +508,18 @@ const rejectRequest = async (statusType) => {
   height: 297mm;
   margin: 10mm auto; /* Updated margin for A4 paper */
   padding: 10mm;
-  background: white;
+  background: white !important;
+  color: black !important; /* Force text color */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  overflow: auto;
+}
+
+.a4-size * {
+  color: black !important; /* Force all child elements to show black text */
+}
+
+.border-black {
+  border: 1px solid #000 !important; /* Force black border */
 }
 
 @media print {

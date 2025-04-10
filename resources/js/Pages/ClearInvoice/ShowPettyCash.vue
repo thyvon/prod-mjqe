@@ -361,8 +361,20 @@ const rejectRequest = async (statusType) => {
   height: 210mm; /* Landscape height */
   margin: 10mm auto; /* Center the content */
   padding: 10mm;
-  background: white;
+  background: white !important;
+  color: black !important; /* Force text color */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  overflow: auto;
 }
+
+.a4-size * {
+  color: black !important; /* Force all child elements to show black text */
+}
+
+.table th,
+  .table td {
+    border: 1px solid black; /* Force dark borders */
+  }
 
 @media print {
   .a4-size {
@@ -371,6 +383,9 @@ const rejectRequest = async (statusType) => {
     margin: 10mm auto; /* Ensure margin is applied during printing */
     padding: 20mm !important; /* Enforce padding for print */
     box-shadow: none; /* Remove any shadow for clean printing */
+    background: white !important;
+    color: black !important; /* Force text color for print */
+    overflow: visible; /* Ensure all content is visible */
   }
 
   #printable-area {
