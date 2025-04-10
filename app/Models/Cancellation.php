@@ -36,12 +36,26 @@ class Cancellation extends Model
     {
         return DB::transaction(function () {
             $currentMonthYear = now()->format('m-Y');
-            $count = self::where('cancellation_no', 'LIKE', "CANCEL-$currentMonthYear-%")
+            $prefix = "CANCEL-$currentMonthYear-";
+    
+            // Fetch the latest cancellation_no for the current month and year
+            $latestCancellation = self::where('cancellation_no', 'LIKE', "$prefix%")
                 ->lockForUpdate()
-                ->count();
-
-            $sequence = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-            return "CANCEL-$currentMonthYear-$sequence";
+                ->orderBy('cancellation_no', 'desc')
+                ->first();
+    
+            if ($latestCancellation) {
+                // Extract the sequence number from the latest cancellation_no
+                $lastSequence = (int) str_replace($prefix, '', $latestCancellation->cancellation_no);
+                $newSequence = $lastSequence + 1;
+            } else {
+                // Start with sequence 1 if no cancellations exist for the current month and year
+                $newSequence = 1;
+            }
+    
+            // Generate the new cancellation_no
+            $sequence = str_pad($newSequence, 4, '0', STR_PAD_LEFT);
+            return "$prefix$sequence";
         });
     }
 }

@@ -4,6 +4,8 @@ import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 
+import cancellationModal from '@/Pages/Cancellations/CancellationModal.vue';
+
 const props = defineProps({
   purchaseRequests: { type: Array, required: true },
   users: Array,
@@ -54,6 +56,18 @@ watch(() => itemForm.product_id, (newProductId) => {
     Object.assign(itemForm, { uom: '', product_description: '', sku: '' });
   }
 });
+
+const openCancellationModal = (purchaseRequest) => {
+  const modalElement = document.getElementById('cancellationModal');
+  if (modalElement) {
+    const modalInstance = new bootstrap.Modal(modalElement);
+
+    // Emit an event with the PR ID to open the create modal
+    window.dispatchEvent(new CustomEvent('open-create-modal', { detail: { prId: purchaseRequest.id, docs: "PR"} }));
+
+    modalInstance.show(); // Show the modal
+  }
+};
 
 const openCreatePage = () => {
   isEdit.value = false;
@@ -148,6 +162,7 @@ const deletePurchaseRequest = async (purchaseRequestId) => {
     }
   });
 };
+
 
 const clearForm = () => {
   Object.assign(purchaseRequestForm, {
@@ -311,12 +326,20 @@ onMounted(() => {
                   ${data.status !== 'Void' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                   <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> Detail</a></li>
+                  <li><a class="dropdown-item btn-cancel text-warning"><i class="fas fa-ban"></i> Cancel</a></li>
                 </ul>
               </div>
             `,
           },
         ],
       });
+
+      $('#purchase-request').on('click', '.btn-cancel', function () {
+      const rowData = dataTableInstance.row($(this).closest('tr')).data();
+      if (rowData) {
+        openCancellationModal(rowData); // Call the function to open the modal
+      }
+    });
 
       $('#purchase-request')
         .on('click', '.btn-edit', function () {
@@ -628,5 +651,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    <cancellationModal/>
   </Main>
 </template>

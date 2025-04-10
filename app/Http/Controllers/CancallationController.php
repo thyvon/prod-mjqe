@@ -27,6 +27,7 @@ class CancallationController extends Controller
             ->whereHas('purchaseRequest', function ($query) {
                 $query->where('request_by', auth()->id());
             })
+            ->where('qty_pending', '!=', 0) // Ensure only items with pending quantity are fetched
             ->get();
 
         return response()->json($prItems); // Ensure PR numbers are included
@@ -38,6 +39,7 @@ class CancallationController extends Controller
             ->whereHas('purchaseOrder', function ($query) {
                 $query->where('purchased_by', auth()->id());
             })
+            ->where('pending', '!=', 0) // Ensure only items with pending quantity are fetche
             ->get();
 
         return response()->json($poItems); // Ensure PO numbers are included
@@ -150,6 +152,7 @@ class CancallationController extends Controller
                     'purchase_request_item_id' => $item->purchase_request_item_id,
                     'purchase_order_id' => $item->purchase_order_id,
                     'purchase_order_item_id' => $item->purchase_order_item_id,
+                    'cancellation_reason' => $item->cancellation_reason,
                 ];
             });
 
@@ -205,30 +208,25 @@ class CancallationController extends Controller
 
             if (isset($validated['items'])) {
                 // Get the IDs of the items in the request
-                $updatedItemIds = collect($validated['items'])->pluck('purchase_request_item_id')->filter()->toArray();
-
+                $updatedItemIds = collect($validated['items'])->pluck('id')->filter()->toArray();
+            
                 // Remove items from the database that are not in the updated list
-                $cancellation->items()->whereNotIn('purchase_request_item_id', $updatedItemIds)->delete();
-
+                $cancellation->items()->whereNotIn('id', $updatedItemIds)->delete();
+            
                 foreach ($validated['items'] as $item) {
-                    // Ensure the required keys exist before accessing them
-                    $purchaseRequestItemId = $item['purchase_request_item_id'] ?? null;
-                    $purchaseOrderItemId = $item['purchase_order_item_id'] ?? null;
-
-                    if ($purchaseRequestItemId) {
-                        $existingItem = $cancellation->items()->where('purchase_request_item_id', $purchaseRequestItemId)->first();
-                    } elseif ($purchaseOrderItemId) {
-                        $existingItem = $cancellation->items()->where('purchase_order_item_id', $purchaseOrderItemId)->first();
+                    $itemId = $item['id'] ?? null;
+            
+                    if ($itemId) {
+                        // Update the existing item
+                        $existingItem = $cancellation->items()->find($itemId);
+                        if ($existingItem) {
+                            $existingItem->update($item);
+                        }
                     } else {
-                        $existingItem = null;
-                    }
-
-                    if ($existingItem) {
-                        $existingItem->update($item); // Update cancellation_reason along with other fields
-                    } else {
+                        // Create a new item if it doesn't exist
                         $item['cancellation_id'] = $cancellation->id;
                         $item['cancellation_by'] = auth()->id();
-                        CancellationItems::create($item); // Save cancellation_reason along with other fields
+                        CancellationItems::create($item);
                     }
                 }
             } else {

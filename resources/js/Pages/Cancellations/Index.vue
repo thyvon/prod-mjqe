@@ -19,7 +19,8 @@ const selectedCancellation = ref(null);
 const openCreateModal = () => {
   isEdit.value = false;
   selectedCancellation.value = null;
-  window.dispatchEvent(new Event('open-create-modal')); // Dispatch event to open the modal
+  window.dispatchEvent(new CustomEvent('open-create-modal', { detail: { prId: 0, docs: 1} }));
+  // Dispatch event to open the modal
 };
 
 const openEditModal = (cancellation) => {
