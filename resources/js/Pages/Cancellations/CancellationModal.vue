@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick, computed } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed, watch} from 'vue';
 import axios from 'axios';
 import swal from 'sweetalert';
 import toastr from 'toastr';
@@ -35,32 +35,11 @@ let poItemsTableInstance = null;
 const filterPrNumber = ref(''); // Initialize as an empty string
 const filterPoNumber = ref(''); // Initialize as an empty string
 
-const applyPrFilter = () => {
-  if (prItemsTableInstance) {
-    const filterValue = String(filterPrNumber.value).trim(); // Ensure value is a string
-    if (filterValue) {
-      prItemsTableInstance.column(0).search(filterValue, false, false).draw(); // Filter by purchase_request.id
-    } else {
-      prItemsTableInstance.search('').draw(); // Clear the filter
-    }
-  }
-};
-
-const applyPoFilter = () => {
-  if (poItemsTableInstance) {
-    const filterValue = String(filterPoNumber.value).trim(); // Ensure value is a string
-    if (filterValue) {
-      poItemsTableInstance.column(0).search(filterValue, false, false).draw(); // Filter by purchase_order.id
-    } else {
-      poItemsTableInstance.search('').draw(); // Clear the filter
-    }
-  }
-};
-
 const fetchPrItems = async () => {
   try {
     const response = await axios.get(route('pr-items-cancellation')); // Use the named route
     prItems.value = response.data; // Assign the fetched data to `prItems`
+    console.log('Fetched PR Items:', prItems.value);
   } catch (error) {
     console.error('Failed to fetch PR items:', error); // Log any errors
   }
@@ -75,10 +54,35 @@ const fetchPoItems = async () => {
   }
 };
 
+// Watch for changes in filterPrNumber and reinitialize the PR items table
+watch(filterPrNumber, (newVal) => {
+  const filteredPrItems = prItems.value.filter((item) =>
+    newVal ? item.purchase_request.id === newVal : true
+  );
+  if (prItemsTableInstance) {
+    prItemsTableInstance.clear().rows.add(filteredPrItems).draw();
+  }
+});
+
+// Watch for changes in filterPoNumber and reinitialize the PO items table
+watch(filterPoNumber, (newVal) => {
+  const filteredPoItems = poItems.value.filter((item) =>
+    newVal ? item.purchase_order.id === newVal : true
+  );
+  if (poItemsTableInstance) {
+    poItemsTableInstance.clear().rows.add(filteredPoItems).draw();
+  }
+});
+
 const initializePrItemsTable = () => {
   nextTick(() => {
     const table = $('#pr-items-table');
     if (table.length) {
+      // Check if the DataTable is already initialized
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy(); // Destroy the existing DataTable instance
+        table.empty(); // Clear the table content to avoid duplication
+      }
       prItemsTableInstance = table.DataTable({
         responsive: true,
         autoWidth: true,
@@ -87,7 +91,7 @@ const initializePrItemsTable = () => {
           { data: 'purchase_request.pr_number', title: 'PR Number' },
           { data: 'product.sku', title: 'SKU' },
           { data: 'product.product_description', title: 'Product Description' },
-          { data: 'qty', title: 'Quantity' },
+          { data: 'qty_pending', title: 'Pending Qty' }, // Ensure this matches the backend field
           { data: 'unit_price', title: 'Unit Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
           { data: 'total_price', title: 'Total Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
           {
@@ -116,6 +120,11 @@ const initializePoItemsTable = () => {
   nextTick(() => {
     const table = $('#po-items-table');
     if (table.length) {
+      // Check if the DataTable is already initialized
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy(); // Destroy the existing DataTable instance
+        table.empty(); // Clear the table content to avoid duplication
+      }
       poItemsTableInstance = table.DataTable({
         responsive: true,
         autoWidth: true,
@@ -124,7 +133,7 @@ const initializePoItemsTable = () => {
           { data: 'purchase_order.po_number', title: 'PO Number' },
           { data: 'product.sku', title: 'SKU' },
           { data: 'product.product_description', title: 'Product Description' },
-          { data: 'qty', title: 'Quantity' },
+          { data: 'pending', title: 'Pending Qty' },
           { data: 'unit_price', title: 'Unit Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
           { data: 'grand_total', title: 'Total Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
           {
@@ -158,11 +167,24 @@ const initializeCancellationItemsTable = () => {
         autoWidth: true,
         data: cancellationForm.items,
         columns: [
-          { data: 'name', title: 'Item Name' },
-          { data: 'pr_number', title: 'PR Number' }, // Updated to use pr_number directly
-          { data: 'po_number', title: 'PO Number' }, // Added PO Number column
-          { data: 'qty', title: 'Quantity' },
-          { data: 'sku', title: 'SKU' },
+          { data: 'sku', title: 'Item Code' },
+          { data: 'name', title: 'Description' },
+          // { data: 'pr_number', title: 'PR Number' },
+          // { data: 'po_number', title: 'PO Number' },
+          { data: 'qty', title: 'Cancel Qty' },
+          {
+            data: 'cancellation_reason',
+            title: 'Reason for Cancellation',
+            render: (data, type, row, meta) => {
+              // Use cancellationForm.cancellation_reason as the default value if data is empty
+              const defaultReason = cancellationForm.cancellation_reason || '';
+              return `
+                <textarea class="form-control cancellation-reason-input" 
+                          data-index="${meta.row}" 
+                          rows="2">${data || defaultReason}</textarea>
+              `;
+            },
+          },
           {
             data: null,
             title: 'Actions',
@@ -195,7 +217,12 @@ const initializeCancellationItemsTable = () => {
 };
 
 const selectPrItem = (item) => {
-  // Check if the item is already in the cancellationForm.items array
+  // Prevent adding PR items if PO items already exist
+  if (cancellationForm.items.some((existingItem) => existingItem.purchase_order_item_id)) {
+    toastr.warning('You cannot add PR items when PO items are already added.', 'Warning');
+    return;
+  }
+
   const isDuplicate = cancellationForm.items.some(
     (existingItem) => existingItem.purchase_request_item_id === item.id
   );
@@ -207,32 +234,29 @@ const selectPrItem = (item) => {
 
   cancellationForm.items.push({
     name: item.product.product_description,
-    qty: item.qty, // Updated to use 'qty'
-    purchase_request_id: item.purchase_request.id, // Use ID
-    pr_number: item.purchase_request.pr_number, // Add pr_number directly
-    po_number: null, // Add pr_number directly
+    qty: item.qty,
+    purchase_request_id: item.purchase_request.id,
+    pr_number: item.purchase_request.pr_number,
+    po_number: null,
     sku: item.product.sku,
     purchase_request_item_id: item.id,
+    cancellation_reason: '',
   });
 
-  // Update the cancellation items DataTable
   if (cancellationItemsTableInstance) {
     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
   }
 
-  toastr.success('Item added successfully.', 'Success');
+  toastr.success('PR item added successfully.', 'Success');
 };
 
 const selectPoItem = (item) => {
-  console.log('Selected PO Item:', item); // Log the selected item for debugging
-
-  // Ensure purchaseOrder exists before accessing its properties
-  if (!item.purchase_order) {
-    toastr.error('Invalid PO item data. Missing purchaseOrder details.', 'Error');
+  // Prevent adding PO items if PR items already exist
+  if (cancellationForm.items.some((existingItem) => existingItem.purchase_request_item_id)) {
+    toastr.warning('You cannot add PO items when PR items are already added.', 'Warning');
     return;
   }
 
-  // Check if the item is already in the cancellationForm.items array
   const isDuplicate = cancellationForm.items.some(
     (existingItem) => existingItem.purchase_order_item_id === item.id
   );
@@ -242,18 +266,17 @@ const selectPoItem = (item) => {
     return;
   }
 
-  // Push the selected PO item into the cancellationForm.items array
   cancellationForm.items.push({
-    name: item.product.product_description, // Product description
-    qty: item.qty, // Quantity
-    purchase_order_id: item.purchase_order.id, // Purchase order ID
-    po_number: item.purchase_order.po_number, // PO number
-    pr_number: item.purchase_request.pr_number, // PR number
-    sku: item.product.sku, // SKU
-    purchase_order_item_id: item.id, // PO item ID
+    name: item.product.product_description,
+    qty: item.qty,
+    purchase_order_id: item.purchase_order.id,
+    po_number: item.purchase_order.po_number,
+    pr_number: item.purchase_request.pr_number,
+    sku: item.product.sku,
+    purchase_order_item_id: item.id,
+    cancellation_reason: '',
   });
 
-  // Update the cancellation items DataTable
   if (cancellationItemsTableInstance) {
     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
   }
@@ -262,6 +285,12 @@ const selectPoItem = (item) => {
 };
 
 const selectAllPrItems = () => {
+  // Prevent adding PR items if PO items already exist
+  if (cancellationForm.items.some((existingItem) => existingItem.purchase_order_item_id)) {
+    toastr.warning('You cannot add PR items when PO items are already added.', 'Warning');
+    return;
+  }
+
   let addedCount = 0;
 
   prItems.value.forEach((item) => {
@@ -272,34 +301,40 @@ const selectAllPrItems = () => {
     if (!isDuplicate) {
       cancellationForm.items.push({
         name: item.product.product_description,
-        qty: item.qty, // Updated to use 'qty'
-        purchase_request_id: item.purchase_request.id, // Use ID
-        pr_number: item.purchase_request.pr_number, // Add pr_number directly
+        qty: item.qty,
+        purchase_request_id: item.purchase_request.id,
+        pr_number: item.purchase_request.pr_number,
         sku: item.product.sku,
         purchase_request_item_id: item.id,
+        cancellation_reason: '',
       });
       addedCount++;
     }
   });
 
-  // Update the cancellation items DataTable
   if (cancellationItemsTableInstance) {
     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
   }
 
   if (addedCount > 0) {
-    toastr.success(`${addedCount} items added successfully.`, 'Success');
+    toastr.success(`${addedCount} PR items added successfully.`, 'Success');
   } else {
-    toastr.warning('No new items were added.', 'Warning');
+    toastr.warning('No new PR items were added.', 'Warning');
   }
 };
 
 const selectAllPoItems = () => {
+  // Prevent adding PO items if PR items already exist
+  if (cancellationForm.items.some((existingItem) => existingItem.purchase_request_item_id)) {
+    toastr.warning('You cannot add PO items when PR items are already added.', 'Warning');
+    return;
+  }
+
   let addedCount = 0;
 
   poItems.value.forEach((item) => {
     const isDuplicate = cancellationForm.items.some(
-      (existingItem) => existingItem.purchase_request_item_id === item.id
+      (existingItem) => existingItem.purchase_order_item_id === item.id
     );
 
     if (!isDuplicate) {
@@ -308,9 +343,10 @@ const selectAllPoItems = () => {
         qty: item.qty,
         purchase_order_id: item.purchase_order.id,
         po_number: item.purchase_order.po_number,
-        pr_number: item.purchase_request.pr_number, // PR number
+        pr_number: item.purchase_request.pr_number,
         sku: item.product.sku,
         purchase_order_item_id: item.id,
+        cancellation_reason: '',
       });
       addedCount++;
     }
@@ -360,29 +396,30 @@ const openEditModal = (cancellation) => {
 
   // Map the cancellation data to the form
   Object.assign(cancellationForm, {
-    id: cancellation.cancellation.id, // Ensure the correct ID is assigned
-    cancellation_date: cancellation.cancellation.cancellation_date,
-    cancellation_reason: cancellation.cancellation.cancellation_reason,
-    cancellation_docs: cancellation.cancellation.cancellation_docs,
-    cancellation_by: cancellation.cancellation.cancellation_by,
-    items: cancellation.cancellation.items.map((item) => ({
+    id: cancellation.id, // Ensure the correct ID is assigned
+    cancellation_date: cancellation.cancellation_date,
+    cancellation_reason: cancellation.cancellation_reason,
+    cancellation_docs: cancellation.cancellation_docs,
+    cancellation_by: cancellation.cancellation_by,
+    items: cancellation.items.map((item) => ({
       id: item.id,
-      name: item.name,
-      pr_number: item.pr_number,
-      po_number: item.po_number,
-      sku: item.sku,
+      name: item.purchase_request_item?.product?.product_description || item.purchase_order_item?.product?.product_description || null,
+      pr_number: item.purchase_request_item?.purchase_request?.pr_number || item.purchase_order_item?.purchase_request?.pr_number || null,
+      po_number: item.purchase_order_item?.purchase_order?.po_number || null,
+      sku: item.purchase_request_item?.product?.sku || item.purchase_order_item?.product?.sku || null,
       qty: item.qty,
       purchase_request_id: item.purchase_request_id,
       purchase_request_item_id: item.purchase_request_item_id,
       purchase_order_id: item.purchase_order_id,
       purchase_order_item_id: item.purchase_order_item_id,
+      cancellation_reason: item.cancellation_reason,
     })),
   });
 
   // Set the filter fields based on cancellation_docs and pr_po_id
-  if (cancellation.cancellation_docs === '1') {
+  if (cancellation.cancellation_docs == 1) {
     filterPrNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPrNumber
-  } else if (cancellation.cancellation_docs === '2') {
+  } else if (cancellation.cancellation_docs == 2) {
     filterPoNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPoNumber
   } else {
     filterPrNumber.value = '';
@@ -410,13 +447,13 @@ const saveCancellation = async () => {
     }));
 
     // Dynamically set the pr_po_id field based on cancellation_docs
-    if (cancellationForm.cancellation_docs === '1') {
+    if (cancellationForm.cancellation_docs == 1) {
       if (!filterPrNumber.value) {
         toastr.error('Please select a valid PR Number.', 'Error');
         return;
       }
       cancellationForm.pr_po_id = filterPrNumber.value;
-    } else if (cancellationForm.cancellation_docs === '2') {
+    } else if (cancellationForm.cancellation_docs == 2) {
       if (!filterPoNumber.value) {
         toastr.error('Please select a valid PO Number.', 'Error');
         return;
@@ -465,32 +502,14 @@ const saveCancellation = async () => {
 };
 
 const openAddItemModal = () => {
-  // if (!filterPrNumber.value.trim()) {
-  //   toastr.warning('Please input a PR Number to select items.', 'Warning');
-  //   return;
-  // }
   Object.assign(newItem, { name: '', quantity: 1 });
   if (addItemModalInstance) {
     addItemModalInstance.show();
   }
 };
 
-const confirmAddItem = () => {
-  if (selectedPrItem.value) {
-    cancellationForm.items.push({
-      name: selectedPrItem.value.product.product_description,
-      quantity: 1,
-      purchase_request_id: selectedPrItem.value.purchase_request.id,
-      purchase_request_item_id: selectedPrItem.value.id,
-    });
-    if (addItemModalInstance) {
-      addItemModalInstance.hide();
-    }
-  }
-};
-
 const openEditItemModal = (item) => {
-  Object.assign(editItem, item, { pr_number: item.pr_number, po_number: item.po_number }); // Ensure pr_number and po_number are set
+  Object.assign(editItem, item, { pr_number: item.pr_number, po_number: item.po_number, cancellation_reason: item.cancellation_reason }); // Ensure pr_number and po_number are set
   if (editItemModalInstance) {
     editItemModalInstance.show();
   }
@@ -513,7 +532,8 @@ const confirmEditItem = () => {
 };
 
 const openPoItemModal = () => {
-  if (!filterPoNumber.value.trim()) {
+  const poNumber = filterPoNumber.value ? String(filterPoNumber.value).trim() : '';
+  if (!poNumber) {
     toastr.warning('Please input a PO Number to select items.', 'Warning');
     return;
   }
@@ -528,43 +548,77 @@ const openPoItemModal = () => {
 
 // Computed properties to get unique PR and PO numbers
 const uniquePrNumbers = computed(() => {
-  return [...new Set(prItems.value.map(item => item.purchase_request.pr_number))];
+  return prItems.value.map(item => ({
+    id: item.purchase_request.id,
+    number: item.purchase_request.pr_number,
+  })).filter((value, index, self) =>
+    index === self.findIndex((t) => t.number === value.number)
+  );
 });
 
 const uniquePoNumbers = computed(() => {
-  return [...new Set(poItems.value.map(item => item.purchase_order.po_number))];
+  return poItems.value.map(item => ({
+    id: item.purchase_order.id,
+    number: item.purchase_order.po_number,
+  })).filter((value, index, self) =>
+    index === self.findIndex((t) => t.number === value.number)
+  );
 });
 
 onMounted(() => {
   const modalElement = document.getElementById('cancellationModal');
   if (modalElement) {
     modalInstance = new bootstrap.Modal(modalElement); // Initialize Bootstrap modal
+
+    // Handle the "open-create-modal" event
+    const handleOpenCreateModal = (event) => {
+      const { prId, docs } = event.detail;
+      cancellationForm.cancellation_docs = docs; // Set the cancellation_docs value
+      cancellationForm.cancellation_date = new Date().toISOString().split('T')[0];
+      filterPrNumber.value = prId; // Set the PR ID in the filter
+      fetchPrItems().then(() => initializePrItemsTable()); // Fetch PR items and initialize the table
+      openCreateModal(); // Open the create modal
+    };
+
+    // Handle the "open-edit-modal" event
+    const handleOpenEditModal = (event) => {
+      const cancellation = event.detail;
+      fetchPrItems().then(() => initializePrItemsTable());
+      openEditModal(cancellation); // Open the modal in edit mode
+    };
+
+    // Add event listeners
+    window.addEventListener('open-create-modal', handleOpenCreateModal);
+    window.addEventListener('open-edit-modal', handleOpenEditModal);
+
+    modalElement.addEventListener('show.bs.modal', () => {
+      console.log('cancellation_docs in form:', cancellationForm.cancellation_docs);
+      fetchPoItems().then(() => initializePoItemsTable()); // Only fetch PO items here
+    });
   }
+
   const addItemModalElement = document.getElementById('addItemModal');
   if (addItemModalElement) {
     addItemModalInstance = new bootstrap.Modal(addItemModalElement); // Initialize Bootstrap modal
   }
+
   const editItemModalElement = document.getElementById('editItemModal');
   if (editItemModalElement) {
     editItemModalInstance = new bootstrap.Modal(editItemModalElement); // Initialize Bootstrap modal
   }
+
   const poItemModalElement = document.getElementById('poItemModal');
   if (poItemModalElement) {
     poItemsTableInstance = new bootstrap.Modal(poItemModalElement); // Initialize Bootstrap modal for PO Items
   }
-  window.addEventListener('open-create-modal', openCreateModal); // Listen for the event
-  window.addEventListener('open-edit-modal', (event) => {
-    openEditModal(event.detail);
-  }); // Listen for the event
-  fetchPrItems().then(() => initializePrItemsTable());
-  fetchPoItems().then(() => initializePoItemsTable());
+
   initializeCancellationItemsTable();
 });
 </script>
 
 <template>
   <div class="modal fade" id="cancellationModal" tabindex="-1" aria-labelledby="cancellationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="cancellationModalLabel">{{ isEdit ? 'Edit Cancellation' : 'Create Cancellation' }}</h5>
@@ -583,50 +637,57 @@ onMounted(() => {
               <div v-if="validationErrors.cancellation_reason" class="text-danger">{{ validationErrors.cancellation_reason[0] }}</div>
             </div>
             <div class="mb-3">
-              <label for="cancellation_docs" class="form-label">Documents</label>
-              <input v-model="cancellationForm.cancellation_docs" type="text" class="form-control" id="cancellation_docs" />
+              <label for="cancellation_docs" class="form-label">PO cancel or PR Cancel</label>
+              <select v-model="cancellationForm.cancellation_docs" class="form-control" id="cancellation_docs">
+                <option value="1">PR</option>
+                <option value="2">PO</option>
+              </select>
               <div v-if="validationErrors.cancellation_docs" class="text-danger">{{ validationErrors.cancellation_docs[0] }}</div>
             </div>
-            <div class="mb-3">
-              <label for="cancellation_by" class="form-label">Cancelled By</label>
-              <input v-model="cancellationForm.cancellation_by" type="text" class="form-control" id="cancellation_by" />
-              <div v-if="validationErrors.cancellation_by" class="text-danger">{{ validationErrors.cancellation_by[0] }}</div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="filter-pr-number" class="form-label">Filter by PR Number</label>
+                  <select
+                    id="filter-pr-number"
+                    class="form-select"
+                    v-model="filterPrNumber"
+                    :disabled="!cancellationForm.cancellation_docs || cancellationForm.cancellation_docs == 2"
+                  >
+                    <option value="">Select PR Number</option>
+                    <option v-for="pr in uniquePrNumbers" :key="pr.id" :value="pr.id">
+                      {{ pr.number }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="filter-po-number" class="form-label">Filter by PO Number</label>
+                  <select
+                    id="filter-po-number"
+                    class="form-select"
+                    v-model="filterPoNumber"
+                    :disabled="!cancellationForm.cancellation_docs || cancellationForm.cancellation_docs == 1"
+                  >
+                    <option value="">Select PO Number</option>
+                    <option v-for="po in uniquePoNumbers" :key="po.id" :value="po.id">
+                      {{ po.number }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              
             </div>
-            <div class="mb-3">
-              <label for="filter-pr-number" class="form-label">Filter by PR Number</label>
-              <select
-                id="filter-pr-number"
-                class="form-select"
-                v-model="filterPrNumber"
-                @change="applyPrFilter"
-              >
-                <option value="">Select PR Number</option>
-                <option v-for="prItem in prItems" :key="prItem.purchase_request.id" :value="prItem.purchase_request.id">
-                  {{ prItem.purchase_request.pr_number }}
-                </option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="filter-po-number" class="form-label">Filter by PO Number</label>
-              <select
-                id="filter-po-number"
-                class="form-select"
-                v-model="filterPoNumber"
-                @change="applyPoFilter"
-              >
-                <option value="">Select PO Number</option>
-                <option v-for="poItem in poItems" :key="poItem.purchase_order.id" :value="poItem.purchase_order.id">
-                  {{ poItem.purchase_order.po_number }}
-                </option>
-              </select>
+            <div class="d-flex justify-content-between mt-2">
+              <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal">Add PR</button>
+              <button type="button" class="btn btn-success btn-sm" @click="openPoItemModal">Add PO</button>
             </div>
             <div class="mb-3">
               <label class="form-label">Items to Cancel</label>
               <div class="table-responsive">
                 <table id="cancellation-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
               </div>
-              <button type="button" class="btn btn-success btn-sm mt-2" @click="openAddItemModal">Add PR</button>
-              <button type="button" class="btn btn-success btn-sm mt-2" @click="openPoItemModal">Add PO</button>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -711,6 +772,10 @@ onMounted(() => {
           <div class="mb-3">
             <label for="edit_item_qty" class="form-label">Quantity</label>
             <input v-model="editItem.qty" type="number" class="form-control" id="edit_item_qty" min="1" />
+          </div>
+          <div class="mb-3">
+            <label for="edit_item_cancellation_reason" class="form-label">Reason for Cancellation</label>
+            <textarea v-model="editItem.cancellation_reason" class="form-control" id="edit_item_cancellation_reason" rows="3"></textarea>
           </div>
           <div class="mb-3">
             <label for="edit_item_sku" class="form-label">SKU</label>

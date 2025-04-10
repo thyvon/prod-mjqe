@@ -32,7 +32,8 @@ class PurchaseOrder extends Model
         'due_amount',
         'is_cancelled',
         'cancelled_reason',
-        'status'
+        'status',
+        'purchased_by',
     ];
 
     public function user()

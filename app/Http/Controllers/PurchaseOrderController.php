@@ -128,6 +128,7 @@ class PurchaseOrderController extends Controller
                 }, $request->items)),
                 'discount' => $request->discount ?? 0,
                 'vat' => $request->vat ?? 0,
+                'purchased_by' => auth()->id(), // Automatically capture the authenticated user's ID
             ]);
 
             \Log::info('Purchase Order Data:', $purchaseOrderData);
@@ -280,6 +281,7 @@ class PurchaseOrderController extends Controller
                 }, $request->items)),
                 'discount' => $request->discount ?? 0,
                 'vat' => $request->vat ?? 0,
+                'purchased_by' => auth()->id(), // Automatically capture the authenticated user's ID	
             ]);
 
             \Log::info('Purchase Order Data:', $purchaseOrderData);
