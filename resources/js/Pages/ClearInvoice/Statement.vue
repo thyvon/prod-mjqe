@@ -470,7 +470,11 @@ const initializeStatementInvoiceTable = () => {
     autoWidth: true,
     data: statementForm.invoices || [], // Use statementForm.invoices for the table data
     columns: [
-      { data: 'id', title: '#' },
+      { 
+        data: null, 
+        title: '#', 
+        render: (data, type, row, meta) => meta.row + 1 
+      },
       { data: 'pi_number', title: 'PI Ref' },
       { data: 'invoice_no', title: 'Invoice No' },
       { data: 'invoice_date', title: 'Invoice Date' },
