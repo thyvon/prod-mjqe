@@ -252,7 +252,7 @@ const openEditModal = async (statement) => {
       status: data.status,
       // Map approvals to corresponding fields
       checked_by: approvals.find(a => a.status_type === 1)?.user_id || '',
-      approved_by: approvals.find(a => a.status_type === 2)?.user_id || '',
+      approved_by: approvals.find(a => a.status_type === 3)?.user_id || '',
       invoices: data.invoices.map((invoice) => ({
         id: invoice.invoice_id,
         invoice_no: invoice.purchase_invoice?.invoice_no || 'N/A',
