@@ -38,7 +38,7 @@ class Statement extends Model
         $count = 1;
 
         do {
-            $statementNumber = sprintf('ST-%02d-%04d-%04d', $month, $year, $count);
+            $statementNumber = sprintf('ST-%04d-%02d-%04d', $year, $month, $count);
             $count++;
         } while (self::where('statement_number', $statementNumber)->exists());
 
