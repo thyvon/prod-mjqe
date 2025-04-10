@@ -154,7 +154,7 @@ const logout = () => {
 					</div>
 					<div class="col-4 d-flex">
 						<div class="form-check form-switch ms-auto mb-0">
-							<input type="checkbox" class="form-check-input" name="app-theme-dark-mode" id="appThemeDarkMode" value="1" checked />
+							<input type="checkbox" class="form-check-input" name="app-theme-dark-mode" id="appThemeDarkMode" value="1" />
 							<label class="form-check-label" for="appThemeDarkMode">&nbsp;</label>
 						</div>
 					</div>
