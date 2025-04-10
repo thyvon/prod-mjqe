@@ -440,10 +440,22 @@ const rejectRequest = async (statusType) => {
 .a4-size {
   width: 210mm;
   height: 297mm;
-  margin: 10mm auto; /* Updated margin for A4 paper */
+  margin: 10mm auto;
   padding: 10mm;
-  background: white;
+  background: white !important;
+  color: black !important; /* Force text color */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  overflow: auto;
 }
+
+.a4-size * {
+  color: black !important; /* Force all child elements to show black text */
+}
+
+.table th,
+  .table td {
+    border: 1px solid black; /* Force dark borders */
+  }
 
 @media print {
   .a4-size {

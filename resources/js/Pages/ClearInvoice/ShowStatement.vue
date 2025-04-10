@@ -43,7 +43,7 @@
                       <span>អ្នកទទួល/Receiver:</span>
                     </div>
                   </div>
-                  <div class="col-4 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-4 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ statement.supplier?.name || 'N/A' }}</span>
                   </div>
   
@@ -58,7 +58,7 @@
                       <span>លេខយោង/Ref:</span>
                     </div>
                   </div>
-                  <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ statement.statement_number || 'N/A' }}</span>
                   </div>
                 </div>
@@ -73,7 +73,7 @@
                       <span>សាខា/Campus:</span>
                     </div>
                   </div>
-                  <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ campuses }}</span>
                   </div>
   
@@ -88,7 +88,7 @@
                       <span>កាលបរិច្ឆេទ/Date:</span>
                     </div>
                   </div>
-                  <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ formatDate(statement.clear_date) || 'N/A' }} 
                       </span>
                   </div>
@@ -104,7 +104,7 @@
                       <span>អាជីវកម្ម/Division:</span>
                     </div>
                   </div>
-                  <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ divisions }}</span>
                   </div>
   
@@ -119,7 +119,7 @@
                       <span>ផ្នែក/Department:</span>
                     </div>
                   </div>
-                  <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                  <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                     <span class="w-100 text-start ps-1 fw-bold">{{ departments }}</span>
                   </div>
                 </div>
@@ -468,7 +468,23 @@ const printPage = () => {
     height: 297mm;
     margin: 10mm auto; /* Updated margin for A4 paper */
     padding: 10mm;
-    background: white;
+    background: white !important;
+    color: black !important; /* Force text color */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+  }
+
+  .a4-size * {
+    color: black !important; /* Force all child elements to show black text */
+  }
+
+  .table th,
+  .table td {
+    border: 1px solid black; /* Force dark borders */
+  }
+
+  .border-black {
+    border: 1px solid #000 !important; /* Force black border */
   }
   
   @media print {
