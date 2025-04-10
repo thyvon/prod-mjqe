@@ -236,7 +236,7 @@ const rejectRequest = async (statusType) => {
                     <span>ឈ្មោះ/Name:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.name}}</span>
                 </div>
 
@@ -251,7 +251,7 @@ const rejectRequest = async (statusType) => {
                     <span>កាលបរិច្ឆេទ/Date:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{  formatDate(clearInvoice.clear_date) }}</span>
                 </div>
               </div>
@@ -266,7 +266,7 @@ const rejectRequest = async (statusType) => {
                     <span>អត្តលេខ/Card ID:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.card_id}}</span>
                 </div>
 
@@ -281,7 +281,7 @@ const rejectRequest = async (statusType) => {
                     <span>លេខសំណើរ/Adv. Ref:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.ref_no }} 
                     ({{ clearInvoice.cash_request?.currency === 1 ? 'USD' : clearInvoice.cash_request?.currency === 2 ? 'KHR' : '' }})</span>
                 </div>
@@ -297,7 +297,7 @@ const rejectRequest = async (statusType) => {
                     <span>លេខទូរស័ព្ទ/Phone:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.phone}}</span>
                 </div>
 
@@ -312,7 +312,7 @@ const rejectRequest = async (statusType) => {
                     <span>លេខទូទាត់/Liq. Ref:</span>
                   </div>
                 </div>
-                <div class="col-3 border border-dark px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
+                <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.cash_request?.ref_no }} </span>
                 </div>
               </div>
@@ -452,10 +452,15 @@ const rejectRequest = async (statusType) => {
   color: black !important; /* Force all child elements to show black text */
 }
 
+.border-black {
+  border: 1px solid #000 !important; /* Force black border */
+}
+
 .table th,
   .table td {
     border: 1px solid black; /* Force dark borders */
   }
+
 
 @media print {
   .a4-size {
