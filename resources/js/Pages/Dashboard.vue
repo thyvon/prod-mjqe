@@ -35,10 +35,14 @@ const purchaseInvoiceData = ref([]);
 const columnChart = ref(null);
 
 function formatToK(value) {
+    value = Number(value); // Convert value to a number
+    if (isNaN(value)) {
+        return '0.00'; // Return a default value if it's not a valid number
+    }
     if (value >= 1000) {
         return (value / 1000).toFixed(1) + 'K';
     }
-    return value.toFixed(2);
+    return value.toFixed(2); // Safely call toFixed for numbers below 1000
 }
 
 async function fetchPurchaseInvoiceItemData(startDate, endDate) {

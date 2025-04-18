@@ -10,6 +10,7 @@ use App\Models\PurchaseRequest;
 use App\Models\Product;
 use App\Models\PoItem;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\CancellationItems;
 
 class PrItem extends Model
 {
@@ -96,6 +97,26 @@ class PrItem extends Model
         $this->isCalculating = false;
     }
 
+    public function calculateQtyCancel()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+    
+        $this->isCalculating = true;
+        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+    
+        // Check if the cancelled quantity equals the total quantity
+        if ($this->qty_cancel == $this->qty) {
+            $this->is_cancel = 1;
+        } else {
+            $this->is_cancel = 0;
+        }
+    
+        $this->isCalculating = false;
+        $this->save();
+    }
+
     public function calculatePending()
     {
         if ($this->isCalculating) {
@@ -145,6 +166,16 @@ class PrItem extends Model
         $this->save();
     }
 
+    public function recalculateQtyCancel()
+    {
+        $this->calculateQtyCancel();
+        if ($this->qty_cancel > ($this->qty - $this->qty_purchase)) {
+            throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
+        }
+        $this->calculateStatus();
+        $this->save();
+    }
+
     public function performCalculations()
     {
         if ($this->isCalculating) {
@@ -154,8 +185,10 @@ class PrItem extends Model
         $this->isCalculating = true;
 
         $this->calculateQtyPurchase();
+        $this->calculateQtyCancel();
         $this->calculatePending();
         $this->recalculateQtyPurchase();
+        $this->recalculateQtyCancel();
         $this->calculateStatus();
 
         $this->isCalculating = false;

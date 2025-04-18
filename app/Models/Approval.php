@@ -43,4 +43,19 @@ class Approval extends Model
     {
         return $this->belongsTo(Statement::class, 'approval_id');
     }
+
+    public function purchaseRequest()
+    {
+        return $this->belongsTo(PurchaseRequest::class, 'approval_id');
+    }
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'approval_id');
+    }
+
+    public function cancellation()
+    {
+        return $this->belongsTo(Cancellation::class, 'approval_id');
+    }
 }

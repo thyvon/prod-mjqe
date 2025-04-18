@@ -20,6 +20,7 @@ class PurchaseRequestController extends Controller
             'purchaseRequests' => PurchaseRequest::with(['prItems.product', 'requestBy'])->get(),
             'currentUser' => auth()->user(),
             'products' => Product::all(),
+            'users' => User::all(),
         ]);
     }
 
