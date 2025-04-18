@@ -18,6 +18,7 @@ class Cancellation extends Model
         'cancellation_reason',
         'pr_po_id', // Add this to allow mass assignment
         'cancellation_by',
+        'status',
     ];
 
     // Define relationships
@@ -30,12 +31,16 @@ class Cancellation extends Model
     {
         return $this->belongsTo(User::class, 'cancellation_by');
     }
+    public function purchaseRequest()
+    {
+        return $this->belongsTo(PurchaseRequest::class, 'pr_po_id', 'id');
+    }
 
     // Generate unique cancellation_no
     public static function generateCancellationNo()
     {
         return DB::transaction(function () {
-            $currentMonthYear = now()->format('m-Y');
+            $currentMonthYear = now()->format('Y-m');
             $prefix = "CANCEL-$currentMonthYear-";
     
             // Fetch the latest cancellation_no for the current month and year

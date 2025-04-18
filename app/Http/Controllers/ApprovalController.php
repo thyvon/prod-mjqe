@@ -11,7 +11,14 @@ class ApprovalController extends Controller
 {
     public function index()
     {
-        $approvals = Approval::with(['user', 'cashRequest:id,id as approval_id,ref_no', 'clearInvoice:id,id as approval_id,ref_no', 'clearStatment:id,id as approval_id,statement_number'])
+        $approvals = Approval::with([
+            'user',
+            'cashRequest:id,id as approval_id,ref_no',
+            'clearInvoice:id,id as approval_id,ref_no',
+            'clearStatment:id,id as approval_id,statement_number',
+            'cancellation:id,id as approval_id,cancellation_no,pr_po_id',
+            'cancellation.purchaseRequest:id,id as pr_po_id,pr_number',
+        ])
             ->where('status', 0)
             ->where('user_id', Auth::id()) // Filter by authenticated user
             ->orderBy('created_at', 'desc')
@@ -24,6 +31,9 @@ class ApprovalController extends Controller
                     $approval->reference = $approval->clearInvoice->ref_no;
                 } elseif ($approval->clearStatment) {
                     $approval->reference = $approval->clearStatment->statement_number;
+                } elseif ($approval->cancellation) {
+                    $approval->reference = $approval->cancellation->cancellation_no . 
+                    ($approval->cancellation->purchaseRequest ? ' (' . $approval->cancellation->purchaseRequest->pr_number . ')' : '');
                 } else {
                     $approval->reference = 'N/A';
                 }

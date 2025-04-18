@@ -15,7 +15,7 @@ use App\Http\Controllers\{
     UserController,
     InvoiceAttachmentController,
     DashboardController,
-    CancallationController,
+    CancellationController,
     StatementController,
     ApprovalController
 };
@@ -100,7 +100,7 @@ Route::middleware('auth')->group(function () {
         'purchase-requests' => PurchaseRequestController::class,
         'purchase-orders' => PurchaseOrderController::class,
         'invoices' => InvoiceController::class,
-        'cancellations' => CancallationController::class,
+        'cancellations' => CancellationController::class,
         'statements' => StatementController::class,
     ]);
 
@@ -150,8 +150,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/clear-invoice/{clearInvoice}/approvals', [ClearInvoiceController::class, 'getApprovals'])->name('clear-invoice.approvals');
     
     // Additional routes for fetching PR and PO items
-    Route::get('/pr-items-cancellation', [CancallationController::class, 'getPrItems'])->name('pr-items-cancellation');
-    Route::get('/po-items-cancellation', [CancallationController::class, 'getPoItems'])->name('po-items-cancellation');
+    Route::get('/pr-items-cancellation', [CancellationController::class, 'getPrItems'])->name('pr-items-cancellation');
+    Route::get('/po-items-cancellation', [CancellationController::class, 'getPoItems'])->name('po-items-cancellation');
 
     Route::get('/search-suppliers', [StatementController::class, 'searchSuppliers'])->name('suppliers.search');
 
@@ -163,6 +163,12 @@ Route::middleware('auth')->group(function () {
 
     // Add a route for the index method of the ApprovalController
     Route::get('/approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+
+    // PR PO cancellation
+    Route::post('/cancellations/{cancellation}/approve', [CancellationController::class, 'approve'])->name('cancellations.approve');
+    Route::post('/cancellations/{cancellation}/reject', [CancellationController::class, 'reject'])->name('cancellations.reject');
+
+    // Ad
 });
 // Routes for Statement Invoices
 

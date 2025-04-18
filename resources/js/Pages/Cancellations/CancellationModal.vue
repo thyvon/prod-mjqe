@@ -12,6 +12,7 @@ const cancellationForm = reactive({
   cancellation_reason: '',
   cancellation_docs: '',
   cancellation_by: '',
+  pr_po_id: null,
   items: [],
 });
 
@@ -381,7 +382,7 @@ const openCreateModal = () => {
     id: null,
     cancellation_date: new Date().toISOString().split('T')[0],
     cancellation_reason: '',
-    cancellation_docs: '',
+    cancellation_docs: cancellationForm.cancellation_docs,
     cancellation_by: '',
     items: [],
   });
@@ -416,16 +417,6 @@ const openEditModal = (cancellation) => {
     })),
   });
 
-  // Set the filter fields based on cancellation_docs and pr_po_id
-  if (cancellation.cancellation_docs == 1) {
-    filterPrNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPrNumber
-  } else if (cancellation.cancellation_docs == 2) {
-    filterPoNumber.value = cancellation.pr_po_id || ''; // Assign pr_po_id to filterPoNumber
-  } else {
-    filterPrNumber.value = '';
-    filterPoNumber.value = '';
-  }
-
   validationErrors.value = {};
 
   // Refresh the cancellation-items-table
@@ -446,28 +437,6 @@ const saveCancellation = async () => {
       qty: parseFloat(item.qty).toFixed(8), // Convert qty to a decimal with 8 places
     }));
 
-    // Dynamically set the pr_po_id field based on cancellation_docs
-    if (cancellationForm.cancellation_docs == 1) {
-      if (!filterPrNumber.value) {
-        toastr.error('Please select a valid PR Number.', 'Error');
-        return;
-      }
-      cancellationForm.pr_po_id = filterPrNumber.value;
-    } else if (cancellationForm.cancellation_docs == 2) {
-      if (!filterPoNumber.value) {
-        toastr.error('Please select a valid PO Number.', 'Error');
-        return;
-      }
-      cancellationForm.pr_po_id = filterPoNumber.value;
-    } else {
-      cancellationForm.pr_po_id = null;
-    }
-
-    if (!cancellationForm.pr_po_id) {
-      toastr.error('Please select a valid PR or PO number.', 'Error');
-      return;
-    }
-
     const url = isEdit.value ? `/cancellations/${cancellationForm.id}` : '/cancellations';
     const method = isEdit.value ? 'put' : 'post';
     const response = await axios[method](url, cancellationForm);
@@ -481,6 +450,7 @@ const saveCancellation = async () => {
       cancellation_reason: '',
       cancellation_docs: '',
       cancellation_by: '',
+      pr_po_id: null,
       items: [], // Clear items
     });
     validationErrors.value = {};
@@ -569,6 +539,10 @@ onMounted(() => {
   const modalElement = document.getElementById('cancellationModal');
   if (modalElement) {
     modalInstance = new bootstrap.Modal(modalElement); // Initialize Bootstrap modal
+    modalElement.addEventListener('hidden.bs.modal', () => {
+      modalInstance.dispose(); // Dispose of the modal instance
+      modalInstance = null; // Reset the modal instance
+    });
 
     // Handle the "open-create-modal" event
     const handleOpenCreateModal = (event) => {
@@ -592,7 +566,6 @@ onMounted(() => {
     window.addEventListener('open-edit-modal', handleOpenEditModal);
 
     modalElement.addEventListener('show.bs.modal', () => {
-      console.log('cancellation_docs in form:', cancellationForm.cancellation_docs);
       fetchPoItems().then(() => initializePoItemsTable()); // Only fetch PO items here
     });
   }
@@ -652,7 +625,6 @@ onMounted(() => {
                     id="filter-pr-number"
                     class="form-select"
                     v-model="filterPrNumber"
-                    :disabled="!cancellationForm.cancellation_docs || cancellationForm.cancellation_docs == 2"
                   >
                     <option value="">Select PR Number</option>
                     <option v-for="pr in uniquePrNumbers" :key="pr.id" :value="pr.id">
@@ -668,9 +640,8 @@ onMounted(() => {
                     id="filter-po-number"
                     class="form-select"
                     v-model="filterPoNumber"
-                    :disabled="!cancellationForm.cancellation_docs || cancellationForm.cancellation_docs == 1"
                   >
-                    <option value="">Select PO Number</option>
+                    <option value="">Select PO</option>
                     <option v-for="po in uniquePoNumbers" :key="po.id" :value="po.id">
                       {{ po.number }}
                     </option>

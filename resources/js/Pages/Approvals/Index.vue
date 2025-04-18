@@ -121,6 +121,9 @@ function viewApproval(docsType, approvalId) {
     case 5:
       url = `/statements/${approvalId}`;
       break;
+    case 6:
+      url = `/cancellations/${approvalId}`;
+      break;
     default:
       console.error('Unknown docs_type:', docsType);
       return;

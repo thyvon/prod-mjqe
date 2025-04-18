@@ -101,7 +101,7 @@ class PurchaseRequest extends Model
 
     public function updateStatus()
     {
-        if ($this->item_purchas == ($this->total_item - $this->item_cancel)) {
+        if ($this->item_purchas == ($this->total_item - $this->item_cancel) && $this->item_purchas != 0) {
             $this->status = 'Closed';
         } elseif ($this->item_cancel == $this->total_item) {
             $this->status = 'Void';
