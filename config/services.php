@@ -30,4 +30,12 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant_id' => env('MICROSOFT_TENANT_ID', 'common'), // Default to 'common' if not set
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'site_id' => env('MICROSOFT_SITE_ID'),
+        'drive_id' => env('MICROSOFT_DRIVE_ID'),
+    ],
 ];

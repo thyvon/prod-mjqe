@@ -2,6 +2,7 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\MicrosoftAuthController;
 use App\Http\Controllers\{
     ProductController,
     ProfileController,
@@ -17,7 +18,7 @@ use App\Http\Controllers\{
     DashboardController,
     CancellationController,
     StatementController,
-    ApprovalController
+    ApprovalController,
 };
 
 /*
@@ -75,6 +76,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn() => Inertia::render('Auth/Login'))->name('login');
     Route::get('/register', fn() => Inertia::render('Auth/Register'))->name('register');
+    Route::get('/auth/microsoft/redirect', [MicrosoftAuthController::class, 'redirect'])->name('auth.microsoft.redirect');
+    Route::get('/auth/microsoft/callback', [MicrosoftAuthController::class, 'callback'])->name('auth.microsoft.callback');
 });
 
 // Profile routes (auth required)

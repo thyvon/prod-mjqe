@@ -27,6 +27,9 @@ class User extends Authenticatable
         'extension',
         'signature', // Added
         'profile',   // Added
+        'microsoft_id',
+        'microsoft_token',
+        'microsoft_refresh_token',
     ];
 
     /**
