@@ -6,6 +6,7 @@ use App\Models\{PurchaseInvoice, PurchaseInvoiceItem, User, PrItem, PoItems, Cas
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use App\Services\SharePointService;
 use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
@@ -359,66 +360,145 @@ class InvoiceController extends Controller
         return response()->json($cashRequests); // Always return a valid JSON response
     }
 
+    // public function attachFile(Request $request, $id)
+    // {
+    //     try {
+    //         $invoice = PurchaseInvoice::findOrFail($id);
+    //         $file = $request->file('file');
+    //         $localFileService = new LocalFileService();
+    //         $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
+    //         $fileUrl = $localFileService->uploadFile($file, $invoice->pi_number, $fileIndex);
+
+    //         if (!$fileUrl) {
+    //             throw new \Exception('File upload failed, no URL returned.');
+    //         }
+
+    //         $attachment = new InvoiceAttachment();
+    //         $attachment->purchase_invoice_id = $invoice->id; // Ensure the correct column name is used
+    //         $attachment->file_url = $fileUrl;
+    //         //$attachment->file_name = $file->getClientOriginalName(); // Ensure file name is saved
+    //         //$attachment->file_size = $file->getSize(); // Ensure file size is saved
+    //         $attachment->save();
+
+    //         return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+    //         return response()->json(['error' => 'Internal Server Error'], 500);
+    //     }
+    // }
+
+    // public function deleteFile($id)
+    // {
+    //     try {
+    //         $attachment = InvoiceAttachment::findOrFail($id);
+    //         $localFileService = new LocalFileService();
+    //         $localFileService->deleteFile($attachment->file_url);
+    //         $attachment->delete();
+
+    //         return response()->json(['message' => 'File deleted successfully'], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error deleting file', ['exception' => $e, 'stack_trace' => $e->getTraceAsString()]);
+    //         return response()->json(['error' => 'Internal Server Error'], 500);
+    //     }
+    // }
+
+    // public function updateFile(Request $request, $id)
+    // {
+    //     try {
+    //         $attachment = InvoiceAttachment::findOrFail($id);
+    //         $file = $request->file('file');
+    //         $localFileService = new LocalFileService();
+    //         $localFileService->deleteFile($attachment->file_url);
+    //         $fileUrl = $localFileService->uploadFile($file);
+
+    //         $attachment->file_url = $fileUrl;
+    //         $attachment->save();
+
+    //         return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+    //         return response()->json(['error' => 'Internal Server Error'], 500);
+    //     }
+    // }
+
     public function attachFile(Request $request, $id)
     {
         try {
             $invoice = PurchaseInvoice::findOrFail($id);
             $file = $request->file('file');
-            $localFileService = new LocalFileService();
+            $sharePointService = new SharePointService();
             $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
-            $fileUrl = $localFileService->uploadFile($file, $invoice->pi_number, $fileIndex);
-
-            if (!$fileUrl) {
-                throw new \Exception('File upload failed, no URL returned.');
+            $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number, $fileIndex);
+    
+            if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
+                throw new \Exception('File upload to SharePoint failed.');
             }
-
+    
             $attachment = new InvoiceAttachment();
-            $attachment->purchase_invoice_id = $invoice->id; // Ensure the correct column name is used
-            $attachment->file_url = $fileUrl;
-            //$attachment->file_name = $file->getClientOriginalName(); // Ensure file name is saved
-            //$attachment->file_size = $file->getSize(); // Ensure file size is saved
+            $attachment->purchase_invoice_id = $invoice->id;
+            $attachment->file_url = $uploadResult['sharepoint_web_url'];
+            $attachment->file_name = $uploadResult['fileName'];
+            $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Save SharePoint file ID
             $attachment->save();
-
+    
             return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
         } catch (\Exception $e) {
             Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
-
+    
     public function deleteFile($id)
     {
         try {
             $attachment = InvoiceAttachment::findOrFail($id);
-            $localFileService = new LocalFileService();
-            $localFileService->deleteFile($attachment->file_url);
+            $sharePointService = new SharePointService();
+    
+            if ($attachment->sharepoint_file_id) {
+                $sharePointService->deleteFileById($attachment->sharepoint_file_id);
+            } else {
+                $sharePointService->deleteFileByPath($attachment->file_name);
+            }
+    
             $attachment->delete();
-
+    
             return response()->json(['message' => 'File deleted successfully'], 200);
         } catch (\Exception $e) {
             Log::error('Error deleting file', ['exception' => $e, 'stack_trace' => $e->getTraceAsString()]);
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
-
+    
     public function updateFile(Request $request, $id)
     {
         try {
             $attachment = InvoiceAttachment::findOrFail($id);
             $file = $request->file('file');
-            $localFileService = new LocalFileService();
-            $localFileService->deleteFile($attachment->file_url);
-            $fileUrl = $localFileService->uploadFile($file);
-
-            $attachment->file_url = $fileUrl;
+            $sharePointService = new SharePointService();
+    
+            if ($attachment->sharepoint_file_id) {
+                $sharePointService->deleteFileById($attachment->sharepoint_file_id);
+            }
+    
+            $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $attachment->purchase_invoice_id)->count();
+            $uploadResult = $sharePointService->uploadFile($file, $attachment->purchaseInvoice->pi_number, $fileIndex);
+    
+            if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
+                throw new \Exception('File upload to SharePoint failed.');
+            }
+    
+            $attachment->file_url = $uploadResult['sharepoint_web_url'];
+            $attachment->file_name = $uploadResult['fileName'];
+            $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Update SharePoint file ID
             $attachment->save();
-
+    
             return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
         } catch (\Exception $e) {
             Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
+
 
     private function getValidationRules($transactionType)
     {

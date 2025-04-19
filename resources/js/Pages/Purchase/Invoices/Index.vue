@@ -1153,14 +1153,68 @@ const removeAttachment = async (attachmentId) => {
   }
 };
 
+// const initializeDropzone = () => {
+//   const dropzoneElement = document.getElementById('demo-upload');
+//   if (Dropzone.instances.length > 0) {
+//     Dropzone.instances.forEach(instance => instance.destroy());
+//   }
+
+//   if (dropzoneElement && !Dropzone.instances.length) { // Check if Dropzone is already initialized
+//     const dropzone = new Dropzone(dropzoneElement, {
+//       url: '/upload',
+//       autoProcessQueue: false,
+//       addRemoveLinks: true,
+//       clickable: true, // Ensure the dropzone is clickable
+//       init: function () {
+//         this.on('addedfile', async function (file) {
+//           try {
+//             await handleFileUpload(file);
+//             this.removeFile(file); // Remove the file from Dropzone after upload
+//           } catch (error) {
+//             console.error('Error during file upload:', error);
+//           }
+//         });
+//         this.on('removedfile', function (file) {
+//           try {
+//             const attachment = form.attachments.find(att => att.file_name === file.name);
+//             if (attachment) {
+//               removeAttachment(attachment.id);
+//             }
+//           } catch (error) {
+//             console.error('Error during file removal:', error);
+//           }
+//         });
+//       },
+//       error: function (file, errorMessage) {
+//         console.error('Dropzone error:', errorMessage);
+//         toastr.error('Error during file upload.');
+//       },
+//     });
+
+//     // Load existing attachments into Dropzone
+//     form.attachments.forEach(attachment => {
+//       const mockFile = { name: attachment.file_name, size: attachment.file_size, dataURL: attachment.file_url };
+//       dropzone.emit('addedfile', mockFile);
+//       dropzone.emit('thumbnail', mockFile, attachment.file_url);
+//       dropzone.emit('complete', mockFile);
+//     });
+//   }
+// };
+
 const initializeDropzone = () => {
   const dropzoneElement = document.getElementById('demo-upload');
-  if (dropzoneElement && !Dropzone.instances.length) { // Check if Dropzone is already initialized
+
+  // Destroy existing Dropzone instance if it exists
+  if (Dropzone.instances.length > 0) {
+    Dropzone.instances.forEach(instance => instance.destroy());
+  }
+
+  if (dropzoneElement) {
     const dropzone = new Dropzone(dropzoneElement, {
       url: '/upload',
       autoProcessQueue: false,
       addRemoveLinks: true,
-      clickable: true, // Ensure the dropzone is clickable
+      clickable: true,
       init: function () {
         this.on('addedfile', async function (file) {
           try {

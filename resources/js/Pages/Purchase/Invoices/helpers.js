@@ -27,12 +27,28 @@ export const getPaymentType = (type) => {
 };
 
 export const getFileThumbnail = (fileUrl) => {
-  const fileExtension = fileUrl.split('.').pop().toLowerCase();
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-  if (imageExtensions.includes(fileExtension)) {
-    return fileUrl;
-  }
-  return '/images/default-file-icon.png'; // Ensure this path is correct and the file exists
+  const extension = fileUrl.split('.').pop().toLowerCase();
+
+  const thumbnailMap = {
+    pdf: '/images/thumbnails/pdf.png',
+    doc: '/images/thumbnails/doc.png',
+    docx: '/images/thumbnails/doc.png',
+    xls: '/images/thumbnails/xls.png',
+    xlsx: '/images/thumbnails/xls.png',
+    ppt: '/images/thumbnails/ppt.png',
+    pptx: '/images/thumbnails/ppt.png',
+    jpg: fileUrl,
+    jpeg: fileUrl,
+    png: fileUrl,
+    gif: fileUrl,
+    bmp: fileUrl,
+    svg: fileUrl,
+  };
+
+  const thumbnailUrl = thumbnailMap[extension] || '/images/thumbnails/default.png';
+
+  // Append a unique query parameter to force refresh
+  return `${thumbnailUrl}?t=${new Date().getTime()}`;
 };
 
 export const openPdfViewer = (url) => {

@@ -5,6 +5,8 @@ namespace App\Providers;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,5 +27,10 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share([
             'auth' => fn () => ['user' => Auth::user()],
         ]);
+
+        $this->app->make('events')->listen(
+            SocialiteWasCalled::class,
+            MicrosoftExtendSocialite::class
+        );
     }
 }

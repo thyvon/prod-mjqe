@@ -9,7 +9,7 @@ class InvoiceAttachment extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['purchase_invoice_id', 'file_url'];
+    protected $fillable = ['purchase_invoice_id','sharepoint_file_id', 'file_url', 'file_name'];	
 
     public function invoice()
     {
