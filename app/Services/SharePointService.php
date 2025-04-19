@@ -83,7 +83,12 @@ class SharePointService
     
             $extension  = $file->getClientOriginalExtension();
             $fileName   = sprintf('%s-%02d.%s', $piNumber, $index, $extension);
-            $remotePath = "invoices/{$fileName}";
+    
+            // Add year/month folder structure
+            $currentDate = now(); // Laravel helper for the current date
+            $year = $currentDate->format('Y');
+            $month = $currentDate->format('M'); // Month in textual format (e.g., Jan, Feb)
+            $remotePath = "Invoices/{$year}/{$month}/{$fileName}";
     
             $response = $this->client->put(
                 "sites/{$this->siteId}/drives/{$this->driveId}/root:/{$remotePath}:/content",
@@ -139,12 +144,16 @@ class SharePointService
     public function deleteFileByPath(string $fileName): bool
     {
         try {
-            $remotePath = "invoices/{$fileName}";
-
+            // Add year/month folder structure
+            $currentDate = now(); // Laravel helper for the current date
+            $year = $currentDate->format('Y');
+            $month = $currentDate->format('M'); // Month in textual format (e.g., Jan, Feb)
+            $remotePath = "Invoices/{$year}/{$month}/{$fileName}";
+    
             $response = $this->client->get("sites/{$this->siteId}/drives/{$this->driveId}/root:/{$remotePath}");
             $data = json_decode($response->getBody(), true);
             $itemId = $data['id'];
-
+    
             return $this->deleteFileById($itemId);
         } catch (\Exception $e) {
             Log::error('Error resolving or deleting SharePoint file by path', ['exception' => $e]);
