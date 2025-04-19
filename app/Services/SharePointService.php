@@ -84,10 +84,10 @@ class SharePointService
             $extension  = $file->getClientOriginalExtension();
             $fileName   = sprintf('%s-%02d.%s', $piNumber, $index, $extension);
     
-            // Add year/month folder structure
+            // Add year/month folder structure with numeric and textual month
             $currentDate = now(); // Laravel helper for the current date
             $year = $currentDate->format('Y');
-            $month = $currentDate->format('M'); // Month in textual format (e.g., Jan, Feb)
+            $month = $currentDate->format('m. M'); // Format: "01. Jan", "02. Feb"
             $remotePath = "Invoices/{$year}/{$month}/{$fileName}";
     
             $response = $this->client->put(
@@ -144,10 +144,10 @@ class SharePointService
     public function deleteFileByPath(string $fileName): bool
     {
         try {
-            // Add year/month folder structure
+            // Add year/month folder structure with numeric and textual month
             $currentDate = now(); // Laravel helper for the current date
             $year = $currentDate->format('Y');
-            $month = $currentDate->format('M'); // Month in textual format (e.g., Jan, Feb)
+            $month = $currentDate->format('m. M'); // Format: "01. Jan", "02. Feb"
             $remotePath = "Invoices/{$year}/{$month}/{$fileName}";
     
             $response = $this->client->get("sites/{$this->siteId}/drives/{$this->driveId}/root:/{$remotePath}");
