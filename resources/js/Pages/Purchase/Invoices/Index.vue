@@ -1225,27 +1225,7 @@ const initializeDropzone = () => {
           }
         });
 
-        this.on('thumbnail', function (file) {
-          // Check if the file is an image
-          const thumbnailElement = file.previewElement.querySelector('[data-dz-thumbnail]');
-          if (thumbnailElement) {
-            if (!file.type.startsWith('image/')) {
-              // Set a custom icon for non-image files
-              thumbnailElement.src = '/images/default-file-icon.png'; // Replace with the path to your file icon
-              thumbnailElement.style.objectFit = 'contain';
-            }
-          }
-        });
-
-        this.on('error', function (file) {
-          // Handle cases where Dropzone fails to generate a thumbnail
-          const thumbnailElement = file.previewElement.querySelector('[data-dz-thumbnail]');
-          if (thumbnailElement) {
-            thumbnailElement.src = '/images/default-file-icon.png'; // Replace with the path to your file icon
-            thumbnailElement.style.objectFit = 'contain';
-          }
-        });
-
+        
         this.on('removedfile', function (file) {
           try {
             const attachment = form.attachments.find(att => att.file_name === file.name);

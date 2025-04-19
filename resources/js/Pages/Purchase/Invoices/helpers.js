@@ -30,7 +30,7 @@ export const getFileThumbnail = (fileUrl) => {
   const extension = fileUrl.split('.').pop().toLowerCase();
 
   const thumbnailMap = {
-    pdf: '/images/thumbnails/pdf.png',
+    pdf: '/images/thumbnails-pdf.png',
     doc: '/images/thumbnails/doc.png',
     docx: '/images/thumbnails/doc.png',
     xls: '/images/thumbnails/xls.png',
