@@ -74,7 +74,7 @@ class SharePointService
     //     }
     // }
 
-    public function uploadFile(UploadedFile $file, string $piNumber, int $index): ?array
+    public function uploadFile(UploadedFile $file, string $piNumber, string $fileId): ?array
     {
         try {
             if ($file->getSize() > 10485760) { // 10 MB limit
@@ -82,7 +82,7 @@ class SharePointService
             }
     
             $extension  = $file->getClientOriginalExtension();
-            $fileName   = sprintf('%s-%02d.%s', $piNumber, $index, $extension);
+            $fileName   = sprintf('%s-%s.%s', $piNumber, $fileId, $extension); // Use fileId for uniqueness
     
             // Add year/month folder structure with numeric and textual month
             $currentDate = now(); // Laravel helper for the current date
