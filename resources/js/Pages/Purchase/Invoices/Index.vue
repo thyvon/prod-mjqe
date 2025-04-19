@@ -1224,6 +1224,19 @@ const initializeDropzone = () => {
             console.error('Error during file upload:', error);
           }
         });
+
+        this.on('thumbnail', function (file) {
+          // Check if the file is an image
+          if (!file.type.startsWith('image/')) {
+            // Set a custom icon for non-image files
+            const thumbnailElement = file.previewElement.querySelector('[data-dz-thumbnail]');
+            if (thumbnailElement) {
+              thumbnailElement.src = '/images/default-file-icon.png'; // Replace with the path to your file icon
+              thumbnailElement.style.objectFit = 'contain';
+            }
+          }
+        });
+
         this.on('removedfile', function (file) {
           try {
             const attachment = form.attachments.find(att => att.file_name === file.name);
