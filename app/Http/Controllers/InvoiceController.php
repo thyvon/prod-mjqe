@@ -217,9 +217,16 @@ class InvoiceController extends Controller
 
         // Delete associated attachments
         $attachments = $invoice->attachments;
+        $sharePointService = new SharePointService();
         foreach ($attachments as $attachment) {
-            $localFileService = new LocalFileService();
-            $localFileService->deleteFile($attachment->file_url);
+            // Delete the file from SharePoint
+            if ($attachment->sharepoint_file_id) {
+                $sharePointService->deleteFileById($attachment->sharepoint_file_id);
+            } else {
+                $sharePointService->deleteFileByPath($attachment->file_name);
+            }
+
+            // Delete the attachment record from the database
             $attachment->delete();
         }
 
@@ -365,58 +372,24 @@ class InvoiceController extends Controller
     //     try {
     //         $invoice = PurchaseInvoice::findOrFail($id);
     //         $file = $request->file('file');
-    //         $localFileService = new LocalFileService();
+    //         $sharePointService = new SharePointService();
     //         $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
-    //         $fileUrl = $localFileService->uploadFile($file, $invoice->pi_number, $fileIndex);
-
-    //         if (!$fileUrl) {
-    //             throw new \Exception('File upload failed, no URL returned.');
+    //         $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number, $fileIndex);
+    
+    //         if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
+    //             throw new \Exception('File upload to SharePoint failed.');
     //         }
-
+    
     //         $attachment = new InvoiceAttachment();
-    //         $attachment->purchase_invoice_id = $invoice->id; // Ensure the correct column name is used
-    //         $attachment->file_url = $fileUrl;
-    //         //$attachment->file_name = $file->getClientOriginalName(); // Ensure file name is saved
-    //         //$attachment->file_size = $file->getSize(); // Ensure file size is saved
+    //         $attachment->purchase_invoice_id = $invoice->id;
+    //         $attachment->file_url = $uploadResult['sharepoint_web_url'];
+    //         $attachment->file_name = $uploadResult['fileName'];
+    //         $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Save SharePoint file ID
     //         $attachment->save();
-
+    
     //         return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
     //     } catch (\Exception $e) {
     //         Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-    //         return response()->json(['error' => 'Internal Server Error'], 500);
-    //     }
-    // }
-
-    // public function deleteFile($id)
-    // {
-    //     try {
-    //         $attachment = InvoiceAttachment::findOrFail($id);
-    //         $localFileService = new LocalFileService();
-    //         $localFileService->deleteFile($attachment->file_url);
-    //         $attachment->delete();
-
-    //         return response()->json(['message' => 'File deleted successfully'], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error deleting file', ['exception' => $e, 'stack_trace' => $e->getTraceAsString()]);
-    //         return response()->json(['error' => 'Internal Server Error'], 500);
-    //     }
-    // }
-
-    // public function updateFile(Request $request, $id)
-    // {
-    //     try {
-    //         $attachment = InvoiceAttachment::findOrFail($id);
-    //         $file = $request->file('file');
-    //         $localFileService = new LocalFileService();
-    //         $localFileService->deleteFile($attachment->file_url);
-    //         $fileUrl = $localFileService->uploadFile($file);
-
-    //         $attachment->file_url = $fileUrl;
-    //         $attachment->save();
-
-    //         return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
     //         return response()->json(['error' => 'Internal Server Error'], 500);
     //     }
     // }
@@ -427,20 +400,22 @@ class InvoiceController extends Controller
             $invoice = PurchaseInvoice::findOrFail($id);
             $file = $request->file('file');
             $sharePointService = new SharePointService();
-            $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
-            $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number, $fileIndex);
-    
+
+            // Upload the file to SharePoint
+            $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number);
+
             if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
                 throw new \Exception('File upload to SharePoint failed.');
             }
-    
+
+            // Save the attachment details in the database
             $attachment = new InvoiceAttachment();
             $attachment->purchase_invoice_id = $invoice->id;
             $attachment->file_url = $uploadResult['sharepoint_web_url'];
             $attachment->file_name = $uploadResult['fileName'];
             $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Save SharePoint file ID
             $attachment->save();
-    
+
             return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
         } catch (\Exception $e) {
             Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
@@ -469,29 +444,61 @@ class InvoiceController extends Controller
         }
     }
     
+    // public function updateFile(Request $request, $id)
+    // {
+    //     try {
+    //         $attachment = InvoiceAttachment::findOrFail($id);
+    //         $file = $request->file('file');
+    //         $sharePointService = new SharePointService();
+    
+    //         if ($attachment->sharepoint_file_id) {
+    //             $sharePointService->deleteFileById($attachment->sharepoint_file_id);
+    //         }
+    
+    //         $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $attachment->purchase_invoice_id)->count();
+    //         $uploadResult = $sharePointService->uploadFile($file, $attachment->purchaseInvoice->pi_number, $fileIndex);
+    
+    //         if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
+    //             throw new \Exception('File upload to SharePoint failed.');
+    //         }
+    
+    //         $attachment->file_url = $uploadResult['sharepoint_web_url'];
+    //         $attachment->file_name = $uploadResult['fileName'];
+    //         $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Update SharePoint file ID
+    //         $attachment->save();
+    
+    //         return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+    //         return response()->json(['error' => 'Internal Server Error'], 500);
+    //     }
+    // }
+
     public function updateFile(Request $request, $id)
     {
         try {
             $attachment = InvoiceAttachment::findOrFail($id);
             $file = $request->file('file');
             $sharePointService = new SharePointService();
-    
+
+            // Delete the old file from SharePoint
             if ($attachment->sharepoint_file_id) {
                 $sharePointService->deleteFileById($attachment->sharepoint_file_id);
             }
-    
-            $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $attachment->purchase_invoice_id)->count();
-            $uploadResult = $sharePointService->uploadFile($file, $attachment->purchaseInvoice->pi_number, $fileIndex);
-    
+
+            // Upload the new file to SharePoint
+            $uploadResult = $sharePointService->uploadFile($file, $attachment->purchaseInvoice->pi_number);
+
             if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
                 throw new \Exception('File upload to SharePoint failed.');
             }
-    
+
+            // Update the attachment details in the database
             $attachment->file_url = $uploadResult['sharepoint_web_url'];
             $attachment->file_name = $uploadResult['fileName'];
             $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Update SharePoint file ID
             $attachment->save();
-    
+
             return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
         } catch (\Exception $e) {
             Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
