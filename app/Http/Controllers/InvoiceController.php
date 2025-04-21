@@ -376,33 +376,6 @@ class InvoiceController extends Controller
         return response()->json($cashRequests); // Always return a valid JSON response
     }
 
-    // public function attachFile(Request $request, $id)
-    // {
-    //     try {
-    //         $invoice = PurchaseInvoice::findOrFail($id);
-    //         $file = $request->file('file');
-    //         $sharePointService = new SharePointService();
-    //         $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $id)->count() + 1;
-    //         $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number, $fileIndex);
-    
-    //         if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
-    //             throw new \Exception('File upload to SharePoint failed.');
-    //         }
-    
-    //         $attachment = new InvoiceAttachment();
-    //         $attachment->purchase_invoice_id = $invoice->id;
-    //         $attachment->file_url = $uploadResult['sharepoint_web_url'];
-    //         $attachment->file_name = $uploadResult['fileName'];
-    //         $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Save SharePoint file ID
-    //         $attachment->save();
-    
-    //         return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-    //         return response()->json(['error' => 'Internal Server Error'], 500);
-    //     }
-    // }
-
     public function attachFile(Request $request, $id)
     {
         try {
@@ -410,8 +383,13 @@ class InvoiceController extends Controller
             $file = $request->file('file');
             $sharePointService = new SharePointService();
 
-            // Upload the file to SharePoint
-            $uploadResult = $sharePointService->uploadFile($file, $invoice->pi_number);
+            // Upload the file to SharePoint with dynamic metadata
+            $uploadResult = $sharePointService->uploadFile(
+                $file,
+                $invoice->pi_number,
+                $invoice->purchased_by, // Pass purchased_by dynamically
+                $invoice->supplier->name // Pass supplier dynamically
+            );
 
             if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
                 throw new \Exception('File upload to SharePoint failed.');
@@ -453,36 +431,6 @@ class InvoiceController extends Controller
         }
     }
     
-    // public function updateFile(Request $request, $id)
-    // {
-    //     try {
-    //         $attachment = InvoiceAttachment::findOrFail($id);
-    //         $file = $request->file('file');
-    //         $sharePointService = new SharePointService();
-    
-    //         if ($attachment->sharepoint_file_id) {
-    //             $sharePointService->deleteFileById($attachment->sharepoint_file_id);
-    //         }
-    
-    //         $fileIndex = InvoiceAttachment::where('purchase_invoice_id', $attachment->purchase_invoice_id)->count();
-    //         $uploadResult = $sharePointService->uploadFile($file, $attachment->purchaseInvoice->pi_number, $fileIndex);
-    
-    //         if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
-    //             throw new \Exception('File upload to SharePoint failed.');
-    //         }
-    
-    //         $attachment->file_url = $uploadResult['sharepoint_web_url'];
-    //         $attachment->file_name = $uploadResult['fileName'];
-    //         $attachment->sharepoint_file_id = $uploadResult['sharepoint_file_id']; // Update SharePoint file ID
-    //         $attachment->save();
-    
-    //         return response()->json(['message' => 'File updated successfully', 'attachment' => $attachment], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error updating file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
-    //         return response()->json(['error' => 'Internal Server Error'], 500);
-    //     }
-    // }
-
     public function updateFile(Request $request, $id)
     {
         try {
