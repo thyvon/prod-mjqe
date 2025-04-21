@@ -326,10 +326,34 @@ class CancellationController extends Controller
     // Remove the specified cancellation
     public function destroy($id)
     {
-        $cancellation = Cancellation::findOrFail($id);
-        Approval::where('approval_id', $cancellation->id)->delete();
-        $cancellation->delete();
-        // return redirect()->route('cancellations.index')->with('success', 'Cancellation deleted successfully.');
+        try {
+            // Find the cancellation record
+            $cancellation = Cancellation::findOrFail($id);
+    
+            // Update the quantity of related items to 0 and save
+            foreach ($cancellation->items as $item) {
+                $item->update(['qty' => 0]); // Set qty to 0
+            }
+    
+            // Recalculate quantities for related PrItems
+            foreach ($cancellation->items as $item) {
+                $prItem = $item->purchaseRequestItem;
+                if ($prItem) {
+                    $prItem->recalculateQtyCancel();
+                }
+            }
+    
+            // Delete related approvals
+            Approval::where('approval_id', $cancellation->id)->delete();
+    
+            // Delete the cancellation record
+            $cancellation->delete();
+    
+            return response()->json(['message' => 'Cancellation deleted successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('Error in destroy method:', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to delete cancellation.'], 500);
+        }
     }
     // Store approvals for the cancellation
     private function storeApprovals($cancelId, $request)
