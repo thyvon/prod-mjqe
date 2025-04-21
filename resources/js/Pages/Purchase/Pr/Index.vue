@@ -676,10 +676,10 @@ onMounted(() => {
                   <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                  ${data.status !== 'Void' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
+                  ${data.status !== 'Void' && data.status !== 'Closed' ? '<li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>' : ''}
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                   <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> Detail</a></li>
-                  ${data.status !== 'Void' ? '<li><a class="dropdown-item btn-cancel text-warning"><i class="fas fa-ban"></i> Cancel</a></li>' : ''}
+                  ${data.status !== 'Void' && data.status !== 'Closed' ? '<li><a class="dropdown-item btn-cancel text-warning"><i class="fas fa-ban"></i> Cancel</a></li>' : ''}
                 </ul>
               </div>
             `,
