@@ -68,7 +68,12 @@ class PurchaseInvoice extends Model
 
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class, 'supplier');
+        return $this->belongsTo(Supplier::class, 'supplier', 'id'); // Ensure the foreign key and local key are correct
+    }
+
+    public function SupplierName()
+    {
+        return $this->belongsTo(Supplier::class, 'supplier', 'id'); // Ensure the foreign key and local key are correct
     }
 
     public function createdBy()
@@ -86,8 +91,8 @@ class PurchaseInvoice extends Model
         return $this->hasMany(InvoiceAttachment::class, 'purchase_invoice_id');
     }
 
-    public function purchasedBy ()
+    public function purchasedBy()
     {
-        return $this->belongsTo(User::class, 'purchased_by');
+        return $this->belongsTo(User::class, 'purchased_by', 'id'); // Ensure the foreign key and local key are correct
     }
 }

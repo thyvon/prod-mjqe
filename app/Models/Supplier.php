@@ -28,4 +28,9 @@ class Supplier extends Model
     {
         return self::where('name', 'like', '%' . $query . '%')->get();
     }
+
+    public function Invoices()
+    {
+        return $this->hasMany(PurchaseInvoice::class, 'supplier', 'name');
+    }
 }
