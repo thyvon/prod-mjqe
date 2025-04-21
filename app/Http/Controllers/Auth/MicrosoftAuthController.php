@@ -26,7 +26,7 @@ class MicrosoftAuthController extends Controller
     {
         return Socialite::driver('microsoft')
             ->scopes(['Sites.ReadWrite.All', 'Files.ReadWrite', 'offline_access']) // Add required scopes
-            ->with(['prompt' => 'login']) // Force Microsoft to show the login page
+            ->with(['prompt' => 'none']) // 'none' will skip the login page if the user is already authenticated
             ->redirect();
     }
 
@@ -55,21 +55,31 @@ class MicrosoftAuthController extends Controller
             // Retrieve the Microsoft user
             $microsoftUser = Socialite::driver('microsoft')->user();
 
-            // Find or create the user in the database
-            $user = User::updateOrCreate(
-                ['email' => $microsoftUser->getEmail()],
-                [
+            // Check if the user already exists in the database
+            $user = User::where('email', $microsoftUser->getEmail())->first();
+
+            if ($user) {
+                // Log in the existing user
+                Auth::login($user, true); // Pass `true` to remember the user
+            } else {
+                // Create a new user in the database
+                $user = User::create([
                     'name'                    => $microsoftUser->getName(),
+                    'email'                   => $microsoftUser->getEmail(),
                     'microsoft_id'            => $microsoftUser->getId(),
                     'microsoft_token'         => $microsoftUser->token,
                     'microsoft_refresh_token' => $microsoftUser->refreshToken,
                     'microsoft_token_expires' => now()->addSeconds($microsoftUser->expiresIn), // Store token expiry time
-                    'password'                => bcrypt(Str::random(16)),
-                ]
-            );
+                    'password'                => bcrypt(Str::random(16)), // Generate a random password
+                ]);
 
-            // Log the user in immediately
-            Auth::login($user);
+                // Log in the newly created user
+                Auth::login($user, true); // Pass `true` to remember the user
+            }
+
+            // Optionally, extend the session lifetime in the config
+            $rememberDuration = 60 * 24 * 7; // 7 days in minutes
+            config(['session.lifetime' => $rememberDuration]);
 
             // Refresh the token if necessary
             $this->refreshMicrosoftToken($user);
