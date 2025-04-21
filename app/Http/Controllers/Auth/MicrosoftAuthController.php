@@ -8,12 +8,21 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str; // For generating random passwords
-use Illuminate\Support\Facades\Http; // For making HTTP requests
 use App\Services\MicrosoftTokenService;
 
 class MicrosoftAuthController extends Controller
 {
-    public function redirect()
+    protected MicrosoftTokenService $tokenService;
+
+    public function __construct(MicrosoftTokenService $tokenService)
+    {
+        $this->tokenService = $tokenService;
+    }
+
+    /**
+     * Redirect the user to Microsoft's OAuth login page.
+     */
+    public function redirect(): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         return Socialite::driver('microsoft')
             ->scopes(['Sites.ReadWrite.All', 'Files.ReadWrite', 'offline_access']) // Add required scopes
@@ -21,23 +30,32 @@ class MicrosoftAuthController extends Controller
             ->redirect();
     }
 
+    /**
+     * Refresh the Microsoft token for the authenticated user.
+     */
     protected function refreshMicrosoftToken(User $user): void
     {
-        if (!Auth::check()) {
-            Log::warning('Attempted to refresh token for unauthenticated user.');
-            throw new \Exception('User is not authenticated.');
+        try {
+            $this->tokenService->refreshToken($user);
+        } catch (\Exception $e) {
+            Log::error('Failed to refresh Microsoft token', [
+                'user_id'   => $user->id,
+                'exception' => $e->getMessage(),
+            ]);
+            throw $e;
         }
-
-        MicrosoftTokenService::refreshToken();
     }
 
-    public function callback()
+    /**
+     * Handle the callback from Microsoft's OAuth.
+     */
+    public function callback(): \Illuminate\Http\RedirectResponse
     {
         try {
             // Retrieve the Microsoft user
             $microsoftUser = Socialite::driver('microsoft')->user();
 
-            // Find or create user
+            // Find or create the user in the database
             $user = User::updateOrCreate(
                 ['email' => $microsoftUser->getEmail()],
                 [
@@ -50,13 +68,14 @@ class MicrosoftAuthController extends Controller
                 ]
             );
 
-            // Log the user in immediately after creating or updating their record
+            // Log the user in immediately
             Auth::login($user);
 
-            // Refresh token if necessary
+            // Refresh the token if necessary
             $this->refreshMicrosoftToken($user);
 
-            return redirect('/'); // Redirect to the dashboard or desired route
+            // Redirect to the dashboard or desired route
+            return redirect('/');
         } catch (\Exception $e) {
             Log::error('Microsoft OAuth Callback Error', [
                 'exception' => $e->getMessage(),
@@ -64,7 +83,7 @@ class MicrosoftAuthController extends Controller
                 'request'   => request()->all(), // Log the request data for debugging
             ]);
 
-            // Check if the error is due to an invalid refresh token
+            // Handle specific errors
             if (str_contains($e->getMessage(), 'Refresh token is invalid or expired')) {
                 return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
             }
