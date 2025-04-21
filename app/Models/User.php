@@ -30,6 +30,7 @@ class User extends Authenticatable
         'microsoft_id',
         'microsoft_token',
         'microsoft_refresh_token',
+        'microsoft_token_expires', // Added
     ];
 
     /**

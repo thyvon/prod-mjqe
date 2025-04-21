@@ -6,6 +6,8 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use App\Services\MicrosoftTokenService;
 
 class SharePointService
 {
@@ -14,6 +16,11 @@ class SharePointService
     protected string $driveId;
 
     public function __construct()
+    {
+        $this->initializeClient();
+    }
+
+    protected function initializeClient(): void
     {
         $accessToken = Auth::user()->microsoft_token;
         if (!$accessToken) {
@@ -28,13 +35,33 @@ class SharePointService
             ],
         ]);
 
-        // Load these from .env
         $this->siteId  = config('services.microsoft.site_id');
         $this->driveId = config('services.microsoft.drive_id');
 
         if (!$this->siteId || !$this->driveId) {
             throw new \Exception('SharePoint siteId or driveId is not configured.');
         }
+    }
+
+    protected function refreshAccessToken(): void
+    {
+        MicrosoftTokenService::refreshToken();
+        $this->initializeClient();
+    }
+
+    protected function handleTokenExpiration(\Exception $e): bool
+    {
+        if ($e instanceof \GuzzleHttp\Exception\ClientException) {
+            $response = $e->getResponse();
+            if ($response && $response->getStatusCode() === 401) {
+                $body = json_decode($response->getBody(), true);
+                if (isset($body['error']['code']) && $body['error']['code'] === 'InvalidAuthenticationToken') {
+                    $this->refreshAccessToken();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function uploadFile(UploadedFile $file, string $piNumber, string $purchasedBy, string $supplier): ?array
@@ -98,6 +125,11 @@ class SharePointService
                 'sharepoint_web_url'  => $data['webUrl'] ?? null,
             ];
         } catch (\Exception $e) {
+            if ($this->handleTokenExpiration($e)) {
+                // Retry the upload after refreshing the token
+                return $this->uploadFile($file, $piNumber, $purchasedBy, $supplier);
+            }
+
             Log::error('Error uploading file to SharePoint', [
                 'exception' => $e->getMessage(),
                 'response' => $e instanceof \GuzzleHttp\Exception\RequestException
