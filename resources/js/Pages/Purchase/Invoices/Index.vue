@@ -2013,7 +2013,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
       </div>
     </div>
     <div class="modal fade" id="editInvoiceItemModal" tabindex="-1" aria-labelledby="editInvoiceItemModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl">
+      <div class="modal-dialog" style="max-width: 90vw;">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="editInvoiceItemModalLabel">{{ editItemForm.po_item ? 'Edit PO Item' : 'Edit PR Item' }}</h5>
