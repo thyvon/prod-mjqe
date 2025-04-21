@@ -2013,7 +2013,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
       </div>
     </div>
     <div class="modal fade" id="editInvoiceItemModal" tabindex="-1" aria-labelledby="editInvoiceItemModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
+      <div class="modal-dialog modal-xl">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="editInvoiceItemModalLabel">{{ editItemForm.po_item ? 'Edit PO Item' : 'Edit PR Item' }}</h5>
@@ -2021,118 +2021,18 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
           </div>
           <div class="modal-body">
             <form @submit.prevent="updateInvoiceItem">
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="row mb-2 align-items-center">
-                    <label for="editDescription" class="col-sm-4 col-form-label">Description</label>
-                    <div class="col-sm-8">
-                      <textarea v-model="editItemForm.description" class="form-control" id="editDescription"></textarea>
-                      <div v-if="editItemFormErrors.description" class="text-danger">{{ editItemFormErrors.description }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editQty" class="col-sm-4 col-form-label">Quantity</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.qty" class="form-control bg-light" id="editQty" step="0.0001" :disabled="form.payment_type === 2">
-                      <div v-if="editItemFormErrors.qty" class="text-danger">{{ editItemFormErrors.qty }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editUom" class="col-sm-4 col-form-label">UoM</label>
-                    <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.uom" class="form-control bg-light" id="editUom" disabled>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editProductPrice" class="col-sm-4 col-form-label">
-                      Previous Price
-                      <i 
-                        class="fas fa-exclamation-circle text-warning ms-2" 
-                        data-bs-toggle="tooltip" 
-                        data-bs-placement="top" 
-                        title="This is just the previous price of the Product. It will not be updated in the database."
-                      ></i>
-                    </label>
-                    <div class="col-sm-8">
-                      <input 
-                        type="text" 
-                        v-model="editItemForm.product_price" 
-                        class="form-control bg-light text-danger" 
-                        id="editProductPrice" 
-                        disabled
-                      >
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editUnitPrice" class="col-sm-4 col-form-label">Unit Price</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.unit_price" class="form-control" id="editUnitPrice" step="0.0001">
-                      <div v-if="editItemFormErrors.unit_price" class="text-danger">{{ editItemFormErrors.unit_price }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editTotalPrice" class="col-sm-4 col-form-label">Total Price</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.total_price" class="form-control bg-light" id="editTotalPrice" disabled>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editDiscount" class="col-sm-4 col-form-label">Discount</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.discount" class="form-control" id="editDiscount" step="0.0001">
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editServiceCharge" class="col-sm-4 col-form-label">Delivery</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.service_charge" class="form-control" id="editServiceCharge" step="0.0001">
-                      <div v-if="editItemFormErrors.service_charge" class="text-danger">{{ editItemFormErrors.service_charge }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editVat" class="col-sm-4 col-form-label">VAT(%)</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.vat" class="form-control bg-light" id="editVat" step="0.01" disabled>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editReturn" class="col-sm-4 col-form-label">Return</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.return" class="form-control" id="editReturn" step="0.0001">
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editRetention" class="col-sm-4 col-form-label">Retention</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.retention" class="form-control" id="editRetention" step="0.0001">
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editDeposit" class="col-sm-4 col-form-label">Deposit</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.deposit" class="form-control" id="editDeposit" step="0.0001">
-                      <div v-if="editItemFormErrors.deposit" class="text-danger">{{ editItemFormErrors.deposit }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editPaidAmount" class="col-sm-4 col-form-label">Grand Total</label>
-                    <div class="col-sm-8">
-                      <input type="number" v-model="editItemForm.paid_amount" class="form-control bg-light" id="editPaidAmount" step="0.0001" disabled>
-                      <div v-if="editItemFormErrors.paid_amount" class="text-danger">{{ editItemFormErrors.paid_amount }}</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
+              <div class="row mb-3">
+                  <div class="col-md-3 border p-3">
                   <div class="row mb-2 align-items-center">
                     <label for="editPrNumber" class="col-sm-4 col-form-label">PR Number</label>
                     <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.pr_number" class="form-control bg-light" id="editPrNumber" disabled>
+                      <input type="text" v-model="editItemForm.pr_number" class="form-control bg-light" id="editPrNumber" readonly>
                     </div>
                   </div>
                   <div v-if="editItemForm.po_item" class="row mb-2 align-items-center">
                     <label for="editPoNumber" class="col-sm-4 col-form-label">PO Number</label>
                     <div class="col-sm-8">
-                      <input type="text" v-model="editItemForm.po_number" class="form-control bg-light" id="editPoNumber" disabled>
+                      <input type="text" v-model="editItemForm.po_number" class="form-control bg-light" id="editPoNumber" readonly>
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">
@@ -2164,19 +2064,6 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     </div>
                   </div>
                   <div class="row mb-2 align-items-center">
-                    <label for="editPurpose" class="col-sm-4 col-form-label">Purpose</label>
-                    <div class="col-sm-8">
-                      <textarea v-model="editItemForm.purpose" class="form-control" id="editPurpose"></textarea>
-                      <div v-if="editItemFormErrors.purpose" class="text-danger">{{ editItemFormErrors.purpose }}</div>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editRemark" class="col-sm-4 col-form-label">Remark</label>
-                    <div class="col-sm-8">
-                      <textarea v-model="editItemForm.remark" class="form-control" id="editRemark"></textarea>
-                    </div>
-                  </div>
-                  <div class="row mb-2 align-items-center">
                     <label for="editStopPurchase" class="col-sm-4 col-form-label">Force Close</label>
                     <div class="col-sm-8">
                       <div class="form-check form-switch">
@@ -2185,6 +2072,106 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                       </div>
                     </div>
                   </div>
+                  </div>
+                  <div class="col-md-9 border p-3">
+                    <div class="row mb-2 align-items-center">
+                      <label for="editDescription" class="col-sm-2 col-form-label">Description</label>
+                      <div class="col-sm-10">
+                        <textarea v-model="editItemForm.description" class="form-control" id="editDescription"></textarea>
+                        <div v-if="editItemFormErrors.description" class="text-danger">{{ editItemFormErrors.description }}</div>
+                      </div>
+                    </div>
+                    <div class="row mb-2 align-items-center">
+                    <label for="editPurpose" class="col-sm-2 col-form-label">Purpose</label>
+                    <div class="col-sm-10">
+                      <textarea v-model="editItemForm.purpose" class="form-control" id="editPurpose"></textarea>
+                      <div v-if="editItemFormErrors.purpose" class="text-danger">{{ editItemFormErrors.purpose }}</div>
+                    </div>
+                  </div>
+                  <div class="row mb-2 align-items-center">
+                    <label for="editRemark" class="col-sm-2 col-form-label">Remark</label>
+                    <div class="col-sm-10">
+                      <textarea v-model="editItemForm.remark" class="form-control" id="editRemark"></textarea>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              <div class="row">
+                <div class="col-md-12 border p-3">
+                  <div class="table-responsive">
+                    <table class="table align-middle table-bordered border-secondary text-center">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Quantity</th>
+                          <th>UoM</th>
+                          <th>
+                            Previous Price
+                            <i 
+                              class="fas fa-exclamation-circle text-warning ms-1" 
+                              data-bs-toggle="tooltip"
+                              title="This is just the previous price of the Product. It will not be updated in the database."
+                            ></i>
+                          </th>
+                          <th>Unit Price</th>
+                          <th>Total Price</th>
+                          <th>Discount</th>
+                          <th>Delivery</th>
+                          <th>VAT (%)</th>
+                          <th>Return</th>
+                          <th>Retention</th>
+                          <th>Deposit</th>
+                          <th>Grand Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.qty" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 2">
+                            <div v-if="editItemFormErrors.qty" class="text-danger small">{{ editItemFormErrors.qty }}</div>
+                          </td>
+                          <td class="p-0">
+                            <input type="text" v-model="editItemForm.uom" class="form-control border-0" readonly>
+                          </td>
+                          <td class="p-0">
+                            <input type="text" v-model="editItemForm.product_price" class="form-control text-danger border-0" readonly>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001">
+                            <div v-if="editItemFormErrors.unit_price" class="text-danger small">{{ editItemFormErrors.unit_price }}</div>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.total_price" class="form-control border-0" readonly>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.discount" class="form-control border-0" step="0.0001">
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.service_charge" class="form-control border-0" step="0.0001">
+                            <div v-if="editItemFormErrors.service_charge" class="text-danger small">{{ editItemFormErrors.service_charge }}</div>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.vat" class="form-control border-0" step="0.01" readonly>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.return" class="form-control border-0" step="0.0001">
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.retention" class="form-control border-0" step="0.0001">
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.deposit" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 1">
+                            <div v-if="editItemFormErrors.deposit" class="text-danger small">{{ editItemFormErrors.deposit }}</div>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.paid_amount" class="form-control border-0" step="0.0001" readonly>
+                            <div v-if="editItemFormErrors.paid_amount" class="text-danger small">{{ editItemFormErrors.paid_amount }}</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+
                 </div>
               </div>
               <div class="modal-footer">
