@@ -12,7 +12,13 @@ class MicrosoftTokenService
     {
         $user = Auth::user();
 
-        if (!$user || !$user->microsoft_refresh_token) {
+        if (!$user) {
+            Log::warning('Attempted to refresh token for unauthenticated user.');
+            throw new \Exception('User is not authenticated.');
+        }
+
+        if (!$user->microsoft_refresh_token) {
+            Log::warning('Refresh token is missing or invalid for user.', ['user_id' => $user->id ?? null]);
             throw new \Exception('Refresh token is missing or invalid.');
         }
 
@@ -30,7 +36,14 @@ class MicrosoftTokenService
                 Log::error('Failed to refresh Microsoft access token', [
                     'status' => $response->status(),
                     'error'  => $errorBody,
+                    'user_id' => $user->id,
                 ]);
+
+                // Check if the refresh token is invalid or expired
+                if (isset($errorBody['error']) && $errorBody['error'] === 'invalid_grant') {
+                    throw new \Exception('Refresh token is invalid or expired. User needs to reauthenticate.');
+                }
+
                 throw new \Exception('Failed to refresh Microsoft access token.');
             }
 
@@ -45,6 +58,7 @@ class MicrosoftTokenService
             Log::error('Error refreshing Microsoft access token', [
                 'exception' => $e->getMessage(),
                 'trace'     => $e->getTraceAsString(),
+                'user_id'   => $user->id ?? null,
             ]);
             throw $e;
         }

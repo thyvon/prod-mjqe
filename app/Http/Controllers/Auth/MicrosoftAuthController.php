@@ -23,6 +23,11 @@ class MicrosoftAuthController extends Controller
 
     protected function refreshMicrosoftToken(User $user): void
     {
+        if (!Auth::check()) {
+            Log::warning('Attempted to refresh token for unauthenticated user.');
+            throw new \Exception('User is not authenticated.');
+        }
+
         MicrosoftTokenService::refreshToken();
     }
 
@@ -45,19 +50,26 @@ class MicrosoftAuthController extends Controller
                 ]
             );
 
+            // Log the user in immediately after creating or updating their record
+            Auth::login($user);
+
             // Refresh token if necessary
             $this->refreshMicrosoftToken($user);
 
-            // Log the user in
-            Auth::login($user);
-
             return redirect('/'); // Redirect to the dashboard or desired route
         } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Microsoft OAuth Callback Error: ' . $e->getMessage());
-            Log::info('Microsoft callback request:', request()->all());
+            Log::error('Microsoft OAuth Callback Error', [
+                'exception' => $e->getMessage(),
+                'trace'     => $e->getTraceAsString(),
+                'request'   => request()->all(), // Log the request data for debugging
+            ]);
 
-            // Redirect back with an error message
+            // Check if the error is due to an invalid refresh token
+            if (str_contains($e->getMessage(), 'Refresh token is invalid or expired')) {
+                return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
+            }
+
+            // Redirect back with a generic error message
             return redirect()->route('login')->with('error', 'Authentication failed. Please try again.');
         }
     }
