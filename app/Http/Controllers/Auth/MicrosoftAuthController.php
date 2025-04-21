@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str; // For generating random passwords
-
+use Illuminate\Support\Facades\Http; // For making HTTP requests
+use App\Services\MicrosoftTokenService;
 
 class MicrosoftAuthController extends Controller
 {
@@ -18,6 +19,11 @@ class MicrosoftAuthController extends Controller
             ->scopes(['Sites.ReadWrite.All', 'Files.ReadWrite', 'offline_access']) // Add required scopes
             ->with(['prompt' => 'login']) // Force Microsoft to show the login page
             ->redirect();
+    }
+
+    protected function refreshMicrosoftToken(User $user): void
+    {
+        MicrosoftTokenService::refreshToken();
     }
 
     public function callback()
@@ -34,9 +40,13 @@ class MicrosoftAuthController extends Controller
                     'microsoft_id'            => $microsoftUser->getId(),
                     'microsoft_token'         => $microsoftUser->token,
                     'microsoft_refresh_token' => $microsoftUser->refreshToken,
+                    'microsoft_token_expires' => now()->addSeconds($microsoftUser->expiresIn), // Store token expiry time
                     'password'                => bcrypt(Str::random(16)),
                 ]
             );
+
+            // Refresh token if necessary
+            $this->refreshMicrosoftToken($user);
 
             // Log the user in
             Auth::login($user);
