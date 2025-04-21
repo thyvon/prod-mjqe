@@ -31,7 +31,11 @@ export const getFileThumbnail = (fileUrl) => {
     return '/images/default-file-icon.png'; // Fallback for empty URLs
   }
 
-  const extension = fileUrl.split('.').pop().toLowerCase();
+  // Remove query parameters from the URL
+  const cleanUrl = fileUrl.split('?')[0];
+
+  // Extract the file extension
+  const extension = cleanUrl.split('.').pop().toLowerCase();
 
   const thumbnailMap = {
     pdf: '/images/thumbnails-pdf.png',
