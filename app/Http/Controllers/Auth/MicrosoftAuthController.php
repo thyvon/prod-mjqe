@@ -26,7 +26,7 @@ class MicrosoftAuthController extends Controller
     {
         return Socialite::driver('microsoft')
             ->scopes(['Sites.ReadWrite.All', 'Files.ReadWrite', 'offline_access']) // Add required scopes
-            ->with(['prompt' => 'none']) // 'none' will skip the login page if the user is already authenticated
+            ->with(['prompt' => 'login']) // Force Microsoft to show the login page
             ->redirect();
     }
 
