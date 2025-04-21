@@ -27,17 +27,21 @@ export const getPaymentType = (type) => {
 };
 
 export const getFileThumbnail = (fileUrl) => {
+  if (!fileUrl) {
+    return '/images/default-file-icon.png'; // Fallback for empty URLs
+  }
+
   const extension = fileUrl.split('.').pop().toLowerCase();
 
   const thumbnailMap = {
     pdf: '/images/thumbnails-pdf.png',
     doc: '/images/thumbnails-doc.png',
     docx: '/images/thumbnails-doc.png',
-    xls: '/images/thumbnails-pdf.png',
-    xlsx: '/images/thumbnails-pdf.png',
+    xls: '/images/thumbnails-xls.png',
+    xlsx: '/images/thumbnails-xls.png',
     ppt: '/images/thumbnails-ppt.png',
     pptx: '/images/thumbnails-ppt.png',
-    jpg: fileUrl,
+    jpg: fileUrl, // Use the file URL directly for images
     jpeg: fileUrl,
     png: fileUrl,
     gif: fileUrl,
@@ -45,6 +49,7 @@ export const getFileThumbnail = (fileUrl) => {
     svg: fileUrl,
   };
 
+  // Check if the extension exists in the map
   const thumbnailUrl = thumbnailMap[extension] || '/images/default-file-icon.png';
 
   // Append a unique query parameter to force refresh
