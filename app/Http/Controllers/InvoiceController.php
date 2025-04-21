@@ -15,7 +15,7 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])
-                ->get(['id', 'pi_number', 'invoice_date', 'supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']), // Include paid_usd and other necessary fields
+                ->get(['id', 'pi_number', 'invoice_date','supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']), // Removed 'supplier' to avoid overriding the relationship
             'users' => User::all(),
             'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])->get(),
             'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
@@ -379,16 +379,26 @@ class InvoiceController extends Controller
     public function attachFile(Request $request, $id)
     {
         try {
-            $invoice = PurchaseInvoice::findOrFail($id);
+            $invoice = PurchaseInvoice::with(['SupplierName', 'purchasedBy'])->findOrFail($id); // Ensure relationships are loaded
             $file = $request->file('file');
             $sharePointService = new SharePointService();
+
+            // Safely access the supplier name
+            $supplierName = $invoice->SupplierName && is_object($invoice->SupplierName) && isset($invoice->SupplierName->name)
+                ? $invoice->SupplierName->name
+                : 'Unknown Supplier';
+
+            // Safely access the purchaser name
+            $purchaserName = $invoice->purchasedBy && is_object($invoice->purchasedBy) && isset($invoice->purchasedBy->name)
+                ? $invoice->purchasedBy->name
+                : 'Unknown Purchaser';
 
             // Upload the file to SharePoint with dynamic metadata
             $uploadResult = $sharePointService->uploadFile(
                 $file,
                 $invoice->pi_number,
-                $invoice->purchased_by, // Pass purchased_by dynamically
-                $invoice->supplier->name // Pass supplier dynamically
+                $purchaserName, // Pass purchaser name dynamically
+                $supplierName // Pass supplier name dynamically
             );
 
             if (!$uploadResult || !isset($uploadResult['sharepoint_web_url'])) {
@@ -405,7 +415,11 @@ class InvoiceController extends Controller
 
             return response()->json(['message' => 'File attached successfully', 'attachment' => $attachment], 201);
         } catch (\Exception $e) {
-            Log::error('Error attaching file', ['exception' => $e, 'request_data' => $request->all(), 'stack_trace' => $e->getTraceAsString()]);
+            Log::error('Error attaching file', [
+                'exception' => $e->getMessage(),
+                'request_data' => $request->all(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
