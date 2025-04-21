@@ -188,6 +188,14 @@ class InvoiceController extends Controller
         $invoice = PurchaseInvoice::findOrFail($id);
         $invoiceItems = $invoice->items;
 
+        // Collect item codes for product price updates
+        $deletedItemCodes = [];
+        foreach ($invoiceItems as $item) {
+            if ($item->item_code) {
+                $deletedItemCodes[] = $item->item_code;
+            }
+        }
+
         foreach ($invoiceItems as $item) {
             if ($item->po_item) {
                 $poItem = PoItems::find($item->po_item);
@@ -204,15 +212,6 @@ class InvoiceController extends Controller
                     $prItem->recalculateQtyPurchase();
                     $prItem->calculateForceClose();
                 }
-            }
-        }
-
-        // Update product prices before deleting items
-        foreach ($invoiceItems as $item) {
-            $product = Product::find($item->item_code);
-            if ($product) {
-                $product->updatePriceFromLatestPurchase();
-                $product->calculateAveragePriceLastThreeMonths();
             }
         }
 
@@ -250,6 +249,15 @@ class InvoiceController extends Controller
                     $prItem->recalculateQtyPurchase();
                     $prItem->calculateForceClose();
                 }
+            }
+        }
+
+        // Perform product price updates after the invoice and items are deleted
+        foreach (array_unique($deletedItemCodes) as $itemCode) {
+            $product = Product::find($itemCode);
+            if ($product) {
+                $product->updatePriceFromLatestPurchase();
+                $product->calculateAveragePriceLastThreeMonths();
             }
         }
 
@@ -744,15 +752,6 @@ class InvoiceController extends Controller
                 $newItem = PurchaseInvoiceItem::create($itemData);
                 $updatedItemIds[] = $newItem->id;
             }
-
-            // Update product price
-            if (isset($itemData['item_code'])) {
-                $product = Product::find($itemData['item_code']);
-                if ($product) {
-                    $product->updatePriceFromLatestPurchase();
-                    $product->calculateAveragePriceLastThreeMonths();
-                }
-            }
         }
 
         return $updatedItemIds;
@@ -761,12 +760,20 @@ class InvoiceController extends Controller
     private function deleteRemovedItems($existingItems, $updatedItemIds)
     {
         $itemsToRecalculate = [];
-
+        $deletedItemCodes = [];
+    
         foreach ($existingItems as $itemId => $item) {
             if (!in_array($itemId, $updatedItemIds)) {
                 $poItemId = $item->po_item;
                 $prItemId = $item->pr_item;
+    
+                // Collect item codes for product price updates after deletion
+                if ($item->item_code) {
+                    $deletedItemCodes[] = $item->item_code;
+                }
+    
                 $item->delete();
+    
                 if ($poItemId) {
                     $itemsToRecalculate['po_item'][] = $poItemId;
                 }
@@ -775,7 +782,16 @@ class InvoiceController extends Controller
                 }
             }
         }
-
+    
+        // Perform product price updates after items are deleted
+        foreach (array_unique($deletedItemCodes) as $itemCode) {
+            $product = Product::find($itemCode);
+            if ($product) {
+                $product->updatePriceFromLatestPurchase();
+                $product->calculateAveragePriceLastThreeMonths();
+            }
+        }
+    
         foreach (array_unique($itemsToRecalculate['po_item'] ?? []) as $poItemId) {
             $poItem = PoItems::find($poItemId);
             if ($poItem) {
@@ -784,7 +800,7 @@ class InvoiceController extends Controller
                 $poItem->calculateForceClose();
             }
         }
-
+    
         foreach (array_unique($itemsToRecalculate['pr_item'] ?? []) as $prItemId) {
             $prItem = PrItem::find($prItemId);
             if ($prItem) {
@@ -796,6 +812,8 @@ class InvoiceController extends Controller
 
     private function recalculateItemQuantities($items)
     {
+        $updatedItemCodes = [];
+    
         foreach ($items as $itemData) {
             if (isset($itemData['po_item'])) {
                 $poItem = PoItems::find($itemData['po_item']);
@@ -803,15 +821,34 @@ class InvoiceController extends Controller
                     $poItem->recalculateReceivedQty();
                     $poItem->recalculatePaidAmount();
                     $poItem->calculateForceClose();
+    
+                    // Collect item codes for product price updates
+                    if ($poItem->product_id) {
+                        $updatedItemCodes[] = $poItem->product_id;
+                    }
                 }
             }
-
+    
             if (isset($itemData['pr_item'])) {
                 $prItem = PrItem::find($itemData['pr_item']);
                 if ($prItem) {
                     $prItem->recalculateQtyPurchase();
                     $prItem->calculateForceClose();
+    
+                    // Collect item codes for product price updates
+                    if ($prItem->product_id) {
+                        $updatedItemCodes[] = $prItem->product_id;
+                    }
                 }
+            }
+        }
+    
+        // Perform product price updates after recalculations
+        foreach (array_unique($updatedItemCodes) as $itemCode) {
+            $product = Product::find($itemCode);
+            if ($product) {
+                $product->updatePriceFromLatestPurchase();
+                $product->calculateAveragePriceLastThreeMonths();
             }
         }
     }
