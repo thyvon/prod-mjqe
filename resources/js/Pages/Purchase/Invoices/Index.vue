@@ -2143,10 +2143,16 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                             <input type="number" v-model="editItemForm.total_price" class="form-control border-0" readonly>
                           </td>
                           <td class="p-0">
-                            <input type="number" v-model="editItemForm.discount" class="form-control border-0" step="0.0001">
+                            <input type="number" v-model="editItemForm.discount" class="form-control border-0" step="0.0001" :readonly="form.discount_total > 0 && form.discount_total !== ''">
                           </td>
                           <td class="p-0">
-                            <input type="number" v-model="editItemForm.service_charge" class="form-control border-0" step="0.0001">
+                            <input 
+                              type="number" 
+                              v-model="editItemForm.service_charge" 
+                              class="form-control border-0" 
+                              step="0.0001" 
+                              :readonly="form.service_charge > 0 && form.service_charge !== ''"
+                            >
                             <div v-if="editItemFormErrors.service_charge" class="text-danger small">{{ editItemFormErrors.service_charge }}</div>
                           </td>
                           <td class="p-0">
