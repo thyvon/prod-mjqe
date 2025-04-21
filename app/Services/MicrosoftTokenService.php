@@ -17,7 +17,7 @@ class MicrosoftTokenService
         }
 
         try {
-            $response = Http::asForm()->post('https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token', [
+            $response = Http::asForm()->post('https://login.microsoftonline.com/8aedd825-623e-4fc4-9591-ea0d629e89ec/oauth2/v2.0/token', [
                 'client_id'     => config('services.microsoft.client_id'),
                 'client_secret' => config('services.microsoft.client_secret'),
                 'grant_type'    => 'refresh_token',
