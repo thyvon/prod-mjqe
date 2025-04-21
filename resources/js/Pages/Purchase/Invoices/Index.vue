@@ -2063,15 +2063,6 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                       <div v-if="editItemFormErrors.location" class="text-danger">{{ editItemFormErrors.location }}</div>
                     </div>
                   </div>
-                  <div class="row mb-2 align-items-center">
-                    <label for="editStopPurchase" class="col-sm-4 col-form-label">Force Close</label>
-                    <div class="col-sm-8">
-                      <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" v-model="editItemForm.stop_purchase" id="editStopPurchase" :true-value="1" :false-value="0">
-                        <label class="form-check-label" for="editStopPurchase">{{ editItemForm.stop_purchase === 1 ? 'Yes' : 'No' }}</label>
-                      </div>
-                    </div>
-                  </div>
                   </div>
                   <div class="col-md-9 border p-3">
                     <div class="row mb-2 align-items-center">
@@ -2092,6 +2083,15 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <label for="editRemark" class="col-sm-2 col-form-label">Remark</label>
                     <div class="col-sm-10">
                       <textarea v-model="editItemForm.remark" class="form-control" id="editRemark"></textarea>
+                    </div>
+                  </div>
+                  <div class="row mb-2 align-items-center">
+                    <label for="editStopPurchase" class="col-sm-2 col-form-label">Force Close</label>
+                    <div class="col-sm-10">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" v-model="editItemForm.stop_purchase" id="editStopPurchase" :true-value="1" :false-value="0">
+                        <label class="form-check-label" for="editStopPurchase">{{ editItemForm.stop_purchase === 1 ? 'Yes' : 'No' }}</label>
+                      </div>
                     </div>
                   </div>
                   </div>
@@ -2170,8 +2170,6 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                       </tbody>
                     </table>
                   </div>
-
-
                 </div>
               </div>
               <div class="modal-footer">
