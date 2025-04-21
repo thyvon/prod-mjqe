@@ -770,7 +770,7 @@ onMounted(() => {
       </li>
       <li class="nav-item">
         <!-- Navigate to the cancellation index page -->
-        <Link href="/cancellations" class="btn btn-sm btn-secondary">Cancellations List</Link>
+        <a href="/cancellations" class="btn btn-sm btn-secondary">Cancellations List</a>
       </li>
     </ul>
     <div class="tab-content panel p-3 rounded-0 rounded-bottom">
