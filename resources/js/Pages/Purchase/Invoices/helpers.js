@@ -31,12 +31,12 @@ export const getFileThumbnail = (fileUrl) => {
 
   const thumbnailMap = {
     pdf: '/images/thumbnails-pdf.png',
-    doc: '/images/thumbnails/doc.png',
-    docx: '/images/thumbnails/doc.png',
-    xls: '/images/thumbnails/xls.png',
-    xlsx: '/images/thumbnails/xls.png',
-    ppt: '/images/thumbnails/ppt.png',
-    pptx: '/images/thumbnails/ppt.png',
+    doc: '/images/thumbnails-doc.png',
+    docx: '/images/thumbnails-doc.png',
+    xls: '/images/thumbnails-xls.png',
+    xlsx: '/images/thumbnails-xls.png',
+    ppt: '/images/thumbnails-ppt.png',
+    pptx: '/images/thumbnails-ppt.png',
     jpg: fileUrl,
     jpeg: fileUrl,
     png: fileUrl,
