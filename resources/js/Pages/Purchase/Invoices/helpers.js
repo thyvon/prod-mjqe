@@ -45,7 +45,7 @@ export const getFileThumbnail = (fileUrl) => {
     svg: fileUrl,
   };
 
-  const thumbnailUrl = thumbnailMap[extension] || '/images/thumbnails/default.png';
+  const thumbnailUrl = thumbnailMap[extension] || '/images/default-file-icon.png';
 
   // Append a unique query parameter to force refresh
   return `${thumbnailUrl}?t=${new Date().getTime()}`;
