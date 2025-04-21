@@ -37,58 +37,7 @@ class SharePointService
         }
     }
 
-
-    // public function uploadFile(UploadedFile $file, string $piNumber, string $fileId): ?array
-    // {
-    //     try {
-    //         if ($file->getSize() > 10485760) { // 10 MB limit
-    //             throw new \Exception('File size exceeds the maximum allowed limit of 10 MB.');
-    //         }
-    
-    //         $extension  = $file->getClientOriginalExtension();
-    //         $fileName   = sprintf('%s-%s.%s', $piNumber, $fileId, $extension); // Use fileId for uniqueness
-    
-    //         // Add year/month folder structure with numeric and textual month
-    //         $currentDate = now(); // Laravel helper for the current date
-    //         $year = $currentDate->format('Y');
-    //         $month = $currentDate->format('m. M'); // Format: "01. Jan", "02. Feb"
-    //         $remotePath = "Invoices/{$year}/{$month}/{$fileName}";
-    
-    //         $response = $this->client->put(
-    //             "sites/{$this->siteId}/drives/{$this->driveId}/root:/{$remotePath}:/content",
-    //             ['body' => file_get_contents($file->getRealPath())]
-    //         );
-    
-    //         // Log the response for debugging
-    //         Log::info('SharePoint API Response', [
-    //             'status_code' => $response->getStatusCode(),
-    //             'body' => $response->getBody()->getContents(),
-    //         ]);
-    
-    //         // Accept both 200 and 201 as successful responses
-    //         if (!in_array($response->getStatusCode(), [200, 201])) {
-    //             throw new \Exception('Failed to upload file to SharePoint.');
-    //         }
-    
-    //         $data = json_decode($response->getBody(), true);
-    
-    //         return [
-    //             'fileName'            => $fileName,
-    //             'sharepoint_file_id'  => $data['id'] ?? null,
-    //             'sharepoint_web_url'  => $data['webUrl'] ?? null,
-    //         ];
-    //     } catch (\Exception $e) {
-    //         Log::error('Error uploading file to SharePoint', [
-    //             'exception' => $e->getMessage(),
-    //             'response' => $e instanceof \GuzzleHttp\Exception\RequestException
-    //                 ? $e->getResponse()->getBody()->getContents()
-    //                 : null,
-    //         ]);
-    //         return null;
-    //     }
-    // }
-
-    public function uploadFile(UploadedFile $file, string $piNumber): ?array
+    public function uploadFile(UploadedFile $file, string $piNumber, string $purchasedBy, string $supplier): ?array
     {
         try {
             if ($file->getSize() > 536870912) { // 0.5 GB = 512 MB in bytes
@@ -126,6 +75,22 @@ class SharePointService
             }
 
             $data = json_decode($response->getBody(), true);
+
+            // Add metadata to the uploaded file
+            $fileId = $data['id'] ?? null;
+            if ($fileId) {
+                $metadata = [
+                    'fields' => [
+                        'Purchaser' => $purchasedBy, // Use "Purchaser" as the column name
+                        'Supplier'  => $supplier,   // Use "Supplier" as the column name
+                    ],
+                ];
+
+                $this->client->patch(
+                    "sites/{$this->siteId}/drives/{$this->driveId}/items/{$fileId}/listItem",
+                    ['json' => $metadata]
+                );
+            }
 
             return [
                 'fileName'            => $fileName,
