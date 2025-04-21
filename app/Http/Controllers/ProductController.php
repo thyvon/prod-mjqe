@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductGroup;
+use App\Models\PurchaseInvoiceItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -88,6 +89,24 @@ class ProductController extends Controller
 
         // Return success response
         return response()->json($product);
+    }
+
+    public function show($id)
+    {
+        // Fetch the product with its category and group relationships
+        $product = Product::with(['category:id,name', 'group:id,name'])->find($id);
+        $purchasedItems = PurchaseInvoiceItem::with(['product:id,sku,product_description', 'purchasedBy:id,name', 'supplier:id,name', 'invoice:id,pi_number'])->where('item_code', $product->id)->get();
+
+        // Check if the product exists
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+        // dd ($purchasedItems);
+
+        return Inertia::render('Products/Show', [
+            'product' => $product,
+            'purchasedItems' => $purchasedItems,
+        ]);
     }
 
     // Delete the specified product
