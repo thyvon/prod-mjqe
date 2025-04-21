@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue';
 import axios from 'axios';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link} from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 
 const props = defineProps({
@@ -38,6 +38,10 @@ const openCreateModal = () => {
   nextTick(() => {
     initializeSelect2();
   });
+};
+
+const openShowPage = (productId) => {
+  window.location.href = `/products/${productId}`;
 };
 
 const openEditModal = (product) => {
@@ -169,6 +173,7 @@ onMounted(() => {
                   <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item btn-view"><i class="fas fa-eye"></i> View</a></li>
                   <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                 </ul>
@@ -187,7 +192,13 @@ onMounted(() => {
         .on('click', '.btn-delete', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
           if (rowData) deleteProduct(rowData.id);
+        })
+
+        .on('click', '.btn-view', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) openShowPage(rowData.id);
         });
+        
 
       // Handle actions inside child rows (responsive details)
       $('#product-table').on('click', '.dtr-details .btn-edit', function () {
@@ -200,6 +211,10 @@ onMounted(() => {
         const tr = $(this).closest('tr').prev(); // Get the parent row of the child
         const rowData = dataTableInstance.row(tr).data();
         if (rowData) deleteProduct(rowData.id);
+      });
+      $('#product-table').on('click', '.btn-view', function () {
+        const rowData = dataTableInstance.row($(this).closest('tr')).data();
+        if (rowData) openShowPage(rowData.id);
       });
     }
   });
