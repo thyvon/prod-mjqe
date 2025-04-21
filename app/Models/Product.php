@@ -18,6 +18,7 @@ class Product extends Model
         'category_id',
         'group_id',
         'price',
+        'avg_price',
         'uom',
         'quantity',
         'status',
@@ -61,10 +62,55 @@ class Product extends Model
             ->where('payment_type', 1)
             ->latest('id') // Assuming 'id' is the primary key or timestamp column
             ->first();
-
+    
         if ($latestPurchase) {
-            $this->price = $latestPurchase->unit_price;
+            $unitPrice = $latestPurchase->unit_price;
+    
+            // Check if the currency is 2 and convert the price
+            if ($latestPurchase->currency == 2 && $latestPurchase->currency_rate > 0) {
+                $unitPrice = $unitPrice / $latestPurchase->currency_rate;
+            } else {
+                $unitPrice = $latestPurchase->unit_price; // Keep the original unit price
+            }
+    
+            $this->price = $unitPrice;
             $this->save();
         }
+    }
+
+    public function calculateAveragePriceLastThreeMonths()
+    {
+        $threeMonthsAgo = now()->subMonths(3);
+    
+        $purchases = PurchaseInvoiceItem::where('item_code', $this->id)
+            ->where('payment_type', 1)
+            ->where('created_at', '>=', $threeMonthsAgo)
+            ->get();
+    
+        $totalPrice = 0;
+        $totalCount = 0;
+    
+        foreach ($purchases as $purchase) {
+            $unitPrice = $purchase->unit_price;
+    
+            // Convert price if currency is 2
+            if ($purchase->currency == 2 && $purchase->currency_rate > 0) {
+                $unitPrice = $unitPrice / $purchase->currency_rate;
+            } 
+            // No conversion needed if currency is 1
+            else if ($purchase->currency == 1) {
+                $unitPrice = $purchase->unit_price;
+            }
+    
+            $totalPrice += $unitPrice;
+            $totalCount++;
+        }
+    
+        $averagePrice = $totalCount > 0 ? $totalPrice / $totalCount : 0;
+    
+        $this->avg_price = $averagePrice; // Save the calculated average price
+        $this->save();
+    
+        return $this->avg_price;
     }
 }

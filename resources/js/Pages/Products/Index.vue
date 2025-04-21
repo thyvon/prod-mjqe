@@ -19,6 +19,7 @@ const productForm = reactive({
   category_id: null,
   group_id: null,
   price: '',
+  avg_price: '',
   uom: '',
   quantity: '',
   status: 1,
@@ -119,6 +120,7 @@ const clearForm = () => {
     category_id: null,
     group_id: null,
     price: '',
+    avg_price: '',
     uom: '',
     quantity: '',
     status: 1,
@@ -157,6 +159,7 @@ onMounted(() => {
           { data: 'group.name', defaultContent: 'N/A' },
           { data: 'uom' },
           { data: 'price' },
+          { data: 'avg_price' },
           { data: 'status', render: (data) => {return `<span class="badge ${data === 1 ? 'bg-primary' : 'bg-danger'}">${data === 1 ? 'Active' : 'Inactive'}</span>`;},className: 'text-center'},
           {
             data: null,
@@ -230,7 +233,8 @@ onMounted(() => {
               <th>Category</th>
               <th>Group</th>
               <th>UoM</th>
-              <th>Price</th>
+              <th>Latest Price</th>
+              <th>Avg Price (3m)</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
