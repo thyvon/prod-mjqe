@@ -212,6 +212,7 @@ class InvoiceController extends Controller
             $product = Product::find($item->item_code);
             if ($product) {
                 $product->updatePriceFromLatestPurchase();
+                $product->calculateAveragePriceLastThreeMonths();
             }
         }
 
@@ -749,6 +750,7 @@ class InvoiceController extends Controller
                 $product = Product::find($itemData['item_code']);
                 if ($product) {
                     $product->updatePriceFromLatestPurchase();
+                    $product->calculateAveragePriceLastThreeMonths();
                 }
             }
         }
