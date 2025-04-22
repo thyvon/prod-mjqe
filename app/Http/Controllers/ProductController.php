@@ -14,9 +14,11 @@ class ProductController extends Controller
     // Display all products with their categories and groups
     public function index()
     {
-        $products = Product::with(['category:id,name', 'group:id,name'])->get(); // Only load necessary fields
-        $categories = ProductCategory::all();
-        $groups = ProductGroup::all();
+        $products = Product::with(['category:id,name', 'group:id,name'])
+        ->select('id', 'sku', 'product_description', 'brand', 'uom', 'category_id', 'group_id', 'price', 'avg_price', 'quantity', 'status')
+        ->get(); // Only load necessary fields
+        $categories = ProductCategory::select('id', 'name')->get();
+        $groups = ProductGroup::select('id', 'name')->get();
 
         return Inertia::render('Products/Index', [
             'products' => $products,
@@ -94,8 +96,12 @@ class ProductController extends Controller
     public function show($id)
     {
         // Fetch the product with its category and group relationships
-        $product = Product::with(['category:id,name', 'group:id,name'])->find($id);
-        $purchasedItems = PurchaseInvoiceItem::with(['product:id,sku,product_description', 'purchasedBy:id,name', 'supplier:id,name', 'invoice:id,pi_number'])->where('item_code', $product->id)->get();
+        $product = Product::with(['category:id,name', 'group:id,name'])
+        ->select('id', 'sku', 'product_description', 'uom',)
+        ->find($id);
+        $purchasedItems = PurchaseInvoiceItem::with(['product:id,sku,product_description', 'purchasedBy:id,name', 'supplier:id,name', 'invoice:id,pi_number'])
+        ->select('id', 'invoice_date', 'item_code','description', 'purchased_by', 'supplier', 'pi_number', 'qty', 'unit_price', 'total_price')
+        ->where('item_code', $product->id)->get();
 
         // Check if the product exists
         if (!$product) {

@@ -14,16 +14,20 @@ class InvoiceController extends Controller
     public function index()
     {
         return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items', 'supplier'])
-                ->get(['id', 'pi_number', 'invoice_date','supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']), // Removed 'supplier' to avoid overriding the relationship
-            'users' => User::all(),
-            'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])->get(),
-            'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])->get(),
-            'cashRequests' => CashRequest::all(),
-            'purchaseRequests' => PurchaseRequest::all(),
-            'purchaseOrders' => PurchaseOrder::all(),
-            'suppliers' => Supplier::all(),
-            'currentUser' => auth()->user(),
+            'purchaseInvoices' => PurchaseInvoice::with(['items:id,pi_number', 'supplier:id,name,vat,currency'])
+                ->get(['id', 'pi_number', 'invoice_date','supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']),
+            'users' => User::select('id', 'name')->get(),
+            'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])
+            ->select('id', 'product_id', 'purchase_request_id', 'qty', 'uom', 'unit_price', 'total_price')
+            ->get(),
+            'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
+            ->select('id', 'product_id', 'po_id', 'qty', 'uom', 'unit_price')
+            ->get(),
+            'cashRequests' => CashRequest::select('id','ref_no')->get(),
+            'purchaseRequests' => PurchaseRequest::select('id', 'pr_number')->get(),
+            'purchaseOrders' => PurchaseOrder::select('id', 'po_number')->get(),
+            'suppliers' => Supplier::select('id', 'name')->get(),
+            'currentUser' => auth()->user()->select('id', 'name'),
         ]);
     }
 
@@ -117,7 +121,7 @@ class InvoiceController extends Controller
     public function show($id)
     {
         try {
-            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
+            $invoice = PurchaseInvoice::with(['items.purchaseRequest:id,pr_number', 'items.purchaseOrder:id,po_number', 'items.product:id,product_description,sku', 'supplier:id,name', 'attachments:id,purchase_invoice_id'])->findOrFail($id);
             return Inertia::render('Purchase/Invoices/Show', [
                 'invoice' => $invoice,
             ]);

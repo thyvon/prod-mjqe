@@ -36,11 +36,6 @@ export const getFileThumbnail = (fileUrl) => {
 
   // Extract the file extension
   const extension = cleanUrl.split('.').pop().toLowerCase();
-
-  console.log('Original File URL:', fileUrl); // Debugging
-  console.log('Cleaned URL:', cleanUrl); // Debugging
-  console.log('Extracted Extension:', extension); // Debugging
-
   const thumbnailMap = {
     pdf: '/images/thumbnails-pdf.png',
     doc: '/images/thumbnails-doc.png',
@@ -59,8 +54,6 @@ export const getFileThumbnail = (fileUrl) => {
 
   // Check if the extension exists in the map
   const thumbnailUrl = thumbnailMap[extension] || '/images/default-file-icon.png';
-
-  console.log('Generated Thumbnail URL:', thumbnailUrl); // Debugging
 
   // Append a unique query parameter to force refresh
   return `${thumbnailUrl}?t=${new Date().getTime()}`;

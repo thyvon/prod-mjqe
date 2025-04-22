@@ -17,7 +17,7 @@ class CancellationController extends Controller
     // Display a listing of cancellations
     public function index()
     {
-        $cancellations = Cancellation::with('items', 'user', 'purchaseRequest:id,pr_number')->latest()->get(); // Ensure latest data is fetched
+        $cancellations = Cancellation::with('items', 'user:id,name', 'purchaseRequest:id,pr_number')->latest()->get(); // Ensure latest data is fetched
         $users = User::select('id', 'name')->get(); // Fetch all users for dropdown
         return Inertia::render('Cancellations/Index', [
             'cancellations' => $cancellations,
