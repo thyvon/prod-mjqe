@@ -96,10 +96,14 @@ onMounted(async () => {
         { data: 'division' },
         { data: 'department' },
         { data: 'qty' },
+        { data: 'qty_cancel'},
+        { data: 'qty_purchase'},
+        { data: 'qty_pending'},
         { data: 'uom' },
         { data: 'unit_price' },
         { data: 'total_price' },
         { data: 'status', render: (data) => `<span class="${getItemStatusBadgeClass(data)}">${data}</span>` },
+        { data: 'force_close', render: (data) => data === 1 ? '<span class="badge bg-danger"><i class="fa fa-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="fa fa-times-circle"></i> No</span>' },
       ],
     });
 
@@ -112,7 +116,10 @@ onMounted(async () => {
       columns: [
         { data: null, render: (data, type, row, meta) => meta.row + 1 },
         { data: 'invoice_date', render: (data) => moment(data).format('MMM DD, YYYY') },
-        { data: 'invoice.pi_number' },
+        { 
+          data: 'invoice.pi_number', 
+          render: (data, type, row) => `<a href="/invoices/${row.invoice.id}" class="text-primary">${data}</a>` 
+        },
         { data: 'invoice_no' },
         { data: 'supplier.name' },
         { data: 'product.sku' },
@@ -195,10 +202,14 @@ onMounted(async () => {
                     <th>Division</th>
                     <th>Department</th>
                     <th>Qty</th>
+                    <th>Qty Cancel</th>
+                    <th>Qty Purchase</th>
+                    <th>Qty Pending</th>
                     <th>UOM</th>
                     <th>Price</th>
                     <th>Total Price</th>
                     <th>Status</th>
+                    <th>Force Close?</th>
                   </tr>
                 </thead>
                 <tbody>

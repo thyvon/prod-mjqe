@@ -17,10 +17,10 @@ class PurchaseRequestController extends Controller
     public function index()
     {
         return Inertia::render('Purchase/Pr/Index', [
-            'purchaseRequests' => PurchaseRequest::with(['prItems.product', 'requestBy'])->get(),
+            'purchaseRequests' => PurchaseRequest::with(['prItems.product:id,product_description,sku,uom', 'requestBy:id,name'])->get(),
             'currentUser' => auth()->user(),
-            'products' => Product::all(),
-            'users' => User::all(),
+            'products' => Product::select('id', 'product_description', 'sku', 'uom')->get(),
+            'users' => User::select('id', 'name')->get(),
         ]);
     }
 
@@ -70,7 +70,7 @@ class PurchaseRequestController extends Controller
     public function edit($id)
     {
         try {
-            $purchaseRequest = PurchaseRequest::with(['prItems.product', 'requestBy'])->findOrFail($id);
+            $purchaseRequest = PurchaseRequest::with(['prItems.product:id,product_description,sku,uom', 'requestBy:id,name'])->findOrFail($id);
             return response()->json($purchaseRequest);
         } catch (\Exception $e) {
             \Log::error('Error in edit method:', ['message' => $e->getMessage()]);
@@ -81,16 +81,16 @@ class PurchaseRequestController extends Controller
     public function show($id)
     {
         return Inertia::render('Purchase/Pr/Show', [
-            'purchaseRequest' => PurchaseRequest::with('prItems.product')->findOrFail($id),
-            'products' => Product::all(),
-            'users' => User::all()
+            'purchaseRequest' => PurchaseRequest::with(['prItems.product:id,product_description,sku,uom'])->findOrFail($id),
+            'products' => Product::select('id', 'product_description', 'sku', 'uom')->get(),
+            'users' => User::select('id', 'name')->get(),
         ]);
     }
 
     public function getInvoiceItems($prNumber)
     {
         try {
-            $invoiceItems = PurchaseInvoiceItem::with('product', 'invoice', 'supplier', 'purchasedBy')
+            $invoiceItems = PurchaseInvoiceItem::with('product:id,product_description,sku,uom', 'invoice:id,pi_number', 'supplier:id,name', 'purchasedBy:id,name')
                 ->where('pr_number', $prNumber)
                 ->get();
             return response()->json($invoiceItems);
