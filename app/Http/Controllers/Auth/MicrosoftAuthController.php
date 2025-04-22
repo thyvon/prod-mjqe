@@ -59,8 +59,16 @@ class MicrosoftAuthController extends Controller
             $user = User::where('email', $microsoftUser->getEmail())->first();
 
             if ($user) {
+                // Update the tokens if the user already exists
+                $user->update([
+                    'microsoft_id'            => $microsoftUser->getId(),
+                    'microsoft_token'         => $microsoftUser->token,
+                    'microsoft_refresh_token' => $microsoftUser->refreshToken,
+                    'microsoft_token_expires' => now()->addSeconds($microsoftUser->expiresIn),
+                ]);
+            
                 // Log in the existing user
-                Auth::login($user, true); // Pass `true` to remember the user
+                Auth::login($user, true);
             } else {
                 // Create a new user in the database
                 $user = User::create([
