@@ -2,11 +2,47 @@
   <Main>
     <Head :title="'Invoice Details'" />
     <div class="panel panel-inverse">
-      <div class="panel-heading">
-        <h4 class="panel-title">Invoice Details</h4>
-      </div>
       <div class="panel-body">
-        <div class="row mb-3">
+        <div class="row mb-1">
+            <div class="col-3">
+              <a class="d-block text-start" href="#!">
+                <img src="/images/Supplier-logo.png" class="img-fluid" alt="BootstrapBrain Logo" width="70" height="30">
+              </a>
+              <div class="row mt-2">
+                <div class="col-12">{{ invoice.supplier?.address }}</div>
+              </div>
+            </div>
+            <div class="col-6 pt-3">
+              <div class="row font-monospace">
+                <h3 class="text-uppercase text-center fw-bold" style="font-family: 'TW Cen MT';">INVOICE</h3>
+                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">{{ invoice.supplier.name }}</h5>
+                <p class="text-center"style="font-family: 'TW Cen MT';">{{ invoice.supplier?.number }}</p>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="row">
+                <div class="col-6 text-end">Ref: </div>
+                <div class="col-6">{{ invoice.pi_number }}</div>
+              </div>
+              <div class="row">
+                <div class="col-6 text-end">No: </div>
+                <div class="col-6">{{ invoice.invoice_no }}</div>
+              </div>
+              <div class="row">
+                <div class="col-6 text-end">Date: </div>
+                <div class="col-6">{{ formatDate(invoice.invoice_date) }}</div>
+              </div>
+              <div class="row">
+                <div class="col-6 text-end">Purchaser: </div>
+                <div class="col-6">{{ invoice.purchased_by?.name }}</div>
+              </div>
+              <div class="row">
+                <div class="col-6 text-end">Payment Term: </div>
+                <div class="col-6">{{ getPaymentTerm(invoice.payment_term) }}</div>
+              </div>
+            </div>
+          </div>
+        <!-- <div class="row mb-3">
           <div class="col-md-6">
             <div class="row mb-1">
               <label class="col-sm-4 col-form-label">Invoice No:</label>
@@ -48,62 +84,61 @@
             </div>
             <div class="row mb-1">
               <label class="col-sm-4 col-form-label">Currency Rate:</label>
-              <div class="col-sm-8">
+              <div class="col-sm-8 border">
                 <p class="form-control-plaintext">{{ invoice.currency_rate }}</p>
               </div>
             </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Total Amount:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ formatCurrency(invoice.total_amount, invoice.currency) }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Paid Amount:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ formatCurrency(invoice.paid_amount, invoice.currency) }}</p>
-              </div>
-            </div>
+          </div>
+        </div> -->
+        <div class="row">
+          <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table id="invoice-items-table" class="table table-bordered mb-0">
+              <thead class="table-light sticky-top bg-white">
+                <tr>
+                  <th>#</th>
+                  <th>PR Number</th>
+                  <th>PO Number</th>
+                  <th>Item Code</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>UOM</th>
+                  <th>Unit Price</th>
+                  <th>Total Price</th>
+                  <th>Discount</th>
+                  <th>Service Charge</th>
+                  <th>VAT</th>
+                  <th>Grand Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in invoice.items" :key="index">
+                  <td>{{ index + 1 }}</td>
+                  <td>{{ item.purchase_request?.pr_number || '' }}</td>
+                  <td>{{ item.purchase_order?.po_number || '' }}</td>
+                  <td>{{ item.product?.sku || '' }}</td>
+                  <td>{{ item.description }}</td>
+                  <td>{{ item.qty }}</td>
+                  <td>{{ item.uom }}</td>
+                  <td>{{ formatCurrency(item.unit_price, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.total_price, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.discount, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.service_charge, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.vat, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.paid_amount, invoice.currency) }}</td>
+                </tr>
+                <tr class="no-datatable fw-bold">
+                  <td colspan="8" class="text-end"><strong>TOTAL</strong></td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.service_charge) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.vat) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0), invoice.currency) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="table-responsive">
-          <table id="invoice-items-table" class="table table-bordered">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>PR Number</th>
-                <th>PO Number</th>
-                <th>Item Code</th>
-                <th>Description</th>
-                <th>Qty</th>
-                <th>UOM</th>
-                <th>Unit Price</th>
-                <th>Total Price</th>
-                <th>Discount</th>
-                <th>Service Charge</th>
-                <th>VAT</th>
-                <th>Grand Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, index) in invoice.items" :key="index">
-                <td>{{ index + 1 }}</td>
-                <td>{{ item.purchase_request?.pr_number || '' }}</td>
-                <td>{{ item.purchase_order?.po_number || '' }}</td>
-                <td>{{ item.product?.sku || '' }}</td>
-                <td>{{ item.description }}</td>
-                <td>{{ item.qty }}</td>
-                <td>{{ item.uom }}</td>
-                <td>{{ formatCurrency(item.unit_price, invoice.currency) }}</td>
-                <td>{{ formatCurrency(item.total_price, invoice.currency) }}</td>
-                <td>{{ formatCurrency(item.discount, invoice.currency) }}</td>
-                <td>{{ formatCurrency(item.service_charge, invoice.currency) }}</td>
-                <td>{{ formatCurrency(item.vat, invoice.currency) }}</td>
-                <td>{{ formatCurrency(item.paid_amount, invoice.currency) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+
         <div class="row mt-3">
           <div class="col-md-6">
             <h5>Attachments</h5>
@@ -113,13 +148,10 @@
               </div>
             </div>
           </div>
-          <div class="col-md-6 text-end">
-            <h5>Grand Total: {{ formatCurrency(grandTotal, invoice.currency) }}</h5>
-          </div>
         </div>
         <div class="mt-3">
           <button class="btn btn-secondary" @click="goBack">Back</button>
-          <button class="btn btn-primary" @click="navigateToPrint">Print</button> <!-- Add Print button -->
+          <!-- <button class="btn btn-primary" @click="navigateToPrint">Print</button> -->
         </div>
       </div>
     </div>
@@ -130,7 +162,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { usePage, Head, router } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
-import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer } from '@/Pages/Purchase/Invoices/helpers';
+import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer,getPaymentTerm } from '@/Pages/Purchase/Invoices/helpers';
 
 const { props } = usePage();
 const invoice = ref(props.invoice);
@@ -145,29 +177,29 @@ const navigateToPrint = () => {
   router.visit(`/purchase/invoices/${invoice.value.id}/print`); // Update route to navigate to Print page
 };
 
-const initializeDataTable = (selector) => {
-  const table = $(selector);
-  if ($.fn.DataTable.isDataTable(table)) {
-    table.DataTable().clear().destroy();
-  }
-  return table.DataTable({
-    responsive: true,
-    autoWidth: false,
-    scrollX: false,
-  });
-};
+// const initializeDataTable = (selector) => {
+//   const table = $(selector);
+//   if ($.fn.DataTable.isDataTable(table)) {
+//     table.DataTable().clear().destroy();
+//   }
+//   return table.DataTable({
+//     responsive: true,
+//     autoWidth: false,
+//     scrollX: false,
+//   });
+// };
 
 const grandTotal = computed(() => {
   return invoice.value.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0).toFixed(2);
 });
 
-onMounted(() => {
-  try {
-    initializeDataTable('#invoice-items-table');
-  } catch (error) {
-    console.error('Error initializing DataTable:', error);
-  }
-});
+// onMounted(() => {
+//   try {
+//     initializeDataTable('#invoice-items-table');
+//   } catch (error) {
+//     console.error('Error initializing DataTable:', error);
+//   }
+// });
 </script>
 
 <style scoped>
