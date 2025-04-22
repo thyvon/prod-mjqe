@@ -25,16 +25,16 @@ class ApprovalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($approval) {
-                // Add a column to show ref_no or statement_number
-                if ($approval->cashRequest) {
+                // Add a column to show ref_no or statement_number based on docs_type
+                if (in_array($approval->docs_type, [1, 2]) && $approval->cashRequest) {
                     $approval->reference = $approval->cashRequest->ref_no;
-                } elseif ($approval->clearInvoice) {
+                } elseif (in_array($approval->docs_type, [3, 4]) && $approval->clearInvoice) {
                     $approval->reference = $approval->clearInvoice->ref_no;
-                } elseif ($approval->clearStatment) {
+                } elseif ($approval->docs_type == 5 && $approval->clearStatment) {
                     $approval->reference = $approval->clearStatment->statement_number;
-                } elseif ($approval->cancellation) {
+                } elseif ($approval->docs_type == 6 && $approval->cancellation) {
                     $approval->reference = $approval->cancellation->cancellation_no . 
-                    ($approval->cancellation->purchaseRequest ? ' (' . $approval->cancellation->purchaseRequest->pr_number . ')' : '');
+                        ($approval->cancellation->purchaseRequest ? ' (' . $approval->cancellation->purchaseRequest->pr_number . ')' : '');
                 } else {
                     $approval->reference = 'N/A';
                 }
