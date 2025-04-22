@@ -121,7 +121,7 @@ class InvoiceController extends Controller
     public function show($id)
     {
         try {
-            $invoice = PurchaseInvoice::with(['items.purchaseRequest:id,pr_number', 'items.purchaseOrder:id,po_number', 'items.product:id,product_description,sku', 'supplier:id,name', 'attachments:id,purchase_invoice_id'])->findOrFail($id);
+            $invoice = PurchaseInvoice::with(['items.purchaseRequest:id,pr_number', 'items.purchaseOrder:id,po_number', 'items.product:id,product_description,sku', 'supplier:id,name', 'attachments:id,purchase_invoice_id,file_url,file_name,sharepoint_file_id'])->findOrFail($id);
             return Inertia::render('Purchase/Invoices/Show', [
                 'invoice' => $invoice,
             ]);
