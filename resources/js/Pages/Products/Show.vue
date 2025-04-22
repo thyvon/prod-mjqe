@@ -28,6 +28,16 @@ onMounted(() => {
           },
           { data: 'description' },
           { data: 'qty' },
+          { 
+            data: 'currency', 
+            render: function (data) {
+              return data === 1 ? 'USD' : 'KHR';
+            }
+          },
+          {             
+            data: null, 
+            render: (data, type, row) => props.product.uom
+          },
           { data: 'unit_price' },
           { data: 'total_price', render: (data, type, row) => (row.qty * row.unit_price).toFixed(2) },
           { data: 'purchased_by', render: (data) => data.name },
@@ -76,6 +86,8 @@ onMounted(() => {
               <th>Item Code</th>
               <th>Description</th>
               <th>Quantity</th>
+              <th>Currency</th>
+              <th>UOM</th>
               <th>Price</th>
               <th>Total</th>
               <th>Purchased By</th>
