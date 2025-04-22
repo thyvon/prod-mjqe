@@ -126,8 +126,18 @@ onMounted(async () => {
         { data: 'description' },
         { data: 'qty' },
         { data: 'uom' },
-        { data: 'unit_price' },
-        { data: 'total_price' },
+        { 
+          data: 'unit_price',
+            render: function (data, type, row) {
+                return parseFloat(data) ? parseFloat(data).toFixed(4) : '0.00';
+            }
+        },
+        { 
+          data: 'total_price',
+            render: function (data, type, row) {
+                return parseFloat(data) ? parseFloat(data).toFixed(4) : '0.00';
+            }
+        },
         { data: 'currency', render: (data) => data === 1 ? 'USD' : 'KHR' },
         { data: 'purchased_by.name' },
         { data: 'stop_purchase', render: (data) => data === 1 ? '<span class="badge bg-danger"><i class="fa fa-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="fa fa-times-circle"></i> No</span>' },
