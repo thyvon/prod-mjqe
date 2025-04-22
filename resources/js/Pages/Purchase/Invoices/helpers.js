@@ -26,6 +26,16 @@ export const getPaymentType = (type) => {
   }
 };
 
+export const getPaymentTerm = (term) => {
+  switch (term) {
+    case 1: return 'Credit 1 week';
+    case 2: return 'Credit 2 weeks';
+    case 3: return 'Credit 1 month';
+    case 4: return 'Non-Credit';
+    default: return 'Unknown';
+  }
+}
+
 export const getFileThumbnail = (fileUrl) => {
   if (!fileUrl) {
     return '/images/default-file-icon.png'; // Fallback for empty URLs
