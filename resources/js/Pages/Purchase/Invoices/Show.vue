@@ -98,7 +98,7 @@
                 <td>{{ formatCurrency(item.total_price, invoice.currency) }}</td>
                 <td>{{ formatCurrency(item.discount, invoice.currency) }}</td>
                 <td>{{ formatCurrency(item.service_charge, invoice.currency) }}</td>
-                <td>{{ item.vat }}%</td>
+                <td>{{ formatCurrency(item.vat, invoice.currency) }}</td>
                 <td>{{ formatCurrency(item.paid_amount, invoice.currency) }}</td>
               </tr>
             </tbody>
