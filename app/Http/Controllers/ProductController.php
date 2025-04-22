@@ -100,7 +100,7 @@ class ProductController extends Controller
         ->select('id', 'sku', 'product_description', 'uom',)
         ->find($id);
         $purchasedItems = PurchaseInvoiceItem::with(['product:id,sku,product_description', 'purchasedBy:id,name', 'supplier:id,name', 'invoice:id,pi_number'])
-        ->select('id', 'invoice_date', 'item_code','description', 'purchased_by', 'supplier', 'pi_number', 'qty', 'unit_price', 'total_price')
+        ->select('id', 'invoice_date', 'item_code','description', 'purchased_by', 'supplier', 'pi_number', 'qty', 'unit_price', 'total_price','currency')
         ->where('item_code', $product->id)->get();
 
         // Check if the product exists
