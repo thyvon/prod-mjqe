@@ -363,8 +363,8 @@ const createInvoice = async () => {
 
 const updateInvoice = async () => {
   try {
-    if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
-    form.created_by = props.currentUser.id;
+    // if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
+    // form.created_by = props.currentUser.id;
     form.transaction_type = parseInt(form.transaction_type);
     form.payment_type = parseInt(form.payment_type);
     form.currency = parseInt(form.currency);
