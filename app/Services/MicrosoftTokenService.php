@@ -45,7 +45,7 @@ class MicrosoftTokenService
                 'client_secret' => $clientSecret,
                 'grant_type'    => 'refresh_token',
                 'refresh_token' => $user->microsoft_refresh_token,
-                'scope'         => 'https://graph.microsoft.com/.default',
+                'scope'         => 'offline_access Files.ReadWrite Sites.ReadWrite.All',
             ]);
 
             if ($response->failed()) {

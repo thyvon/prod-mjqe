@@ -70,8 +70,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
-
+    'timezone' => 'Asia/Phnom_Penh',
+    
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
