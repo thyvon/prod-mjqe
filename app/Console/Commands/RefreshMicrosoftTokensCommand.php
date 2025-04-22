@@ -38,6 +38,8 @@ class RefreshMicrosoftTokensCommand extends Command
                 $this->error("❌ Error refreshing token for: {$user->email}");
             }
         }
+
+        \Log::info('🔁 RefreshMicrosoftTokensCommand ran at ' . now());
     }
 }
 
