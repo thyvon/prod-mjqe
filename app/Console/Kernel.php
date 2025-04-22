@@ -12,8 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('microsoft:refresh-tokens')->everyFiveMinutes();
-        $schedule->command('microsoft:refresh-tokens')->everyMinute();
+        $schedule->command('microsoft:refresh-tokens')->everyFiveMinutes();
+        // $schedule->command('microsoft:refresh-tokens')->everyMinute();
     }
 
     /**
