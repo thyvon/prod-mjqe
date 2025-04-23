@@ -3,6 +3,8 @@ import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
+import toastr from 'toastr';
+import 'toastr/build/toastr.min.css';
 // import 'bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css';
 // import 'bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js';
 
@@ -15,6 +17,385 @@ const props = defineProps({
   currentUser: Object,
   purchaseOrder: Object,
 });
+
+
+// Cancellation Form
+let modalInstance = null;
+const cancellationForm = reactive({
+  id: null,
+  cancellation_date: '',
+  cancellation_reason: '',
+  cancellation_docs: '',
+  cancellation_by: '',
+  pr_po_id: null,
+  // cancellation_reason: '',
+  // cancellation_docs: '',
+  // cancellation_by: '',
+  approved_by: null,
+  authorized_by: null,
+  items: [],
+});
+
+let addItemModalInstance = null;
+const poItems = ref([]);
+let poItemsTableInstance;
+let cancellationItemsTableInstance;
+
+const filterPoNumber = ref(''); // Initialize as an empty string
+const fetchPoItems = async (purchaseOrderId = null) => {
+  try {
+    const response = await axios.get(route('po-items-cancellation')); // Use the named route
+    let items = response.data;
+
+    // Filter items by purchase_request_id if provided
+    if (purchaseOrderId) {
+      items = items.filter(item => item.purchase_order.id === purchaseOrderId);
+    }
+
+    poItems.value = items; // Assign the filtered data to `prItems`
+    console.log('Fetched PO Items:', prItems.value);
+  } catch (error) {
+    console.error('Failed to fetch PR items:', error); // Log any errors
+  }
+};
+
+// Watch for changes in filterPrNumber and reinitialize the PR items table
+watch(filterPoNumber, (newVal) => {
+  const filteredPoItems = poItems.value.filter((item) =>
+    newVal ? item.purchase_order.id === newVal : true
+  );
+  if (poItemsTableInstance) {
+    poItemsTableInstance.clear().rows.add(filteredPoItems).draw();
+  }
+});
+
+const initializePoItemsTable = () => {
+  nextTick(() => {
+    const table = $('#po-items-table');
+    if (table.length) {
+      // Check if the DataTable is already initialized
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy(); // Destroy the existing DataTable instance
+        table.empty(); // Clear the table content to avoid duplication
+      }
+      poItemsTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: poItems.value,
+        columns: [
+          { data: 'purchase_order.po_number', title: 'PO Number' },
+          { data: 'product.sku', title: 'SKU' },
+          { data: 'product.product_description', title: 'Product Description' },
+          { data: 'pending', title: 'Pending Qty' }, // Ensure this matches the backend field
+          { data: 'unit_price', title: 'Unit Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          { data: 'discount', title: 'Discount', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          { data: 'vat', title: 'VAT', render: (data) => `${parseFloat(data).toFixed(2)}%` },
+          { data: 'grand_total', title: 'Total Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          {
+            data: null,
+            title: 'Actions',
+            render: (data) => `
+              <button class="btn btn-primary btn-sm btn-select">Select</button>
+            `,
+            className: 'text-center',
+          },
+        ],
+      });
+
+      // Attach event listener for the "Select" button
+      $('#po-items-table').on('click', '.btn-select', function () {
+        const rowData = poItemsTableInstance.row($(this).closest('tr')).data();
+        if (rowData) {
+          selectPoItem(rowData);
+        }
+      });
+    }
+  });
+};
+
+const initializeCancellationItemsTable = () => {
+  nextTick(() => {
+    const table = $('#cancellation-items-table');
+    if (table.length) {
+      cancellationItemsTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: cancellationForm.items,
+        columns: [
+          { data: 'sku', title: 'Item Code' },
+          { data: 'name', title: 'Description' },
+          {
+            data: 'qty',
+            title: 'Cancel Qty',
+            render: (data, type, row, meta) => {
+              return `
+                <input type="number" class="form-control qty-input" 
+                       data-index="${meta.row}" 
+                       value="${data}" 
+                       min="1" />
+              `;
+            },
+          },
+          {
+            data: 'cancellation_reason',
+            title: 'Remarks',
+            render: (data, type, row, meta) => {
+              return `
+                <textarea class="form-control cancellation-reason-input" 
+                          data-index="${meta.row}" 
+                          rows="1">${data || ''}</textarea>
+              `;
+            },
+          },
+          {
+            data: null,
+            title: 'Actions',
+            render: (data, type, row, meta) => `
+              <button type="button" class="btn btn-danger btn-sm btn-remove">Remove</button>
+            `,
+            className: 'text-center',
+          },
+        ],
+      });
+
+      // Attach event listener for changes in the cancellation_reason field
+      $('#cancellation-items-table').on('input', '.cancellation-reason-input', function () {
+        const index = $(this).data('index');
+        const value = $(this).val();
+        if (cancellationForm.items[index]) {
+          cancellationForm.items[index].cancellation_reason = value; // Update the reactive data
+        }
+      });
+
+      // Attach event listener for changes in the qty field
+      $('#cancellation-items-table').on('input', '.qty-input', function () {
+        const index = $(this).data('index');
+        const value = parseFloat($(this).val());
+        if (cancellationForm.items[index]) {
+          cancellationForm.items[index].qty = value; // Update the reactive data
+        }
+      });
+
+      // Attach event listener for the "Remove" button
+      $('#cancellation-items-table').on('click', '.btn-remove', function () {
+        const rowData = cancellationItemsTableInstance.row($(this).closest('tr')).data();
+        if (rowData) {
+          removeItemCancel(rowData);
+        }
+      });
+
+    }
+  });
+};
+
+const selectPoItem = (item) => {
+
+  const isDuplicate = cancellationForm.items.some(
+    (existingItem) => existingItem.purchase_order_item_id === item.id
+  );
+
+  if (isDuplicate) {
+    toastr.warning('This item is already added.', 'Warning');
+    return;
+  }
+
+  cancellationForm.items.push({
+    name: item.product.product_description,
+    qty: item.pending,
+    purchase_request_id: item.purchase_order.id,
+    pr_number: item.purchase_request.pr_number,
+    po_number: item.purchase_order.po_number,
+    sku: item.product.sku,
+    purchase_order_item_id: item.id,
+    cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
+  });
+
+  if (cancellationItemsTableInstance) {
+    cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+  }
+
+  toastr.success('PO item added successfully.', 'Success');
+};
+
+const selectAllPoItems = () => {
+
+  let addedCount = 0;
+
+  poItems.value.forEach((item) => {
+    const isDuplicate = cancellationForm.items.some(
+      (existingItem) => existingItem.purchase_order_item_id === item.id
+    );
+
+    if (!isDuplicate) {
+      cancellationForm.items.push({
+        name: item.product.product_description,
+        qty: item.qty_pending,
+        purchase_order_id: item.purchase_order.id,
+        pr_number: item.purchase_request.pr_number,
+        po_number: item.purchase_order.po_number,
+        sku: item.product.sku,
+        purchase_request_item_id: item.id,
+        cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
+      });
+      addedCount++;
+    }
+  });
+
+  if (cancellationItemsTableInstance) {
+    cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+  }
+
+  if (addedCount > 0) {
+    toastr.success(`${addedCount} PO items added successfully.`, 'Success');
+  } else {
+    toastr.warning('No new PR items were added.', 'Warning');
+  }
+};
+
+const removeItemCancel = (item) => {
+  const index = cancellationForm.items.findIndex((i) => i.name === item.name && i.purchase_order_item_id === item.purchase_order_item_id);
+  if (index !== -1) {
+    cancellationForm.items.splice(index, 1);
+  }
+
+  // Update the DataTable with the modified items array
+  if (cancellationItemsTableInstance) {
+    cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+  }
+};
+
+const openCreateModalCancel = ( purchaseOrder ) => {
+  isEdit.value = false;
+  Object.assign(cancellationForm, {
+    id: null,
+    cancellation_date: new Date().toISOString().split('T')[0],
+    cancellation_reason: '',
+    cancellation_docs: 1,
+    pr_po_id: purchaseOrder?.id || null, // Set pr_po_id to the current purchase order ID
+    cancellation_by: '',
+    items: [],
+  });
+  validationErrors.value = {};
+  if (modalInstance) {
+    modalInstance.show(); // Show the modal
+    nextTick(() => {
+      initializeSelect2(); // Reinitialize select2 for the modal
+      initializeSummernote(); // Initialize Summernote for the cancellation reason
+    });
+  }
+};
+
+const saveCancellation = async () => {
+  try {
+    // Ensure all qty fields are decimals
+    cancellationForm.items = cancellationForm.items.map(item => ({
+      ...item,
+      qty: parseFloat(item.qty).toFixed(8), // Convert qty to a decimal with 8 places
+      cancellation_reason: item.cancellation_reason || '', // Ensure cancellation_reason is included
+    }));
+
+    const payload = {
+      ...cancellationForm,
+      pr_po_id: cancellationForm.pr_po_id, // Include pr_po_id in the payload
+      approved_by: cancellationForm.approved_by,
+      authorized_by: cancellationForm.authorized_by,
+      items: cancellationForm.items,
+    };
+
+    const url = isEdit.value ? `/cancellations/${cancellationForm.id}` : '/cancellations';
+    const method = isEdit.value ? 'put' : 'post';
+    const response = await axios[method](url, cancellationForm);
+    window.dispatchEvent(new CustomEvent('cancellation-saved', { detail: response.data.cancellation }));
+    swal('Success!', `Cancellation ${isEdit.value ? 'updated' : 'created'} successfully.`, 'success');
+    console.log('Cancellation saved:', response.data.cancellation);
+
+    // Reset the form after saving
+    Object.assign(cancellationForm, {
+      id: null,
+      cancellation_date: '',
+      cancellation_reason: '',
+      cancellation_docs: '',
+      cancellation_by: '',
+      pr_po_id: null,
+      approved_by: null,
+      authorized_by: null,
+      items: [], // Clear items
+    });
+    validationErrors.value = {};
+
+    // Clear the DataTable for items
+    if (cancellationItemsTableInstance) {
+      cancellationItemsTableInstance.clear().draw();
+    }
+
+    modalInstance?.hide();
+  } catch (error) {
+    if (error.response && error.response.status === 422) {
+      validationErrors.value = error.response.data.errors;
+      swal('Error!', 'Validation failed. Please check the form.', 'error');
+    } else {
+      swal('Error!', 'An unexpected error occurred. Please try again.', 'error');
+    }
+  }
+};
+
+const openAddItemModal = () => {
+  // Fetch PR items filtered by the selected purchase request ID
+  fetchPoItems(cancellationForm.pr_po_id).then(() => {
+    // Initialize the PR items table after fetching the data
+    initializePoItemsTable();
+    if (addItemModalInstance) {
+      addItemModalInstance.show(); // Show the modal
+    }
+  });
+};
+
+const selectedPurchaseOrderId = computed(() => {
+  // Replace this logic with how you determine the selected purchase request
+  const selectedOrder = props.purchaseOrders.find(pr => pr.id === cancellationForm.pr_po_id);
+  return selectedRequest ? selectedRequest.po_number : '';
+});
+
+const initializeSummernote = () => {
+  nextTick(() => {
+    if ($('.summernote').length) {
+      $('.summernote').summernote({
+        placeholder: 'Purpose <br> Root Cause <br> Conclusion',
+        height: "300",
+        toolbar: [
+          // Default Summernote toolbar configuration
+          ['style', ['bold', 'italic', 'underline', 'clear']],
+          ['font', ['strikethrough', 'superscript', 'subscript']],
+          ['fontname', ['fontname']],
+          ['color', ['color']],
+          ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
+          ['insert', ['link', 'picture', 'video']],
+          ['view', ['fullscreen', 'codeview', 'help']],
+          ['table', ['table']],
+          ['height', ['height']],
+          ['mybutton', ['mybutton']],
+          ['custom', ['undo', 'redo']],
+          ['custom', ['clear']],
+          ['custom', ['hr']],
+          ['custom', ['print']],
+          ['custom', ['fullscreen']],
+        ],
+        fontNames: ['Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Tw Cen MT', 'Khmer OS Content'],
+        fontNamesIgnoreCheck: ['Tw Cen MT', 'Khmer OS Content'], // bypass checking if fonts are installed
+        callbacks: {
+          onChange: function (contents) {
+            cancellationForm.cancellation_reason = contents;
+          },
+        },
+      });
+      // Set the initial value from DB to the editor
+      $('.summernote').summernote('code', cancellationForm.cancellation_reason);
+      
+    }
+  });
+};
+
+// End Cacellation Form
 
 const isEdit = ref(false);
 const purchaseOrderForm = reactive({
@@ -153,8 +534,48 @@ watch(() => purchaseOrderForm.supplier_id, (newSupplierId) => {
 });
 
 const initializeSelect2 = () => {
-  $('#supplier_id').select2().on('change', function () {
-    purchaseOrderForm.supplier_id = $(this).val();
+  nextTick(() => {
+    setTimeout(() => {
+      if ($.fn.select2 && $('#supplier_id').data('select2')) {
+        purchaseOrderForm.supplier_id = $(this).val();
+        $('#supplier_id').select2('destroy');
+      }
+
+      if ($('#approved_by').length) {
+        if ($.fn.select2 && $('#approved_by').data('select2')) {
+          $('#approved_by').select2('destroy');
+        }
+
+        // Initialize select2 with dropdownParent set to the modal
+        $('#approved_by').select2({
+          placeholder: 'Select an approver',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#cancellationModal'), // Ensure dropdown is rendered inside the modal
+        }).on('change', function () {
+          // Sync the selected value with the reactive form
+          cancellationForm.approved_by = $(this).val();
+        });
+      }
+
+      if ($('#authorized_by').length) {
+        if ($.fn.select2 && $('#authorized_by').data('select2')) {
+          $('#authorized_by').select2('destroy');
+        }
+
+        // Initialize select2 with dropdownParent set to the modal
+        $('#authorized_by').select2({
+          placeholder: 'Select an authorized person',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#cancellationModal'), // Ensure dropdown is rendered inside the modal
+        }).on('change', function () {
+          // Sync the selected value with the reactive form
+          cancellationForm.authorized_by = $(this).val();
+        });
+      }
+
+    }, 300);
   });
 };
 
@@ -602,6 +1023,7 @@ const addItemToPo = (prItem) => {
 };
 
 onMounted(() => {
+  initializeSelect2();
   nextTick(() => {
     const table = $('#purchase-order');
     if (table.length) {
@@ -641,6 +1063,13 @@ onMounted(() => {
 
       initializeSupplierSelect(); // Initialize Select2 on mount
 
+      $('#purchase-order').on('click', '.btn-cancel', function () {
+        const rowData = dataTableInstance.row($(this).closest('tr')).data();
+        if (rowData) {
+          openCreateModalCancel(rowData); // Call the function to open the modal
+        }
+      });
+
       $('#purchase-order')
         .on('click', '.btn-edit', function () {
           const rowData = dataTableInstance.row($(this).closest('tr')).data();
@@ -673,11 +1102,17 @@ onMounted(() => {
         if (rowData) deletePurchaseOrder(rowData.id);
       });
 
+      // $('#purchase-order').on('click', '.dtr-details .btn-cancel', function () {
+      //   const tr = $(this).closest('tr').prev();
+      //   const rowData = dataTableInstance.row(tr).data();
+      //   if (rowData) openCreateModalCancel(rowData.id);
+      // });
+
       $('#purchase-order').on('click', '.dtr-details .btn-cancel', function () {
-        const tr = $(this).closest('tr').prev();
-        const rowData = dataTableInstance.row(tr).data();
-        if (rowData) cancelPurchaseOrder(rowData.id);
-      });
+          const tr = $(this).closest('tr').prev();
+          const rowData = dataTableInstance.row(tr).data();
+          if (rowData) openCreateModalCancel(rowData); // Pass rowData to the function
+        });
 
       const prItemsTable = $('#pr-items-table');
       if (prItemsTable.length) {
@@ -727,6 +1162,22 @@ onMounted(() => {
       }
     }
   });
+  const cancellationModalElement = document.getElementById('cancellationModal');
+  if (cancellationModalElement) {
+    modalInstance = new bootstrap.Modal(cancellationModalElement);
+  }
+ 
+
+  const addItemModalElement = document.getElementById('addItemModal');
+  if (addItemModalElement) {
+    addItemModalInstance = new bootstrap.Modal(addItemModalElement);
+  }
+
+  const editItemModalElement = document.getElementById('editItemModal');
+  if (editItemModalElement) {
+    editItemModalInstance = new bootstrap.Modal(editItemModalElement);
+  }
+  initializeCancellationItemsTable();
 });
 </script>
 
@@ -1108,7 +1559,7 @@ onMounted(() => {
   </div>
 
   <!-- Modal for Cancel Reason -->
-  <div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelReasonModalLabel" aria-hidden="true">
+  <!-- <div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelReasonModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -1127,7 +1578,102 @@ onMounted(() => {
         </div>
       </div>
     </div>
+  </div> -->
+
+
+  <div class="modal fade" id="cancellationModal" tabindex="-1" aria-labelledby="cancellationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="cancellationModalLabel">{{ isEdit ? 'Edit Cancellation' : 'Create Cancellation' }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="saveCancellation">
+              <div class="mb-3">
+                <label for="cancellation_date" class="form-label">Cancellation Date</label>
+                <input v-model="cancellationForm.cancellation_date" type="date" class="form-control" id="cancellation_date" required />
+                <div v-if="validationErrors.cancellation_date" class="text-danger">{{ validationErrors.cancellation_date[0] }}</div>
+              </div>
+              <div class="mb-3">
+                <label for="cancellation_reason" class="form-label">Reason</label>
+                <textarea class="summernote" id="cancellation_reason" rows="3"></textarea>
+                <div v-if="validationErrors.cancellation_reason" class="text-danger">
+                  {{ validationErrors.cancellation_reason[0] }}
+                </div>
+              </div>
+              <div class="d-flex justify-content-between mt-2">
+                <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal"> <i class="fas fa-plus-circle"></i> SELECT PO ITEMS</button>
+              </div>
+              <div class="panel panel-inverse border mt-3 p-3">
+                <div class="panel-heading bg-warning text-white mb-2">
+                  <h4 class="panel-title">ITEM TO CANCEL</h4>
+                </div>
+                <div class="table-responsive ">
+                  <table id="cancellation-items-table" class="table table-bordered table-sm border-secondary align-middle" width="100%"></table>
+                </div>
+
+                <div class="row mb-2">
+                  <div class="col-6 border">
+                    <div class="row">
+                      <span class="text-center">Approved By</span>
+                    </div>
+                    <div class="col-sm-12">
+                      <select v-model="cancellationForm.approved_by" class="form-select select2" id="approved_by">
+                        <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                      </select>
+                      <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                    </div>
+                  </div>
+                  <div class="col-6 border">
+                    <div class="row">
+                      <span class="text-center">Authized By</span>
+                    </div>
+                    <div class="col-sm-12">
+                      <select v-model="cancellationForm.authorized_by" class="form-select select2" id="authorized_by">
+                        <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                      </select>
+                      <div v-if="validationErrors.authorized_by" class="text-danger">{{ validationErrors.authorized_by[0] }}</div>
+                    </div>
+                  </div>
+              </div>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Create' }}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+    </div>
   </div>
+
+  <!-- Add Item Modal -->
+  <div class="modal fade bg-secondary" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addItemModalLabel">Select PO ITEM</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="table-responsive">
+            <table id="po-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" @click="selectAllPoItems">
+            <i class="fas fa-check-double"></i> Cancel All
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <style scoped>

@@ -10,6 +10,7 @@ use App\Models\Approval;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CancellationController extends Controller
@@ -17,7 +18,7 @@ class CancellationController extends Controller
     // Display a listing of cancellations
     public function index()
     {
-        $cancellations = Cancellation::with('items', 'user:id,name', 'purchaseRequest:id,pr_number')->latest()->get(); // Ensure latest data is fetched
+        $cancellations = Cancellation::with('items', 'user:id,name', 'purchaseRequest:id,pr_number', 'purchaseOrder:id,po_number')->latest()->get(); // Ensure latest data is fetched
         $users = User::select('id', 'name')->get(); // Fetch all users for dropdown
         return Inertia::render('Cancellations/Index', [
             'cancellations' => $cancellations,
@@ -50,16 +51,12 @@ class CancellationController extends Controller
         return response()->json($poItems); // Ensure PO numbers are included
     }
 
-    // Show the form for creating a new cancellation
-    public function create()
-    {
-        return Inertia::render('Cancellations/Create');
-    }
-
     // Store a newly created cancellation
     public function store(Request $request)
     {
         \Log::info('Store method called with data:', $request->all()); // Log the incoming request data
+
+        DB::beginTransaction();
 
         try {
             $validated = $request->validate([
@@ -68,6 +65,7 @@ class CancellationController extends Controller
                 'cancellation_reason' => 'nullable|string',
                 'pr_po_id' => 'nullable|integer', // Add validation for pr_po_id
                 'approved_by' => 'required|integer',
+                'authorized_by' => 'required|integer',
                 'items' => 'required|array',
                 'items.*.purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'items.*.purchase_order_item_id' => 'nullable|exists:po_items,id',
@@ -99,10 +97,14 @@ class CancellationController extends Controller
                     $item['purchase_order_id'] = $item['purchase_order_id'] ?? null;
                     $item['purchase_order_item_id'] = $item['purchase_order_item_id'] ?? null;
                     CancellationItems::create($item); // Save cancellation_reason along with other fields
+                    PrItem::find($item['purchase_request_item_id'] ?? null)?->recalculateQtyCancelValidation(); // Recalculate quantities for related PrItems
+                    // PoItems::find($item['purchase_order_item_id'] ?? null)?->recalculateQtyCancelValidation(); // Recalculate quantities for related PoItems
                 }
             }
 
             $this->storeApprovals($cancellation->id, $request);  // Store approvals for the cancellation
+
+            DB::commit(); // Commit the transaction
 
             \Log::info('Cancellation created successfully:', $cancellation->toArray()); // Log the created cancellation
 
@@ -112,9 +114,11 @@ class CancellationController extends Controller
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation error in store method:', ['errors' => $e->errors()]); // Log validation errors
+            DB::rollBack(); // Rollback the transaction on validation error
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             \Log::error('Error in store method:', ['error' => $e->getMessage()]); // Log unexpected errors
+            DB::rollBack(); // Rollback the transaction on unexpected error
             return response()->json(['message' => 'Failed to create cancellation.'], 500);
         }
     }
@@ -131,6 +135,7 @@ class CancellationController extends Controller
         ->map(function ($approval) {
             $labels = [
                 3 => 'Approved By',
+                4 => 'Authorized By',
             ];
 
             return [
@@ -201,6 +206,7 @@ class CancellationController extends Controller
             ->map(function ($approval) {
                 $labels = [
                     3 => 'Approved By',
+                    4 => 'Authorized By',
                 ];
 
                 return [
@@ -245,83 +251,99 @@ class CancellationController extends Controller
     }
 
     // Update the specified cancellation
+
     public function update(Request $request, $id)
     {
-        \Log::info('Update method called with data:', $request->all()); // Log the incoming request data
-
+        \Log::info('Update method called with data:', $request->all());
+    
+        DB::beginTransaction();
+    
         try {
             $validated = $request->validate([
                 'cancellation_date' => 'sometimes|date',
                 'cancellation_docs' => 'sometimes|integer',
                 'cancellation_reason' => 'nullable|string',
-                'pr_po_id' => 'nullable|integer', // Add validation for pr_po_id
+                'pr_po_id' => 'nullable|integer',
                 'approved_by' => 'required|integer',
+                'authorized_by' => 'required|integer',
                 'items' => 'sometimes|array',
                 'items.*.purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'items.*.purchase_order_item_id' => 'nullable|exists:po_items,id',
                 'items.*.purchase_request_id' => 'nullable|exists:purchase_requests,id',
                 'items.*.purchase_request_item_id' => 'nullable|exists:pr_items,id',
-                'items.*.cancellation_reason' => 'nullable|string', // Validate cancellation_reason for each item
-                'items.*.qty' => 'required', // Added validation for qty
+                'items.*.cancellation_reason' => 'nullable|string',
+                'items.*.qty' => 'required',
             ]);
-
-            \Log::info('Validated data:', $validated); // Log the validated data
-
+    
+            \Log::info('Validated data:', $validated);
+    
             $cancellation = Cancellation::findOrFail($id);
-
-            // Ensure pr_po_id is explicitly updated
+    
             $cancellation->update([
                 'cancellation_date' => $validated['cancellation_date'] ?? $cancellation->cancellation_date,
                 'cancellation_docs' => $validated['cancellation_docs'] ?? $cancellation->cancellation_docs,
                 'cancellation_reason' => $validated['cancellation_reason'] ?? $cancellation->cancellation_reason,
-                'pr_po_id' => $cancellation->pr_po_id, // Explicitly update pr_po_id
-                'cancellation_by' => auth()->id(), // Automatically set the authenticated user
+                'pr_po_id' => $cancellation->pr_po_id,
+                'cancellation_by' => auth()->id(),
             ]);
-
+    
             if (isset($validated['items'])) {
-                // Get the IDs of the items in the request
                 $updatedItemIds = collect($validated['items'])->pluck('id')->filter()->toArray();
-            
-                // Remove items from the database that are not in the updated list
                 $cancellation->items()->whereNotIn('id', $updatedItemIds)->delete();
-            
+    
                 foreach ($validated['items'] as $item) {
                     $itemId = $item['id'] ?? null;
-            
+    
                     if ($itemId) {
-                        // Update the existing item
                         $existingItem = $cancellation->items()->find($itemId);
                         if ($existingItem) {
                             $existingItem->update($item);
+    
+                            $prItem = $existingItem->purchaseRequestItem;
+                            if ($prItem && method_exists($prItem, 'recalculateQtyCancelValidation')) {
+                                if ($prItem->recalculateQtyCancelValidation()) {
+                                    throw new \Exception("Failed to recalculate qty cancel for item ID {$itemId}");
+                                }
+                            }
                         }
                     } else {
-                        // Create a new item if it doesn't exist
                         $item['cancellation_id'] = $cancellation->id;
                         $item['cancellation_by'] = auth()->id();
-                        CancellationItems::create($item);
+                        $newItem = CancellationItems::create($item);
+    
+                        $prItem = $newItem->purchaseRequestItem;
+                        if ($prItem && method_exists($prItem, 'recalculateQtyCancelValidation')) {
+                            if ($prItem->recalculateQtyCancelValidation()) {
+                                throw new \Exception("Failed to recalculate qty cancel for new item.");
+                            }
+                        }
                     }
                 }
             } else {
-                // If no items are provided, delete all items associated with the cancellation
                 $cancellation->items()->delete();
             }
-
-            $this->updateApprovals($cancellation->id, $validated['approved_by'], 6); // Pass docsType as 6
-
-            \Log::info('Cancellation updated successfully:', $cancellation->toArray()); // Log the updated cancellation
-
+    
+            $this->updateApprovals($cancellation->id, $validated['approved_by'], $validated['authorized_by'], 6);
+    
+            DB::commit();
+    
+            \Log::info('Cancellation updated successfully:', $cancellation->toArray());
+    
             return response()->json([
                 'cancellation' => $cancellation->load('items', 'user'),
                 'message' => 'Cancellation updated successfully.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation error in update method:', ['errors' => $e->errors()]); // Log validation errors
+            DB::rollBack();
+            \Log::error('Validation error in update method:', ['errors' => $e->errors()]);
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            \Log::error('Error in update method:', ['error' => $e->getMessage()]); // Log unexpected errors
+            DB::rollBack();
+            \Log::error('Error in update method:', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to update cancellation.'], 500);
         }
     }
+    
 
     // Remove the specified cancellation
     public function destroy($id)
@@ -359,95 +381,62 @@ class CancellationController extends Controller
     private function storeApprovals($cancelId, $request)
     {
         $docsType = 6;
-    
-        if ($request->approved_by) {
-            $this->storeNewApprovals($cancelId, $request->approved_by, $docsType);
+
+        if ($request->approved_by && $request->authorized_by) {
+            $this->storeNewApprovals($cancelId, $request->approved_by, $request->authorized_by, $docsType);
         }
     }
     
-    private function storeNewApprovals($cancelId, $userId, $docsType)
+    private function storeNewApprovals($cancelId, $approvedBy, $authorizedBy, $docsType)
     {
+        // Approved By
         Approval::create([
             'approval_id' => $cancelId,
-            'status_type' => 3, // Approved By
+            'status_type' => 3,
             'docs_type' => $docsType,
-            'user_id' => $userId,
-            'approval_name' => 'Request for Cancel PR',
+            'user_id' => $approvedBy,
+            'approval_name' => 'Request for Cancel PR - Approved',
+        ]);
+
+        // Authorized By
+        Approval::create([
+            'approval_id' => $cancelId,
+            'status_type' => 4,
+            'docs_type' => $docsType,
+            'user_id' => $authorizedBy,
+            'approval_name' => 'Request for Cancel PR - Authorized',
         ]);
     }
     
-    private function updateApprovals($cancelId, $userId, $docsType)
+    private function updateApprovals($cancelId, $approvedBy, $authorizedBy, $docsType)
     {
+        // Update Approved By (status_type 3)
         $approval = Approval::where('approval_id', $cancelId)
-            ->where('status_type', 3) // Approved By
+            ->where('status_type', 3)
             ->where('docs_type', $docsType)
             ->first();
     
         if ($approval) {
             $approval->update([
-                'user_id' => $userId,
-                'docs_type' => $docsType,
-                'approval_name' => 'Request for Cancel PR',
+                'user_id' => $approvedBy,
+                'approval_name' => 'Request for Cancel PR - Approved',
+            ]);
+        }
+    
+        // Update Authorized By (status_type 4)
+        $authorization = Approval::where('approval_id', $cancelId)
+            ->where('status_type', 4)
+            ->where('docs_type', $docsType)
+            ->first();
+    
+        if ($authorization) {
+            $authorization->update([
+                'user_id' => $authorizedBy,
+                'approval_name' => 'Request for Cancel PR - Authorized',
             ]);
         }
     }
-
-    // public function approve(Request $request, $id)
-    // {
-    //     try {
-    //         $request->validate([
-    //             'status_type' => 'required|integer',
-    //         ]);
-
-    //         $currentUser = Auth::user();
-
-    //         // Determine docs_type based on clear_type
-    //         $cancellation = Cancellation::findOrFail($id);
-    //         $docsType = 6;
-
-    //         // Find or create the approval record for the current user, status type, and docs_type
-    //         $approval = Approval::firstOrCreate(
-    //             [
-    //                 'approval_id' => $id,
-    //                 'status_type' => $request->status_type,
-    //                 'user_id' => $currentUser->id,
-    //                 'docs_type' => $docsType,
-    //             ],
-    //             [
-    //                 'approval_name' => 'Request for Cancel PR',
-    //                 'status' => 0, // Default status
-    //             ]
-    //         );
-
-    //         // Update the approval status
-    //         $approval->update([
-    //             'status' => 1, // Update the status to 'approved'
-    //             'click_date' => now(), // Capture the current date
-    //         ]);
-
-    //         if ($request->status_type == 1) {
-    //             $cancellation->status = 1; // Checked
-    //         } elseif ($request->status_type == 3) {
-    //             $cancellation->status = 3; // Approved
-    //         // Recalculate quantities for related PrItems
-    //         foreach ($cancellation->items as $item) {
-    //             $prItem = $item->purchaseRequestItem;
-    //             if ($prItem) {
-    //                 $prItem->recalculateQtyCancel();
-    //             }
-    //         }
-    //         }
-    //         $cancellation->save();
-
-    //         return response()->json(['message' => 'Approval successful.']);
-    //     } catch (\Exception $e) {
-    //         \Log::error('Approval Error:', [
-    //             'error' => $e->getMessage(),
-    //             'stack' => $e->getTraceAsString(),
-    //         ]);
-    //         return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
-    //     }
-    // }
+    
 
     public function approve(Request $request, $id)
     {
@@ -489,7 +478,8 @@ class CancellationController extends Controller
                 $cancellation->status = 1; // Checked
             } elseif ($request->status_type == 3) {
                 $cancellation->status = 3; // Approved
-
+            } elseif ($request->status_type == 4) {
+                $cancellation->status = 4; // Authorized
                 // Recalculate quantities for related PrItems
                 foreach ($cancellation->items as $item) {
                     $prItem = $item->purchaseRequestItem;

@@ -43,6 +43,7 @@ const cancellationForm = reactive({
   // cancellation_docs: '',
   // cancellation_by: '',
   approved_by: null,
+  authorized_by: null,
   items: [],
 });
 
@@ -146,14 +147,12 @@ const initializeCancellationItemsTable = () => {
           },
           {
             data: 'cancellation_reason',
-            title: 'Reason for Cancellation',
+            title: 'Remarks',
             render: (data, type, row, meta) => {
-              // Use cancellationForm.cancellation_reason as the default value if data is empty
-              const defaultReason = cancellationForm.cancellation_reason || '';
               return `
                 <textarea class="form-control cancellation-reason-input" 
                           data-index="${meta.row}" 
-                          rows="1">${data || defaultReason}</textarea>
+                          rows="1">${data || ''}</textarea>
               `;
             },
           },
@@ -199,11 +198,6 @@ const initializeCancellationItemsTable = () => {
 };
 
 const selectPrItem = (item) => {
-  // Prevent adding PR items if PO items already exist
-  if (cancellationForm.items.some((existingItem) => existingItem.purchase_order_item_id)) {
-    toastr.warning('You cannot add PR items when PO items are already added.', 'Warning');
-    return;
-  }
 
   const isDuplicate = cancellationForm.items.some(
     (existingItem) => existingItem.purchase_request_item_id === item.id
@@ -233,11 +227,6 @@ const selectPrItem = (item) => {
 };
 
 const selectAllPrItems = () => {
-  // Prevent adding PR items if PO items already exist
-  if (cancellationForm.items.some((existingItem) => existingItem.purchase_order_item_id)) {
-    toastr.warning('You cannot add PR items when PO items are already added.', 'Warning');
-    return;
-  }
 
   let addedCount = 0;
 
@@ -317,6 +306,7 @@ const saveCancellation = async () => {
       ...cancellationForm,
       pr_po_id: cancellationForm.pr_po_id, // Include pr_po_id in the payload
       approved_by: cancellationForm.approved_by,
+      authorized_by: cancellationForm.authorized_by,
       items: cancellationForm.items,
     };
 
@@ -336,6 +326,7 @@ const saveCancellation = async () => {
       cancellation_by: '',
       pr_po_id: null,
       approved_by: null,
+      authorized_by: null,
       items: [], // Clear items
     });
     validationErrors.value = {};
@@ -670,6 +661,24 @@ const initializeSelect2 = () => {
           cancellationForm.approved_by = $(this).val();
         });
       }
+
+      if ($('#authorized_by').length) {
+        if ($.fn.select2 && $('#authorized_by').data('select2')) {
+          $('#authorized_by').select2('destroy');
+        }
+
+        // Initialize select2 with dropdownParent set to the modal
+        $('#authorized_by').select2({
+          placeholder: 'Select an authorized person',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#cancellationModal'), // Ensure dropdown is rendered inside the modal
+        }).on('change', function () {
+          // Sync the selected value with the reactive form
+          cancellationForm.authorized_by = $(this).val();
+        });
+      }
+
     }, 300);
   });
 };
@@ -1119,6 +1128,17 @@ onMounted(() => {
                         <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                       </select>
                       <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                    </div>
+                  </div>
+                  <div class="col-6 border">
+                    <div class="row">
+                      <span class="text-center">Authized By</span>
+                    </div>
+                    <div class="col-sm-12">
+                      <select v-model="cancellationForm.authorized_by" class="form-select select2" id="authorized_by">
+                        <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                      </select>
+                      <div v-if="validationErrors.authorized_by" class="text-danger">{{ validationErrors.authorized_by[0] }}</div>
                     </div>
                   </div>
               </div>

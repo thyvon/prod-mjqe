@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use App\Models\PurchaseRequest;
 use App\Models\Product;
 use App\Models\PoItem;
@@ -169,12 +170,32 @@ class PrItem extends Model
     public function recalculateQtyCancel()
     {
         $this->calculateQtyCancel();
-        if ($this->qty_cancel > ($this->qty - $this->qty_purchase)) {
+        if ($this->qty_cancel > ($this->qty - $this->qty_purchase - $this->qty_po)) {
             throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
         }
         $this->calculateStatus();
         $this->save();
     }
+
+    public function recalculateQtyCancelValidation()
+    {
+        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+    
+        // Log each value for debugging or tracking
+        Log::info('Recalculating Cancelled Quantity Validation', [
+            'purchase_request_item_id' => $this->id,
+            'qty' => $this->qty,
+            'qty_purchase' => $this->qty_purchase,
+            'qty_po' => $this->qty_po,
+            'qty_cancel' => $this->qty_cancel,
+            'remaining_qty' => $this->qty - $this->qty_purchase - $this->qty_po,
+        ]);
+    
+        if ($this->qty_cancel > ($this->qty - $this->qty_purchase - $this->qty_po)) {
+            throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
+        }
+    }
+    
 
     public function performCalculations()
     {
@@ -186,6 +207,7 @@ class PrItem extends Model
 
         $this->calculateQtyPurchase();
         $this->calculateQtyCancel();
+        $this->recalculateQtyCancelValidation();
         $this->calculatePending();
         $this->recalculateQtyPurchase();
         $this->recalculateQtyCancel();

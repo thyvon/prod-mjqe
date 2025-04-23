@@ -65,6 +65,8 @@ const getStatusTypeString = (statusType) => {
       return 'Reject';
     case 3:
       return 'Approve';
+    case 4:
+      return 'Authorize';
     default:
       return 'Unknown';
   }
@@ -286,11 +288,11 @@ const rejectRequest = async (statusType) => {
               <div class="row">
                 <div class="col-2 text-start p-0">
                   <div class="row mt-2">
-                    <span>លេខទូរស័ព្ទ/Phone:</span>
+                    <span>តួនាទី/Position:</span>
                   </div>
                 </div>
                 <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ cancellation.user?.phone}}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ cancellation.user?.position}}</span>
                 </div>
 
                 <div class="col-2">
@@ -317,15 +319,14 @@ const rejectRequest = async (statusType) => {
               <table class="table table-bordered border-dark table-sm">
                 <thead style="font-size: 12px;">
                   <tr class="text-center">
-                    <th style="width: 3%;">ល.រ.<br>No.</th>
-                    <!-- <th style="width: 10%;">លេខសំណើរ<br>PR Number</th> -->
-                    <th style="width: 8%;">លេខកូដ<br>Item Code</th>
-                    <th style="width: 32%;">បរិយាយ<br>Description</th>
+                    <th style="width: 5%;">ល.រ.<br>No.</th>
+                    <th style="width: 13%;">លេខកូដ<br>Item Code</th>
+                    <th style="width: 40%;">បរិយាយ<br>Description</th>
                     <th style="width: 5%;">ឯកតា<br>UOM</th>
                     <th style="width: 5%;">ចំនួន<br>Qty</th>
                     <th style="width: 5%;">តម្លៃ<br>Price</th>
-                    <th style="width: 8%;">តម្លៃសរុប<br>Total Price</th>
-                    <th style="width: 24%;">មូលហេតុ<br>Reason</th>
+                    <th style="width: 10%;">តម្លៃសរុប<br>Total Price</th>
+                    <th style="width: 17%;">កំណត់សម្គាល់<br>Remark</th>
                   </tr>
                 </thead>
                 <tbody class="table-group-divider" style="font-size: 12px;">
@@ -396,13 +397,16 @@ const rejectRequest = async (statusType) => {
 
             <div class="col-4 text-center px-2 mb-3"></div>
             <!-- Loop through approvals -->
+            <!-- Approved By & others -->
             <div 
-              v-for="approval in approvals" 
+              v-for="approval in approvals.filter(a => a.label !== 'Authorized By')" 
               :key="approval.status_type" 
               class="col-4 text-center px-2 mb-3"
             >
               <div v-if="approval.label === 'Approved By'">អនុម័តដោយ</div>
               <div>{{ approval.label }}</div>
+
+              <!-- Signature or rejected icon -->
               <img
                 v-if="approval.status === 1"
                 :src="getSignatureUrl(approval.signature)"
@@ -410,38 +414,104 @@ const rejectRequest = async (statusType) => {
                 style="width: 130px; height: 80px; object-fit: contain;"
               />
               <div v-else-if="approval.status === -1" class="text-danger mt-2">
-                <i class="fas fa-times-circle fa-2x"></i> <!-- Font Awesome Reject Icon -->
+                <i class="fas fa-times-circle fa-2x"></i>
                 <div>Rejected</div>
               </div>
-              <!-- Buttons under the image -->
+
+              <!-- Action buttons -->
               <div class="mt-2">
                 <button 
                   class="btn btn-success btn-sm" 
                   @click="approveRequest(approval.status_type)"
-                  v-if="approval.user_id === currentUser.id && approval.status === 0 &&
-                    (
-                      (approval.label === 'Approved By')
-                    )"
+                  v-if="approval.user_id === currentUser.id && approval.status === 0"
                 >
                   Sign
                 </button>
                 <button 
                   class="btn btn-danger btn-sm ms-2" 
                   @click="rejectRequest(approval.status_type)"
-                  v-if="approval.user_id === currentUser.id && approval.status === 0 &&
-                    (
-                      (approval.label === 'Approved By')
-                    )"
+                  v-if="approval.user_id === currentUser.id && approval.status === 0"
                 >
                   Reject
                 </button>
               </div>
+
+              <!-- Metadata -->
               <div class="border-top mt-2 pt-1 text-start">
                 <div>Name: {{ approval.name }}</div>
                 <div>Position: {{ approval.position }}</div>
                 <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
               </div>
             </div>
+
+
+            <!-- Authorized By only -->
+            <div 
+              v-for="approval in approvals.filter(a => a.label === 'Authorized By')" 
+              :key="approval.status_type" 
+              class="col-4 text-center px-2 mb-3 border-start border-info"
+            >
+            <!-- <div class="fw-bold text-primary">
+              អនុញ្ញាតដោយ  
+              <div class="text-primary" style="font-size: 0.85rem;">Authorized By</div>
+            </div> -->
+
+
+              <!-- ✅ Signed View -->
+              <template v-if="approval.status === 1">
+                <!-- <img
+                  :src="getSignatureUrl(approval.signature)"
+                  alt="Signature"
+                  style="width: 130px; height: 80px; object-fit: contain;"
+                /> -->
+                <div class="mt-2 pt-1 text-start text-primary">
+                  <div>Authorized By: {{ approval.name }}</div>
+                  <div>Position: {{ approval.position }}</div>
+                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
+                </div>
+              </template>
+
+              <!-- ❌ Rejected View -->
+              <template v-else-if="approval.status === -1">
+                <div class="text-danger mt-2">
+                  <i class="fas fa-times-circle fa-2x"></i>
+                  <div>Unauthorized</div>
+                </div>
+                <div class="border-top mt-2 pt-1 text-start">
+                  <div>Rejected By: {{ approval.name }}</div>
+                  <div>Position: {{ approval.position }}</div>
+                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
+                </div>
+              </template>
+
+              <!-- 🕒 Pending View with Buttons -->
+              <template v-else>
+                <div class="mt-2">
+                  <button 
+                    class="btn btn-success btn-sm" 
+                    @click="approveRequest(approval.status_type)"
+                    v-if="approval.user_id === currentUser.id &&
+                          approvals.find(a => a.label === 'Approved By' && a.status === 1)"
+                  >
+                    Sign
+                  </button>
+                  <button 
+                    class="btn btn-danger btn-sm ms-2" 
+                    @click="rejectRequest(approval.status_type)"
+                    v-if="approval.user_id === currentUser.id &&
+                          approvals.find(a => a.label === 'Approved By' && a.status === 1)"
+                  >
+                    Reject
+                  </button>
+                </div>
+                <div class="border-top mt-2 pt-1 text-start">
+                  <div>Name: {{ approval.name }}</div>
+                  <div>Position: {{ approval.position }}</div>
+                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
+                </div>
+              </template>
+            </div>
+
           </div>
         </div>
       </div>
@@ -451,8 +521,8 @@ const rejectRequest = async (statusType) => {
 
 <style scoped>
 .a4-size {
-  width: 297mm;
-  height: 210mm;
+  width: 210mm;
+  height: 297mm;
   margin: 10mm auto;
   padding: 10mm;
   background: white !important;
@@ -473,8 +543,8 @@ const rejectRequest = async (statusType) => {
 
 @media print {
   .a4-size {
-    width: 297mm;
-    height: 210mm;
+    width: 210mm;
+    height: 297mm;
     margin: 10mm auto; /* Ensure margin is applied during printing */
     padding: 20mm !important; /* Enforce padding for print */
     box-shadow: none; /* Remove any shadow for clean printing */
