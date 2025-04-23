@@ -27,6 +27,7 @@
     <link href="/coloradmin/plugins/dropzone/dist/min/dropzone.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/jvectormap-next/jquery-jvectormap.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/nvd3/build/nv.d3.css" rel="stylesheet" defer />
+    <link href="/coloradmin/plugins/summernote/dist/summernote-lite.css" rel="stylesheet" defer />
     <!-- ================== END plugin-css ================== -->
 
     @inertiaHead
@@ -50,6 +51,7 @@
     <script src="/coloradmin/plugins/moment/min/moment.min.js" defer></script>
     <script src="/coloradmin/plugins/bootstrap-daterangepicker/daterangepicker.js" defer></script>
     <script src="/coloradmin/plugins/dropzone/dist/min/dropzone.min.js" defer></script>
+    <script src="/coloradmin/plugins/summernote/dist/summernote-lite.min.js" defer></script>
     <!-- ================== END plugin-js ================== -->
 
     <!-- ================== BEGIN dashboard-js ================== -->

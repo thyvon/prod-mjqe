@@ -36,6 +36,64 @@ const cancellationForm = reactive({
 });
 const validationErrors = ref({});
 
+// const openEditModal = async (rowData) => {
+//   try {
+//     // Make an API request to fetch the cancellation data from the backend
+//     const response = await axios.get(`/cancellations/${rowData.id}/edit`);
+//     const cancellation = response.data.cancellation;
+//     const approvals = response.data.approvals;
+
+//     // Populate the form with the fetched data
+//     isEdit.value = true;
+//     Object.assign(cancellationForm, {
+//       id: cancellation.id,
+//       cancellation_date: cancellation.cancellation_date,
+//       cancellation_reason: cancellation.cancellation_reason,
+//       cancellation_docs: cancellation.cancellation_docs,
+//       cancellation_by: cancellation.cancellation_by,
+//       approved_by: approvals.find(a => a.status_type === 3)?.user_id || null, // Set approved_by dynamically
+//       items: cancellation.items.map((item) => ({
+//         id: item.id,
+//         name: `${item.purchase_request_item?.product?.product_description || ''} - ${item.purchase_request_item?.remark || ''}` || item.purchase_order_item?.product?.product_description || null,
+//         pr_number: item.purchase_request_item?.purchase_request?.pr_number || null,
+//         po_number: item.purchase_order_item?.purchase_order?.po_number || null,
+//         sku: item.purchase_request_item?.product?.sku || item.purchase_order_item?.product?.sku || null,
+//         qty: item.qty,
+//         purchase_request_id: item.purchase_request_id,
+//         purchase_request_item_id: item.purchase_request_item_id,
+//         purchase_order_id: item.purchase_order_id,
+//         purchase_order_item_id: item.purchase_order_item_id,
+//         cancellation_reason: item.cancellation_reason,
+//       })),
+//     });
+
+//     // Optionally handle approvals if needed
+//     console.log('Approvals:', approvals);
+
+//     validationErrors.value = {};
+
+//     // Refresh the cancellation-items-table
+//     if (cancellationItemsTableInstance) {
+//       cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+//     }
+
+//     // Reinitialize Select2 and set the value for "Approved By"
+//     nextTick(() => {
+//       if ($('#approved_by').length) {
+//         $('#approved_by').val(cancellationForm.approved_by).trigger('change'); // Set the value
+//       }
+//     });
+
+//     // Show the modal
+//     if (modalInstance) {
+//       modalInstance.show();
+//     }
+//   } catch (error) {
+//     console.error('Failed to fetch cancellation data:', error);
+//     toastr.error('Failed to load cancellation data. Please try again.', 'Error');
+//   }
+// };
+
 const openEditModal = async (rowData) => {
   try {
     // Make an API request to fetch the cancellation data from the backend
@@ -48,7 +106,7 @@ const openEditModal = async (rowData) => {
     Object.assign(cancellationForm, {
       id: cancellation.id,
       cancellation_date: cancellation.cancellation_date,
-      cancellation_reason: cancellation.cancellation_reason,
+      cancellation_reason: cancellation.cancellation_reason,  // Make sure this is correctly populated
       cancellation_docs: cancellation.cancellation_docs,
       cancellation_by: cancellation.cancellation_by,
       approved_by: approvals.find(a => a.status_type === 3)?.user_id || null, // Set approved_by dynamically
@@ -67,15 +125,18 @@ const openEditModal = async (rowData) => {
       })),
     });
 
-    // Optionally handle approvals if needed
-    console.log('Approvals:', approvals);
-
-    validationErrors.value = {};
-
     // Refresh the cancellation-items-table
     if (cancellationItemsTableInstance) {
       cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
     }
+
+    // Reinitialize Summernote with the correct cancellation reason
+    nextTick(() => {
+      if ($('.summernote').length) {
+        // Set the value for Summernote editor
+        $('.summernote').summernote('code', cancellationForm.cancellation_reason);
+      }
+    });
 
     // Reinitialize Select2 and set the value for "Approved By"
     nextTick(() => {
@@ -93,6 +154,7 @@ const openEditModal = async (rowData) => {
     toastr.error('Failed to load cancellation data. Please try again.', 'Error');
   }
 };
+
 
 let addItemModalInstance = null;
 const prItems = ref([]);
@@ -423,6 +485,44 @@ const initializeSelect2 = () => {
   });
 };
 
+const initializeSummernote = () => {
+  nextTick(() => {
+    if ($('.summernote').length) {
+      $('.summernote').summernote({
+        placeholder: 'Purpose <br> Root Cause <br> Conclusion',
+        height: "300",
+        toolbar: [
+          // Default Summernote toolbar configuration
+          ['style', ['bold', 'italic', 'underline', 'clear']],
+          ['font', ['strikethrough', 'superscript', 'subscript']],
+          ['fontname', ['fontname']],
+          ['color', ['color']],
+          ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
+          ['insert', ['link', 'picture', 'video']],
+          ['view', ['fullscreen', 'codeview', 'help']],
+          ['table', ['table']],
+          ['height', ['height']],
+          ['mybutton', ['mybutton']],
+          ['custom', ['undo', 'redo']],
+          ['custom', ['clear']],
+          ['custom', ['hr']],
+          ['custom', ['print']],
+          ['custom', ['fullscreen']],
+        ],
+        callbacks: {
+          onChange: function (contents) {
+            cancellationForm.cancellation_reason = contents;
+          },
+        },
+      });
+      // Set the initial value from DB to the editor
+      $('.summernote').summernote('code', cancellationForm.cancellation_reason);
+      
+    }
+  });
+};
+
+
 // End of Cancellation Form
 
 // Local state
@@ -440,6 +540,7 @@ const format = (value, type) => {
 // Initialize DataTable
 onMounted(() => {
 initializeSelect2();
+initializeSummernote(); // Initialize Summernote editor
   nextTick(() => {
     const table = $('#cancellations-table');
     if (table.length) {
@@ -645,9 +746,12 @@ const deleteCancellation = async (cancellationId) => {
               </div>
               <div class="mb-3">
                 <label for="cancellation_reason" class="form-label">Reason</label>
-                <textarea v-model="cancellationForm.cancellation_reason" class="form-control" id="cancellation_reason" rows="3"></textarea>
-                <div v-if="validationErrors.cancellation_reason" class="text-danger">{{ validationErrors.cancellation_reason[0] }}</div>
+                <textarea class="summernote" id="cancellation_reason" rows="3"></textarea>
+                <div v-if="validationErrors.cancellation_reason" class="text-danger">
+                  {{ validationErrors.cancellation_reason[0] }}
+                </div>
               </div>
+
               <div class="d-flex justify-content-between mt-2">
                 <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal"> <i class="fas fa-plus-circle"></i> SELECT PR ITEMS</button>
               </div>

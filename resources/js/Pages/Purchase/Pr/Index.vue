@@ -299,6 +299,7 @@ const openCreateModalCancel = ( purchaseRequest ) => {
     modalInstance.show(); // Show the modal
     nextTick(() => {
       initializeSelect2(); // Reinitialize select2 for the modal
+      initializeSummernote(); // Initialize Summernote for the cancellation reason
     });
   }
 };
@@ -371,6 +372,43 @@ const selectedPurchaseRequestId = computed(() => {
   const selectedRequest = props.purchaseRequests.find(pr => pr.id === cancellationForm.pr_po_id);
   return selectedRequest ? selectedRequest.pr_number : '';
 });
+
+const initializeSummernote = () => {
+  nextTick(() => {
+    if ($('.summernote').length) {
+      $('.summernote').summernote({
+        placeholder: 'Purpose <br> Root Cause <br> Conclusion',
+        height: "300",
+        toolbar: [
+          // Default Summernote toolbar configuration
+          ['style', ['bold', 'italic', 'underline', 'clear']],
+          ['font', ['strikethrough', 'superscript', 'subscript']],
+          ['fontname', ['fontname']],
+          ['color', ['color']],
+          ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
+          ['insert', ['link', 'picture', 'video']],
+          ['view', ['fullscreen', 'codeview', 'help']],
+          ['table', ['table']],
+          ['height', ['height']],
+          ['mybutton', ['mybutton']],
+          ['custom', ['undo', 'redo']],
+          ['custom', ['clear']],
+          ['custom', ['hr']],
+          ['custom', ['print']],
+          ['custom', ['fullscreen']],
+        ],
+        callbacks: {
+          onChange: function (contents) {
+            cancellationForm.cancellation_reason = contents;
+          },
+        },
+      });
+      // Set the initial value from DB to the editor
+      $('.summernote').summernote('code', cancellationForm.cancellation_reason);
+      
+    }
+  });
+};
 
 // End Cacellation Form
 const itemForm = reactive({ product_id: '', remark: '', qty: 1, uom: '', unit_price: 0, total_price: 0, campus: '', division: '', department: '' });
@@ -1053,8 +1091,10 @@ onMounted(() => {
               </div>
               <div class="mb-3">
                 <label for="cancellation_reason" class="form-label">Reason</label>
-                <textarea v-model="cancellationForm.cancellation_reason" class="form-control" id="cancellation_reason" rows="3"></textarea>
-                <div v-if="validationErrors.cancellation_reason" class="text-danger">{{ validationErrors.cancellation_reason[0] }}</div>
+                <textarea class="summernote" id="cancellation_reason" rows="3"></textarea>
+                <div v-if="validationErrors.cancellation_reason" class="text-danger">
+                  {{ validationErrors.cancellation_reason[0] }}
+                </div>
               </div>
               <div class="d-flex justify-content-between mt-2">
                 <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal"> <i class="fas fa-plus-circle"></i> SELECT PR ITEMS</button>
