@@ -1,6 +1,10 @@
 <template>
   <Main>
     <Head :title="'Invoice Details'" />
+    <div class="mt-3">
+      <button class="btn btn-secondary" @click="goBack">Back</button>
+      <!-- <button class="btn btn-primary" @click="navigateToPrint">Print</button> -->
+    </div>
     <div class="panel panel-inverse">
       <div class="panel-body">
         <div class="row mb-1">
@@ -148,10 +152,6 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="mt-3">
-          <button class="btn btn-secondary" @click="goBack">Back</button>
-          <!-- <button class="btn btn-primary" @click="navigateToPrint">Print</button> -->
         </div>
       </div>
     </div>

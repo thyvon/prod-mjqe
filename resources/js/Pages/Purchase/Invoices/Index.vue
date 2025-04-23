@@ -28,6 +28,8 @@ const props = defineProps({
   vatRate: Number,
 });
 
+console.log('Current User:', props.currentUser); // Log the current user to check if it's defined
+
 const form = reactive({
   id: null, // Add the id field here
   transaction_type: null,
@@ -363,8 +365,8 @@ const createInvoice = async () => {
 
 const updateInvoice = async () => {
   try {
-    // if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
-    // form.created_by = props.currentUser.id;
+    if (!props.currentUser || !props.currentUser.id) throw new Error('Current user is not defined');
+    form.created_by = props.currentUser.id;
     form.transaction_type = parseInt(form.transaction_type);
     form.payment_type = parseInt(form.payment_type);
     form.currency = parseInt(form.currency);

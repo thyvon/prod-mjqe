@@ -14,8 +14,16 @@ class InvoiceController extends Controller
     public function index()
     {
         return Inertia::render('Purchase/Invoices/Index', [
-            'purchaseInvoices' => PurchaseInvoice::with(['items:id,pi_number', 'supplier:id,name,vat,currency'])
-                ->get(['id', 'pi_number', 'invoice_date','supplier', 'total_amount', 'paid_amount', 'paid_usd', 'currency', 'currency_rate', 'transaction_type', 'payment_type', 'status']),
+            'purchaseInvoices' => PurchaseInvoice::with([
+                'items:id,pi_number,pi_number',
+                'supplier:id,name,vat,currency'
+            ])
+            ->select([
+                'id', 'pi_number', 'invoice_date', 'total_amount',
+                'paid_amount', 'paid_usd', 'currency', 'currency_rate',
+                'transaction_type', 'payment_type', 'status', 'supplier' // Include foreign key
+            ])
+            ->get(),
             'users' => User::select('id', 'name')->get(),
             'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])
             ->select('id', 'product_id', 'purchase_request_id', 'qty', 'uom', 'unit_price', 'total_price')
@@ -27,7 +35,8 @@ class InvoiceController extends Controller
             'purchaseRequests' => PurchaseRequest::select('id', 'pr_number')->get(),
             'purchaseOrders' => PurchaseOrder::select('id', 'po_number')->get(),
             'suppliers' => Supplier::select('id', 'name')->get(),
-            'currentUser' => auth()->user()->select('id', 'name'),
+            'currentUser' => auth()->user()->only(['id', 'name']),
+
         ]);
     }
 
