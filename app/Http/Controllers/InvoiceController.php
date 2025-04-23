@@ -163,7 +163,7 @@ class InvoiceController extends Controller
 
             $this->validateItemQuantities($validatedData['items'], $invoice->id);
 
-            $this->validateCashAmount($invoice->id, $validatedData['cash_ref'], $validatedData['items']);
+            $this->validateCashAmount($validatedData['cash_ref'], $validatedData['items'], $invoice->id);
 
 
             // Use the purchased_by value from the request
