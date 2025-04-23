@@ -397,6 +397,8 @@ const initializeSummernote = () => {
           ['custom', ['print']],
           ['custom', ['fullscreen']],
         ],
+        fontNames: ['Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Tw Cen MT', 'Khmer OS Content'],
+        fontNamesIgnoreCheck: ['Tw Cen MT', 'Khmer OS Content'], // bypass checking if fonts are installed
         callbacks: {
           onChange: function (contents) {
             cancellationForm.cancellation_reason = contents;

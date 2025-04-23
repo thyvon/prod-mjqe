@@ -131,23 +131,26 @@ const openEditModal = async (rowData) => {
     }
 
     // Reinitialize Summernote with the correct cancellation reason
-    nextTick(() => {
-      if ($('.summernote').length) {
-        // Set the value for Summernote editor
-        $('.summernote').summernote('code', cancellationForm.cancellation_reason);
-      }
-    });
+    // nextTick(() => {
+    //   if ($('.summernote').length) {
+    //     // Set the value for Summernote editor
+    //     $('.summernote').summernote('code', cancellationForm.cancellation_reason);
+    //   }
+    // });
 
     // Reinitialize Select2 and set the value for "Approved By"
-    nextTick(() => {
-      if ($('#approved_by').length) {
-        $('#approved_by').val(cancellationForm.approved_by).trigger('change'); // Set the value
-      }
-    });
+    // nextTick(() => {
+    //   if ($('#approved_by').length) {
+    //     $('#approved_by').val(cancellationForm.approved_by).trigger('change'); // Set the value
+    //   }
+    // });
 
-    // Show the modal
-    if (modalInstance) {
-      modalInstance.show();
+      if (modalInstance) {
+      modalInstance.show(); // Show the modal
+      nextTick(() => {
+        initializeSelect2(); // Reinitialize select2 for the modal
+        initializeSummernote(); // Initialize Summernote for the cancellation reason
+      });
     }
   } catch (error) {
     console.error('Failed to fetch cancellation data:', error);
@@ -509,6 +512,8 @@ const initializeSummernote = () => {
           ['custom', ['print']],
           ['custom', ['fullscreen']],
         ],
+        fontNames: ['Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Tw Cen MT', 'Khmer OS Content'],
+        fontNamesIgnoreCheck: ['Tw Cen MT', 'Khmer OS Content'], // bypass checking if fonts are installed
         callbacks: {
           onChange: function (contents) {
             cancellationForm.cancellation_reason = contents;
