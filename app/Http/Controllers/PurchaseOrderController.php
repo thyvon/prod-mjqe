@@ -68,6 +68,7 @@ class PurchaseOrderController extends Controller
             'suppliers' => $suppliers,
             'prItems' => $prItems,
             'purchaseRequests' => $purchaseRequests,
+            'users' => User::select('id', 'name')->get(),
         ]);
     }
 

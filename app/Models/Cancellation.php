@@ -36,6 +36,11 @@ class Cancellation extends Model
         return $this->belongsTo(PurchaseRequest::class, 'pr_po_id', 'id');
     }
 
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'pr_po_id', 'id');
+    }
+
     // Generate unique cancellation_no
     public static function generateCancellationNo()
     {

@@ -29,11 +29,6 @@ button {
   border-radius: 0 !important;
 }
 
-body {
-    /* font-size: 12px; */
-    font-family: 'TW Cen MT','Khmer OS Content','Poppins', 'Montserrat', sans-serif;
-}
-
 @font-face {
   font-family: 'Tw Cen MT';
   src: url('/Fonts/TwCenMT.woff2') format('woff2');
@@ -41,7 +36,17 @@ body {
 
 @font-face {
   font-family: 'Khmer OS Content';
-  src: url('/Fonts/KhmerOSContent.woff2') format('woff2');
+  src: url('/Fonts/KhmerOScontent.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Khmer OS Moul Light';
+  src: url('/Fonts/KhmerOSmuol.woff2') format('woff2');
+}
+
+body {
+    /* font-size: 12px; */
+    font-family: 'TW Cen MT','Khmer OS Content','Khmer OS Moul Light','Poppins', 'Montserrat', sans-serif;
 }
 
 #demo-upload {
