@@ -16,7 +16,7 @@ return new class extends Migration
             $table->date('cancellation_date');
             $table->tinyInteger('cancellation_docs');
             $table->string('cancellation_no')->unique();
-            $table->string('cancellation_reason')->nullable();
+            $table->text('cancellation_reason')->nullable();
             $table->foreignId('cancellation_by')->constrained('users');
             $table->timestamps();
         });

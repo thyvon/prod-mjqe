@@ -562,7 +562,7 @@ initializeSummernote(); // Initialize Summernote editor
           },
           { data: 'purchase_request.pr_number' },
           { data: 'cancellation_date', render: (data) => format(data, 'date') }, // Cancellation date
-          { data: 'cancellation_reason' }, // Reason
+          // { data: 'cancellation_reason' }, // Reason
           { data: 'user.name', defaultContent: 'N/A' }, // User who created the cancellation
           { data: 'status', render: (data) => {
               if (data === 3) return '<span class="badge bg-success">Approved</span>';
@@ -717,7 +717,7 @@ const deleteCancellation = async (cancellationId) => {
                 <th style="width: 5%;">Cancellation Type</th>
                 <th style="width: 10%;">Reference No.</th>
                 <th style="width: 8%;">Date</th>
-                <th style="width: 50%;">Reason</th>
+                <!-- <th style="width: 50%;">Reason</th> -->
                 <th style="width: 5%;">Created By</th>
                 <th style="width: 5%;">Status</th>
                 <th style="width: 2%;">Actions</th>
