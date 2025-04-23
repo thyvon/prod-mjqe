@@ -786,13 +786,18 @@ watch(completedPOCount, (newValue) => applyCountUpAnimation('completed-po-count'
 
 		<!-- BEGIN #content -->
 			<!-- BEGIN page-header -->
-			<h1 class="page-header mb-3">Procurement Dashboard</h1>
+			<!-- <h1 class="page-header mb-3">Procurement Dashboard</h1> -->
 			<!-- END page-header -->
 			<!-- BEGIN daterange-filter -->
 			<div class="d-sm-flex align-items-center mb-3">
 				<a href="#" class="btn btn-dark me-2 text-truncate" id="daterange-filter">
 					<i class="fa fa-calendar fa-fw text-white text-opacity-50 ms-n1"></i> 
 					 <span>{{ currentRange }}</span>
+					<b class="caret ms-1 opacity-5"></b>
+				</a>
+                <a href="/dashboard" class="btn btn-dark me-2 text-truncate" id="daterange-filter">
+					<i class="fa fa-dashboard fa-fw text-white text-opacity-50 ms-n1"></i> 
+					 <span> DASHBOARD</span>
 					<b class="caret ms-1 opacity-5"></b>
 				</a>
 			</div>

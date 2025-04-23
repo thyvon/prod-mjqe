@@ -59,9 +59,10 @@ class Product extends Model
     public function updatePriceFromLatestPurchase()
     {
         $latestPurchase = PurchaseInvoiceItem::where('item_code', $this->id)
-            ->where('payment_type', 1)
-            ->latest('id') // Assuming 'id' is the primary key or timestamp column
-            ->first();
+        ->where('payment_type', 1)
+        ->orderBy('invoice_date', 'desc')
+        ->orderBy('id', 'desc')
+        ->first();
     
         if ($latestPurchase) {
             $unitPrice = $latestPurchase->unit_price;
