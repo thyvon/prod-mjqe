@@ -374,27 +374,45 @@ class InvoiceController extends Controller
     public function filterCashRequests(Request $request)
     {
         $transactionType = $request->input('transaction_type');
-
+    
         if (!in_array($transactionType, [1, 2, 3])) {
             return response()->json(['error' => 'Invalid transaction type'], 400);
         }
-
-        $cashRequests = CashRequest::where('approval_status', 4) // Filter by approval_status = 4
-            ->when($transactionType == 1, function ($query) {
-                return $query->where('request_type', 1);
-            })
-            ->when($transactionType == 3, function ($query) {
-                return $query->where('request_type', 2);
-            })
-            ->when($transactionType == 2, function ($query) {
-                return $query->whereNull('request_type'); // Ensure no cash requests are returned
-            })
-            ->get();
-
-        Log::info('Filtered Cash Requests:', ['transaction_type' => $transactionType, 'cashRequests' => $cashRequests]);
-
-        return response()->json($cashRequests); // Always return a valid JSON response
+    
+        $cashRequests = CashRequest::where('approval_status', 4)
+            ->when($transactionType == 1, fn($query) => $query->where('request_type', 1))
+            ->when($transactionType == 3, fn($query) => $query->where('request_type', 2))
+            ->when($transactionType == 2, fn($query) => $query->whereNull('request_type'))
+            ->get()
+            ->map(function ($cashRequest) {
+                $paidAmount = PurchaseInvoiceItem::where('cash_ref', $cashRequest->id)->sum('paid_amount');
+                $remainingAmount = $cashRequest->amount - $paidAmount;
+                $currency = match ($cashRequest->currency ?? 1) {
+                    1 => 'USD',
+                    2 => 'KHR',
+                    default => '',
+                };
+    
+                return [
+                    'id' => $cashRequest->id,
+                    'amount' => $cashRequest->amount,
+                    'paid_amount' => $paidAmount,
+                    'remaining_amount' => $remainingAmount,
+                    'request_type' => $cashRequest->request_type,
+                    'approval_status' => $cashRequest->approval_status,
+                    'currency' => $currency,
+                    'label' => $cashRequest->ref_no . ' | (' . number_format($remainingAmount, 2) . ' ' . $currency . ')',
+                ];
+            });
+    
+        Log::info('Filtered Cash Requests:', [
+            'transaction_type' => $transactionType,
+            'cashRequests' => $cashRequests
+        ]);
+    
+        return response()->json($cashRequests);
     }
+    
 
     public function attachFile(Request $request, $id)
     {

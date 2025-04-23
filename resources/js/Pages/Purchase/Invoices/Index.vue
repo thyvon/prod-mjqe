@@ -1712,7 +1712,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                         <select v-model="form.cash_ref" class="form-select" id="cash_ref">
                           <option value="" disabled>Select Cash Reference</option>
                           <option v-for="cashRequest in filteredCashRequests" :key="cashRequest.id" :value="cashRequest.id">
-                            {{ cashRequest.ref_no }}
+                            {{ cashRequest.label }}
                           </option>
                         </select>
                         <div v-if="formErrors.cash_ref" class="text-danger">{{ formErrors.cash_ref }}</div>
