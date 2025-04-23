@@ -61,17 +61,17 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         try {
-            Log::info('Store method called', ['request_data' => $request->all()]);
-            Log::info('Cash Reference ID:', ['cash_ref' => $request->input('cash_ref')]); // Log the cash_ref value
 
             $rules = $this->getValidationRules($request->transaction_type);
             $validatedData = $request->validate($rules);
 
+            // if ($validatedData['transaction_type'] == 2) {
+            //     $validatedData['cash_ref'] = null;
+            // }
+
             $this->validateItemQuantities($validatedData['items']);
 
-            if ($validatedData['transaction_type'] == 2) {
-                $validatedData['cash_ref'] = null;
-            }
+            $this->validateCashAmount($validatedData['cash_ref'], $validatedData['items']);
 
             // Use the purchased_by value from the request
             $validatedData['purchased_by'] = $request->input('purchased_by');
@@ -143,21 +143,28 @@ class InvoiceController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            Log::info('Update method called', ['request_data' => $request->all()]);
+            Log::info('Cash Reference ID:', ['cash_ref' => $request->input('cash_ref')]); // Log the cash_ref value
 
             $rules = $this->getValidationRules($request->transaction_type);
             $validatedData = $request->validate($rules);
 
+            
+
             $invoice = PurchaseInvoice::findOrFail($id);
             $existingItems = $invoice->items->keyBy('id');
 
+            // if ($validatedData['transaction_type'] == 2) {
+            //     $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
+            // } else {
+            //     $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
+            // }
+
+            // Log::info('Cash Reference ID:', ['cash_ref' => $validatedData['cash_ref']]); // Log the cash_ref value
+
             $this->validateItemQuantities($validatedData['items'], $invoice->id);
 
-            if ($validatedData['transaction_type'] == 2) {
-                $validatedData['cash_ref'] = null; // Ensure cash_ref is null for Credit transactions
-            } else {
-                $validatedData['cash_ref'] = $request->input('cash_ref'); // Retain cash_ref for other transaction types
-            }
+            $this->validateCashAmount($invoice->id, $validatedData['cash_ref'], $validatedData['items']);
+
 
             // Use the purchased_by value from the request
             $validatedData['purchased_by'] = $request->input('purchased_by');
@@ -541,6 +548,8 @@ class InvoiceController extends Controller
             'items.*.total_usd' => 'required|numeric',
             'items.*.total_khr' => 'required|numeric',
             'items.*.deposit' => 'nullable|numeric',
+            'items.*.transaction_type' => 'required|integer',
+            
             // 'items.*.purchased_by' => 'required|integer|exists:users,id', // Ensure purchased_by is set for each item
         ];
 
@@ -566,7 +575,7 @@ class InvoiceController extends Controller
                 $itemQuantities['pr_item'][$itemData['pr_item']] = ($itemQuantities['pr_item'][$itemData['pr_item']] ?? 0) + $itemData['qty'];
             }
         }
-
+        // Validate PO items
         foreach ($items as $index => $itemData) {
             if (isset($itemData['po_item'])) {
                 $poItem = PoItems::find($itemData['po_item']);
@@ -611,38 +620,43 @@ class InvoiceController extends Controller
                     ]);
                 }
             }
+        }
+    }
 
-            if (isset($itemData['cash_ref'])) {
-                $cashRef = $itemData['cash_ref'];
+    private function validateCashAmount($cashRef, $items, $invoiceId = null)
+    {
+        if ($cashRef) {
+            // Calculate cash amount from the database for this cash_ref
+            $cashAmount = CashRequest::where('id', $cashRef)->sum('amount');
+    
+            // Calculate paid amount from existing invoices excluding the current invoice
+            $paidAmount = PurchaseInvoiceItem::where('cash_ref', $cashRef)
+                ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
+                ->sum('paid_amount');
+    
+            // Calculate remaining amount
+            $remainAmount = $cashAmount - $paidAmount;
 
-                // Calculate cash amount from the database
-                $cashAmount = CashRequest::where('id', $cashRef)->sum('amount');
-
-                // Calculate paid amount from existing invoices excluding the current invoice
-                $paidAmount = PurchaseInvoiceItem::where('cash_ref', $cashRef)
-                    ->when($invoiceId, fn($query) => $query->where('pi_number', '!=', $invoiceId))
-                    ->sum('paid_amount');
-
-                // Calculate remaining amount
-                $remainAmount = $cashAmount - $paidAmount;
-
-                // Calculate new paid amount from the current input
-                $newPaidAmount = array_reduce($items, function ($sum, $item) use ($cashRef) {
-                    return $item['cash_ref'] == $cashRef ? $sum + $item['paid_amount'] : $sum;
-                }, 0);
-
-                // Validate that the total paid amount does not exceed the cash amount
-                $validationAmount = $remainAmount - $newPaidAmount;
-                if ($validationAmount < 0) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        "items.$index.paid_amount" => [
-                            'The total paid amount for the selected cash reference exceeds the available cash amount. Remaining amount: ' . $remainAmount
-                        ]
-                    ]);
-                }
+            Log::info('Form Cash Ref:', ['cash_ref' => $cashRef]);
+    
+            // Calculate new paid amount for this specific cash_ref
+            $newPaidAmount = collect($items)->reduce(function ($sum, $item) {
+                return $sum + ($item['paid_amount'] ?? 0);
+            }, 0);
+    
+            // Validate that the total paid amount does not exceed the cash amount
+            $validationAmount = $remainAmount - $newPaidAmount;
+            Log::info('Validation Amount:', ['validation_amount' => $validationAmount]);
+            if ($validationAmount < 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'paid_amount' => [
+                        'The total paid amount for the selected cash reference exceeds the available cash amount. Remaining amount: ' . $remainAmount
+                    ]
+                ]);
             }
         }
     }
+    
 
     private function createOrUpdateInvoiceItems($invoice, $items, $existingItems = null)
     {
