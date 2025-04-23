@@ -370,7 +370,8 @@ const rejectRequest = async (statusType) => {
                   </div>
                 </div>
                 <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ cancellation.cancellation_reason }}</span>
+                  <!-- Display Summernote content with v-html -->
+                  <span class="w-100 text-start ps-1" v-html="cancellation.cancellation_reason"></span>
                 </div>
               </div>
             </div>
@@ -458,10 +459,6 @@ const rejectRequest = async (statusType) => {
   color: black !important; /* Force text color */
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   overflow: auto;
-}
-
-.a4-size * {
-  color: black !important; /* Force all child elements to show black text */
 }
 
 .border-black {
