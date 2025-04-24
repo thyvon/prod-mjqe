@@ -434,6 +434,7 @@ const initializeSummernote = () => {
           ['style', ['bold', 'italic', 'underline', 'clear']],
           ['font', ['strikethrough', 'superscript', 'subscript']],
           ['fontname', ['fontname']],
+          ['fontsize', ['fontsize']],
           ['color', ['color']],
           ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
           ['insert', ['link', 'picture', 'video']],
@@ -500,7 +501,12 @@ initializeSummernote(); // Initialize Summernote editor
               return '<span class="badge bg-light">Unknown</span>'; // Default case
             },
           },
-          { data: 'purchase_request.pr_number' },
+          {
+            data: null,
+            render: function (data, type, row) {
+              return row.purchase_request?.pr_number || row.purchase_order?.po_number || '-';
+            },
+          },
           { data: 'cancellation_date', render: (data) => format(data, 'date') }, // Cancellation date
           // { data: 'cancellation_reason' }, // Reason
           { data: 'user.name', defaultContent: 'N/A' }, // User who created the cancellation

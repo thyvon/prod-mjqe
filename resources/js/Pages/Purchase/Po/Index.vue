@@ -188,8 +188,40 @@ const initializeCancellationItemsTable = () => {
   });
 };
 
-const selectPoItem = (item) => {
+// const selectPoItem = (item) => {
 
+//   const isDuplicate = cancellationForm.items.some(
+//     (existingItem) => existingItem.purchase_order_item_id === item.id
+//   );
+
+//   if (isDuplicate) {
+//     toastr.warning('This item is already added.', 'Warning');
+//     return;
+//   }
+
+//   cancellationForm.items.push({
+//     name: item.product.product_description,
+//     qty: item.pending,
+//     purchase_request_id: item.pr_id,
+//     purchase_order_id: item.purchase_order.id,
+//     pr_number: item.purchase_request.pr_number,
+//     po_number: item.purchase_order.po_number,
+//     sku: item.product.sku,
+//     purchase_order_item_id: item.id,
+//     purchase_request_item_id: item.pr_item_id,
+//     cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
+//   });
+
+//   console.log('Selected PO Item:', item);
+
+//   if (cancellationItemsTableInstance) {
+//     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+//   }
+
+//   toastr.success('PO item added successfully.', 'Success');
+// };
+
+const selectPoItem = (item) => {
   const isDuplicate = cancellationForm.items.some(
     (existingItem) => existingItem.purchase_order_item_id === item.id
   );
@@ -199,16 +231,23 @@ const selectPoItem = (item) => {
     return;
   }
 
-  cancellationForm.items.push({
+  const newItem = {
     name: item.product.product_description,
     qty: item.pending,
-    purchase_request_id: item.purchase_order.id,
-    pr_number: item.purchase_request.pr_number,
-    po_number: item.purchase_order.po_number,
+    purchase_request_id: item.pr_id > 0 ? item.pr_id : null,
+    purchase_order_id: item.purchase_order.id,
+    pr_number: item.purchase_request?.pr_number || '',
+    po_number: item.purchase_order?.po_number || '',
     sku: item.product.sku,
     purchase_order_item_id: item.id,
+    purchase_request_item_id: item.pr_item_id > 0 ? item.pr_item_id : null,
     cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
-  });
+  };
+
+  cancellationForm.items.push(newItem);
+
+  console.log('✅ New cancellation item added:', newItem);
+  console.log('📦 Updated cancellationForm.items:', cancellationForm.items);
 
   if (cancellationItemsTableInstance) {
     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
@@ -216,6 +255,7 @@ const selectPoItem = (item) => {
 
   toastr.success('PO item added successfully.', 'Success');
 };
+
 
 const selectAllPoItems = () => {
 
@@ -230,11 +270,12 @@ const selectAllPoItems = () => {
       cancellationForm.items.push({
         name: item.product.product_description,
         qty: item.qty_pending,
+        purchase_request_id: item.pr_id,
         purchase_order_id: item.purchase_order.id,
         pr_number: item.purchase_request.pr_number,
         po_number: item.purchase_order.po_number,
         sku: item.product.sku,
-        purchase_request_item_id: item.id,
+        purchase_request_item_id: item.pr_item_id,
         cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
       });
       addedCount++;
@@ -270,7 +311,7 @@ const openCreateModalCancel = ( purchaseOrder ) => {
     id: null,
     cancellation_date: new Date().toISOString().split('T')[0],
     cancellation_reason: '',
-    cancellation_docs: 1,
+    cancellation_docs: 2,
     pr_po_id: purchaseOrder?.id || null, // Set pr_po_id to the current purchase order ID
     cancellation_by: '',
     items: [],
@@ -367,6 +408,7 @@ const initializeSummernote = () => {
           ['style', ['bold', 'italic', 'underline', 'clear']],
           ['font', ['strikethrough', 'superscript', 'subscript']],
           ['fontname', ['fontname']],
+          ['fontsize', ['fontsize']],
           ['color', ['color']],
           ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
           ['insert', ['link', 'picture', 'video']],

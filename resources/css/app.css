@@ -41,7 +41,7 @@ button {
 
 @font-face {
   font-family: 'Khmer OS Moul Light';
-  src: url('/Fonts/KhmerOSmuol.woff2') format('woff2');
+  src: url('/Fonts/KhmerOSmuollight.woff2') format('woff2');
 }
 
 body {
