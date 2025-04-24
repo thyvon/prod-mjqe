@@ -248,7 +248,7 @@ class PoItems extends Model
 
     public function recalculateQtyCancelValidation()
     {
-        $this->qty_cancel = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
+        $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
     
         // Log each value for debugging or tracking
         Log::info('Recalculating Cancelled Quantity Validation', [
