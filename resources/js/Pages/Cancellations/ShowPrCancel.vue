@@ -367,12 +367,17 @@ const rejectRequest = async (statusType) => {
               <div class="row">
                 <div class="col-12 text-start p-0">
                   <div class="row mt-2">
-                    <span>មូលហេតុ/Reason:</span>
+                    <span class="fw-bold">Reason of amendment where the PR have been approved.</span>
                   </div>
                 </div>
                 <div class="col-12 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
                   <!-- Display Summernote content with v-html -->
                   <span class="w-100 text-start ps-1" v-html="cancellation.cancellation_reason"></span>
+                </div>
+                <div class="col-12 border-start border-end border-bottom border-dark px-1 d-flex align-items-center" style="min-height: 35px; height: auto;">
+                  <div class="row mt-2">
+                    <span class="w-100 text-start fw-bold">=>Approver of this form is referred to Financial Matter in Part 2 in latest TOCA</span>
+                  </div>
                 </div>
               </div>
             </div>
