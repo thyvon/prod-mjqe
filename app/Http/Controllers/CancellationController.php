@@ -559,6 +559,11 @@ class CancellationController extends Controller
                 $cancellation->status = 1; // Checked
             } elseif ($request->status_type == 3) {
                 $cancellation->status = 3; // Approved
+                foreach ($cancellation->items as $item) {
+                    if ($cancellation->cancellation_docs == 2 && $item->purchaseOrderItem) {
+                        $item->purchaseOrderItem->recalculateQtyCancel();
+                    }
+                }
             } elseif ($request->status_type == 4) {
                 $cancellation->status = 4; // Authorized
     
@@ -566,10 +571,6 @@ class CancellationController extends Controller
                 foreach ($cancellation->items as $item) {
                     if ($cancellation->cancellation_docs == 1 && $item->purchaseRequestItem) {
                         $item->purchaseRequestItem->recalculateQtyCancel();
-                    }
-    
-                    if ($cancellation->cancellation_docs == 2 && $item->purchaseOrderItem) {
-                        $item->purchaseOrderItem->recalculateQtyCancel();
                     }
                 }
             }
