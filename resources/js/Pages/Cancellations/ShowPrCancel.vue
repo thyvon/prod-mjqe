@@ -381,8 +381,8 @@ const rejectRequest = async (statusType) => {
           <div class="row mb-3" style="height: 150px;">
 
             <div class="col-4 text-center px-2 mb-3">
-              <div>ស្នើសុំដោយ</div>
-              <div>Requested By</div>
+              <div>រៀបចំដោយ</div>
+              <div>Prepared By</div>
               <img
                 :src="getSignatureUrl(cancellation.user.signature)"
                 alt="Signature"
@@ -449,7 +449,7 @@ const rejectRequest = async (statusType) => {
             <div 
               v-for="approval in approvals.filter(a => a.label === 'Authorized By')" 
               :key="approval.status_type" 
-              class="col-4 text-center px-2 mb-3 border-start border-info"
+              class="col-4 text-center px-2 mb-3"
             >
             <!-- <div class="fw-bold text-primary">
               អនុញ្ញាតដោយ  
@@ -465,6 +465,7 @@ const rejectRequest = async (statusType) => {
                   style="width: 130px; height: 80px; object-fit: contain;"
                 /> -->
                 <div class="mt-2 pt-1 text-start text-primary">
+                  <i class="fas fa-check-circle fa-2x"></i>
                   <div>Authorized By: {{ approval.name }}</div>
                   <div>Position: {{ approval.position }}</div>
                   <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
@@ -486,6 +487,13 @@ const rejectRequest = async (statusType) => {
 
               <!-- 🕒 Pending View with Buttons -->
               <template v-else>
+                <div class="badge bg-warning text-dark mt-2">
+                  <i class="fas fa-clock"></i> Pending
+                </div>
+              <div class="fw-bold text-primary">
+                  អនុញ្ញាតដោយ  
+              <div class="text-primary" style="font-size: 0.85rem;">Authorized By</div>
+            </div>
                 <div class="mt-2">
                   <button 
                     class="btn btn-success btn-sm" 
@@ -504,11 +512,11 @@ const rejectRequest = async (statusType) => {
                     Reject
                   </button>
                 </div>
-                <div class="border-top mt-2 pt-1 text-start">
+                <!-- <div class="border-top mt-2 pt-1 text-start">
                   <div>Name: {{ approval.name }}</div>
                   <div>Position: {{ approval.position }}</div>
                   <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
-                </div>
+                </div> -->
               </template>
             </div>
 

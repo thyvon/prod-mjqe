@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CancellationController extends Controller
@@ -96,9 +97,21 @@ class CancellationController extends Controller
                     $item['cancellation_by'] = $validated['cancellation_by'];
                     $item['purchase_order_id'] = $item['purchase_order_id'] ?? null;
                     $item['purchase_order_item_id'] = $item['purchase_order_item_id'] ?? null;
+                    $item['purchase_request_id'] = $item['purchase_request_id'] ?? null;
+                    $item['purchase_request_item_id'] = $item['purchase_request_item_id'] ?? null;
+
+
+                    Log::info('Creating cancellation item:', $item);
+
                     CancellationItems::create($item); // Save cancellation_reason along with other fields
-                    PrItem::find($item['purchase_request_item_id'] ?? null)?->recalculateQtyCancelValidation(); // Recalculate quantities for related PrItems
-                    // PoItems::find($item['purchase_order_item_id'] ?? null)?->recalculateQtyCancelValidation(); // Recalculate quantities for related PoItems
+                    // Recalculate logic
+                    if ($validated['cancellation_docs'] == 1 && isset($item['purchase_request_item_id'])) {
+                        PrItem::find($item['purchase_request_item_id'])?->recalculateQtyCancelValidation();
+                    }
+
+                    if ($validated['cancellation_docs'] == 2 && isset($item['purchase_order_item_id'])) {
+                        PoItems::find($item['purchase_order_item_id'])?->recalculateQtyCancelValidation();
+                    }
                 }
             }
 
@@ -126,41 +139,63 @@ class CancellationController extends Controller
     // Display the specified cancellation
     public function show($id)
     {
-        $cancellation = Cancellation::with('items.purchaseRequest','items.purchaseRequestItem','items.purchaseRequestItem.product', 'user:id,name,card_id,position,phone,signature', 'purchaseRequest:id,pr_number')->findOrFail($id);
+        $cancellation = Cancellation::with(
+            'items.purchaseRequest',
+            'items.purchaseRequestItem',
+            'items.purchaseRequestItem.product',
+            'items.purchaseOrder',
+            'items.purchaseOrderItem',
+            'items.purchaseOrderItem.product',
+            'user:id,name,card_id,position,phone,signature',
+            'purchaseRequest:id,pr_number',
+            'purchaseOrder:id,po_number'
+        )->findOrFail($id);
+    
         $approvals = Approval::where('approval_id', $id)
-        ->whereIn('docs_type', [6]) // Filter by docs_type for ClearInvoice
-        ->with('user:id,name,position,card_id,signature') // Include 'signature' field
-        ->get()
-        // Map approvals to include only necessary fields
-        ->map(function ($approval) {
-            $labels = [
-                3 => 'Approved By',
-                4 => 'Authorized By',
-            ];
-
-            return [
-                'label' => $labels[$approval->status_type] ?? 'Unknown',
-                'user_id' => $approval->user_id, // Include user_id for button logic
-                'name' => $approval->user->name ?? '',
-                'position' => $approval->user->position ?? '',
-                'card_id' => $approval->user->card_id ?? '',
-                'signature' => $approval->user->signature ?? null,
-                'status_type' => $approval->status_type, // Include status_type for button logic
-                'status' => $approval->status, // Include status for button logic
-                'click_date' => $approval->click_date, // Include click_date
-            ];
-        })
-        ->values();
+            ->whereIn('docs_type', [6, 7])
+            ->with('user:id,name,position,card_id,signature')
+            ->get()
+            ->map(function ($approval) {
+                $labels = [
+                    3 => 'Approved By',
+                    4 => 'Authorized By',
+                ];
+    
+                return [
+                    'label' => $labels[$approval->status_type] ?? 'Unknown',
+                    'user_id' => $approval->user_id,
+                    'name' => $approval->user->name ?? '',
+                    'position' => $approval->user->position ?? '',
+                    'card_id' => $approval->user->card_id ?? '',
+                    'signature' => $approval->user->signature ?? null,
+                    'status_type' => $approval->status_type,
+                    'status' => $approval->status,
+                    'click_date' => $approval->click_date,
+                ];
+            })
+            ->values();
+    
         \Log::info('Approvals retrieved:', $approvals->toArray());
-        return Inertia::render('Cancellations/Show', [
+    
+        // Dynamic view based on integer cancellation_docs value
+        $view = match ($cancellation->cancellation_docs) {
+            1 => 'Cancellations/ShowPrCancel',
+            2 => 'Cancellations/ShowPoCancel',
+            default => 'Cancellations/ShowCancel',
+        };
+
+        Log::info('Rendering view:', ['view' => $view]);
+    
+        return Inertia::render($view, [
             'cancellation' => $cancellation,
-            'approvals' => $approvals,	
+            'approvals' => $approvals,
             'currentUser' => [
-                'id' => Auth::id(), // Pass the authenticated user's ID
-                'user' => Auth::user(), // Pass the authenticated user
+                'id' => Auth::id(),
+                'user' => Auth::user(),
             ],
         ]);
     }
+    // Show the form for creating a new cancellation    
 
     // Show the form for editing the specified cancellation
     public function edit($id)
@@ -359,11 +394,14 @@ class CancellationController extends Controller
     
             // Recalculate quantities for related PrItems
             foreach ($cancellation->items as $item) {
-                $prItem = $item->purchaseRequestItem;
-                if ($prItem) {
-                    $prItem->recalculateQtyCancel();
+                if ($cancellation->cancellation_docs == 1 && $item->purchaseRequestItem) {
+                    $item->purchaseRequestItem->recalculateQtyCancel();
                 }
-            }
+            
+                if ($cancellation->cancellation_docs == 2 && $item->purchaseOrderItem) {
+                    $item->purchaseOrderItem->recalculateQtyCancel();
+                }
+            }  
     
             // Delete related approvals
             Approval::where('approval_id', $cancellation->id)->delete();
@@ -380,8 +418,12 @@ class CancellationController extends Controller
     // Store approvals for the cancellation
     private function storeApprovals($cancelId, $request)
     {
-        $docsType = 6;
-
+        $docsType = match ((int) $request->cancellation_docs) {
+            1 => 5, // For example: PR Cancellation
+            2 => 6, // PO Cancellation
+            default => 0, // Fallback or unknown
+        };
+    
         if ($request->approved_by && $request->authorized_by) {
             $this->storeNewApprovals($cancelId, $request->approved_by, $request->authorized_by, $docsType);
         }
@@ -482,11 +524,14 @@ class CancellationController extends Controller
                 $cancellation->status = 4; // Authorized
                 // Recalculate quantities for related PrItems
                 foreach ($cancellation->items as $item) {
-                    $prItem = $item->purchaseRequestItem;
-                    if ($prItem) {
-                        $prItem->recalculateQtyCancel();
+                    if ($cancellation->cancellation_docs == 1 && $item->purchaseRequestItem) {
+                        $item->purchaseRequestItem->recalculateQtyCancel();
                     }
-                }
+                
+                    if ($cancellation->cancellation_docs == 2 && $item->purchaseOrderItem) {
+                        $item->purchaseOrderItem->recalculateQtyCancel();
+                    }
+                }              
             }
 
             // Save the cancellation

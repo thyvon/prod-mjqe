@@ -375,6 +375,7 @@ const initializeSummernote = () => {
           ['style', ['bold', 'italic', 'underline', 'clear']],
           ['font', ['strikethrough', 'superscript', 'subscript']],
           ['fontname', ['fontname']],
+          ['fontsize', ['fontsize']],
           ['color', ['color']],
           ['para', ['ul', 'ol', 'paragraph', 'lineheight']], // Adding 'lineheight' to the para group
           ['insert', ['link', 'picture', 'video']],

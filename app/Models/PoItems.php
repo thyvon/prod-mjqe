@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequest;
 use App\Models\PrItem;
@@ -165,6 +166,26 @@ class PoItems extends Model
         $this->isCalculating = false;
     }
 
+    public function calculateQtyCancel()
+    {
+        if ($this->isCalculating) {
+            return;
+        }
+    
+        $this->isCalculating = true;
+        $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
+    
+        // Check if the cancelled quantity equals the total quantity
+        if ($this->cancelled_qty == $this->qty) {
+            $this->is_cancelled = 1;
+        } else {
+            $this->is_cancelled = 0;
+        }
+    
+        $this->isCalculating = false;
+        $this->save();
+    }
+
     public function calculatePaidAmount()
     {
         if ($this->isCalculating) {
@@ -212,6 +233,35 @@ class PoItems extends Model
         }
         $this->calculateStatus();
         $this->save();
+    }
+
+    public function recalculateQtyCancel()
+    {
+        $this->calculateQtyCancel();
+        if ($this->cancelled_qty > ($this->qty - $this->received_qty)) {
+            throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
+        }
+        $this->calculateStatus();
+        $this->save();
+    }
+
+    public function recalculateQtyCancelValidation()
+    {
+        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+    
+        // Log each value for debugging or tracking
+        Log::info('Recalculating Cancelled Quantity Validation', [
+            'purchase_request_item_id' => $this->id,
+            'qty' => $this->qty,
+            'qty_purchase' => $this->received_qty,
+            // 'qty_po' => $this->qty_po,
+            'qty_cancel' => $this->cancelled_qty,
+            'remaining_qty' => $this->qty - $this->received_qty,
+        ]);
+    
+        if ($this->cancelled_qty > ($this->qty - $this->received_qty)) {
+            throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
+        }
     }
 
     public function recalculatePaidAmount()
