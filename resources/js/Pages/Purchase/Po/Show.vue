@@ -28,6 +28,10 @@ const props = defineProps({
   purchaseOrder: { type: Object, required: true },
 });
 
+const goBack = () => {
+  window.history.back();
+};
+
 
 const form = ref({
   id: props.purchaseOrder?.id || '',
@@ -131,19 +135,19 @@ const confirmCancel = async () => {
   }
 };
 
-const cancelPoItem = async (poItemId) => {
-  currentItemId.value = poItemId;
-  const item = form.value.po_items.find(item => item.id === poItemId);
-  remainingQty.value = item.qty - item.cancelled_qty - item.received_qty;
+// const cancelPoItem = async (poItemId) => {
+//   currentItemId.value = poItemId;
+//   const item = form.value.po_items.find(item => item.id === poItemId);
+//   remainingQty.value = item.qty - item.cancelled_qty - item.received_qty;
 
-  const modalElement = document.getElementById('cancelItemReasonModal');
-  const modal = new bootstrap.Modal(modalElement);
-  modal.show();
+//   const modalElement = document.getElementById('cancelItemReasonModal');
+//   const modal = new bootstrap.Modal(modalElement);
+//   modal.show();
 
-  modalElement.addEventListener('shown.bs.modal', () => {
-    document.getElementById('cancelled_item_reason').focus();
-  });
-};
+//   modalElement.addEventListener('shown.bs.modal', () => {
+//     document.getElementById('cancelled_item_reason').focus();
+//   });
+// };
 
 const confirmCancelItem = async () => {
   if (cancelledItemReason.value && currentItemId.value !== null && cancelledQty.value > 0) {
@@ -252,9 +256,13 @@ const fetchInvoiceItems = async () => {
         { data: 'discount' },
         { data: 'vat' },
         { data: 'total_usd', render: (data) => parseFloat(data).toFixed(4) },
+        { data: 'received_qty' },
+        { data: 'cancelled_qty' },
+        { data: 'pending', render: (data) => parseFloat(data).toFixed(4) },
         { data: 'status', render: (data) => `<span class="${getItemStatusBadgeClass(data)}">${data}</span>` },
-        { data: 'cancelled_reason', visible: hasCancelledItems.value },
-        { data: null, render: (data) => `<button type="button" class="btn btn-sm btn-warning" onclick="cancelPoItem(${data.id})" ${isButtonDisabled(data.status) ? 'disabled' : ''}><i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i></button>` },
+        { data: 'force_close', render: (data) => data === 1 ? '<span class="badge bg-danger"><i class="fa fa-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="fa fa-times-circle"></i> No</span>' },
+        // { data: 'cancelled_reason', visible: hasCancelledItems.value },
+        // { data: null, render: (data) => `<button type="button" class="btn btn-sm btn-warning" onclick="cancelPoItem(${data.id})" ${isButtonDisabled(data.status) ? 'disabled' : ''}><i class="fa fa-ban t-plus-1 fa-fw fa-lg"></i></button>` },
       ],
     });
 
@@ -287,7 +295,7 @@ const fetchInvoiceItems = async () => {
   }
 };
 
-window.cancelPoItem = cancelPoItem;
+// window.cancelPoItem = cancelPoItem;
 
 onMounted(() => {
   // Check if the flag is set in localStorage and show the alert
@@ -308,8 +316,10 @@ onMounted(() => {
   <Main>
     <Head title="Purchase Order Details" />
     <div class="mb-3">
-      <Link href="/purchase-orders" class="btn btn-primary"><i class="fa-solid fa-arrow-left-long"></i> Back</Link>
-      <button class="btn btn-danger ms-2" @click="cancelPurchaseOrder" :disabled="form.status === 'Cancelled' || form.status === 'Closed'"><i class="fas fa-ban"></i> Cancel PO</button>
+      <button @click="goBack" class="btn btn-primary">
+        <i class="fa-solid fa-arrow-left-long"></i> Back
+      </button>
+      <!-- <button class="btn btn-danger ms-2" @click="cancelPurchaseOrder" :disabled="form.status === 'Cancelled' || form.status === 'Closed'"><i class="fas fa-ban"></i> Cancel PO</button> -->
     </div>
     <div class="panel panel-inverse">
       <div class="panel-heading">
@@ -354,7 +364,7 @@ onMounted(() => {
           <div class="invoice-content">
             <!-- PO Items Section -->
             <div class="table-responsive">
-              <table id="po-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+              <table id="po-items-table" class="table table-bordered align-middle" width="100%">
                 <thead class="text-center">
                   <tr>
                     <th>#</th>
@@ -371,9 +381,13 @@ onMounted(() => {
                     <th>Discount</th>
                     <th>VAT%</th>
                     <th>Total Price</th>
+                    <th>Received Qty</th>
+                    <th>Cancelled Qty</th>
+                    <th>Pending Qty</th>
                     <th>Status</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
+                    <th>Force Close?</th>
+                    <!-- <th>Reason</th> -->
+                    <!-- <th>Actions</th> -->
                   </tr>
                 </thead>
                 <tbody>
@@ -421,7 +435,7 @@ onMounted(() => {
       </div>
       <div class="panel-body">
         <div class="table-responsive">
-          <table id="invoice-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+          <table id="invoice-items-table" class="table table-bordered align-middle m-3" width="100%">
             <thead>
               <tr>
                 <th>#</th>
