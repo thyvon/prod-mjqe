@@ -205,8 +205,8 @@ const rejectRequest = async (statusType) => {
             </div>
             <div class="col-6 pt-5">
               <div class="row font-monospace">
-                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំលុបសំណើរ</h5>
-                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Cancellation of Purchase Request</h5>
+                <h5 class="text-uppercase text-center" style="font-family: 'Khmer OS Moul Light';">ពាក្យស្នើសុំលុបបញ្ជាទិញ</h5>
+                <h5 class="text-uppercase text-center fw-bold"style="font-family: 'TW Cen MT';">Cancellation of Purchase Order</h5>
               </div>
             </div>
             <div class="col-3">
@@ -299,11 +299,11 @@ const rejectRequest = async (statusType) => {
 
                 <div class="col-2 text-start p-0">
                   <div class="row mt-2">
-                    <span>លេខ PR/PR Number:</span>
+                    <span>លេខ PO/PO Number:</span>
                   </div>
                 </div>
                 <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ cancellation.purchase_request?.pr_number }}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ cancellation.purchase_order?.po_number }}</span>
                 </div>
               </div>
             </div>
@@ -338,20 +338,6 @@ const rejectRequest = async (statusType) => {
                       {{ (parseFloat(item.qty) * parseFloat(item.purchase_order_item?.unit_price)).toFixed(2) }}
                     </td>
                     <td class="text-start">{{ item.cancellation_reason || 'N/A' }}</td>
-                  </tr>
-
-                  <!-- Total row -->
-                  <tr>
-                    <td colspan="6" class="text-end fw-bold">សរុប/Total:</td>
-                    <td colspan="2" class="text-center fw-bold">
-                      {{
-                        cancellation.items.reduce((total, item) => {
-                          const qty = parseFloat(item.qty);
-                          const unitPrice = parseFloat(item.purchase_order_item?.unit_price || 0);
-                          return total + qty * unitPrice;
-                        }, 0).toFixed(2)
-                      }}
-                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -439,83 +425,6 @@ const rejectRequest = async (statusType) => {
                 <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
               </div>
             </div>
-
-
-            <!-- Authorized By only -->
-            <div 
-              v-for="approval in approvals.filter(a => a.label === 'Authorized By')" 
-              :key="approval.status_type" 
-              class="col-4 text-center px-2 mb-3"
-            >
-            <!-- <div class="fw-bold text-primary">
-              អនុញ្ញាតដោយ  
-              <div class="text-primary" style="font-size: 0.85rem;">Authorized By</div>
-            </div> -->
-
-
-              <!-- ✅ Signed View -->
-              <template v-if="approval.status === 1">
-                <!-- <img
-                  :src="getSignatureUrl(approval.signature)"
-                  alt="Signature"
-                  style="width: 130px; height: 80px; object-fit: contain;"
-                /> -->
-                <div class="mt-2 pt-1 text-start text-primary">
-                  <i class="fas fa-check-circle fa-2x"></i>
-                  <div>Authorized By: {{ approval.name }}</div>
-                  <div>Position: {{ approval.position }}</div>
-                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
-                </div>
-              </template>
-
-              <!-- ❌ Rejected View -->
-              <template v-else-if="approval.status === -1">
-                <div class="text-danger mt-2">
-                  <i class="fas fa-times-circle fa-2x"></i>
-                  <div>Unauthorized</div>
-                </div>
-                <div class="border-top mt-2 pt-1 text-start">
-                  <div>Rejected By: {{ approval.name }}</div>
-                  <div>Position: {{ approval.position }}</div>
-                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
-                </div>
-              </template>
-
-              <!-- 🕒 Pending View with Buttons -->
-              <template v-else>
-                <div class="badge bg-warning text-dark mt-2">
-                  <i class="fas fa-clock"></i> Pending
-                </div>
-              <div class="fw-bold text-primary">
-                  អនុញ្ញាតដោយ  
-              <div class="text-primary" style="font-size: 0.85rem;">Authorized By</div>
-            </div>
-                <div class="mt-2">
-                  <button 
-                    class="btn btn-success btn-sm" 
-                    @click="approveRequest(approval.status_type)"
-                    v-if="approval.user_id === currentUser.id &&
-                          approvals.find(a => a.label === 'Approved By' && a.status === 1)"
-                  >
-                    Sign
-                  </button>
-                  <button 
-                    class="btn btn-danger btn-sm ms-2" 
-                    @click="rejectRequest(approval.status_type)"
-                    v-if="approval.user_id === currentUser.id &&
-                          approvals.find(a => a.label === 'Approved By' && a.status === 1)"
-                  >
-                    Reject
-                  </button>
-                </div>
-                <!-- <div class="border-top mt-2 pt-1 text-start">
-                  <div>Name: {{ approval.name }}</div>
-                  <div>Position: {{ approval.position }}</div>
-                  <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
-                </div> -->
-              </template>
-            </div>
-
           </div>
         </div>
       </div>

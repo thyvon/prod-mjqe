@@ -722,7 +722,7 @@ const deleteCancellation = async (cancellationId) => {
                       <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
                     </div>
                   </div>
-                  <div class="col-6 border">
+                  <div v-if="cancellationForm.cancellation_docs == 1" class="col-6 border"> <!-- Updated condition to true -->
                     <div class="row">
                       <span class="text-center">Authized By</span>
                     </div>
