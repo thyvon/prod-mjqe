@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\CancellationItems;
 
 class PoItems extends Model
 {
@@ -109,40 +110,40 @@ class PoItems extends Model
         return $this->belongsTo(User::class, 'purchaser_id');
     }
 
-    public function cancelItem($cancelled_reason, $cancelled_qty)
-    {
-        $remainingQty = $this->qty - $this->cancelled_qty;
+    // public function cancelItem($cancelled_reason, $cancelled_qty)
+    // {
+    //     $remainingQty = $this->qty - $this->cancelled_qty;
 
-        if ($cancelled_qty > $remainingQty) {
-            throw new \Exception('Cancelled quantity cannot exceed remaining quantity.');
-        }
+    //     if ($cancelled_qty > $remainingQty) {
+    //         throw new \Exception('Cancelled quantity cannot exceed remaining quantity.');
+    //     }
 
-        $this->cancelled_reason = $cancelled_reason;
-        $this->cancelled_qty += $cancelled_qty;
-        $this->pending = $this->qty - $this->cancelled_qty;
+    //     $this->cancelled_reason = $cancelled_reason;
+    //     $this->cancelled_qty += $cancelled_qty;
+    //     $this->pending = $this->qty - $this->cancelled_qty;
 
-        if ($this->cancelled_qty == $this->qty) {
-            $this->status = 'Void';
-            $this->is_cancelled = 1;
-        }
+    //     if ($this->cancelled_qty == $this->qty) {
+    //         $this->status = 'Void';
+    //         $this->is_cancelled = 1;
+    //     }
 
-        $this->save();
+    //     $this->save();
 
-        $this->calculatePending();
+    //     $this->calculatePending();
 
-        $purchaseOrder = $this->purchaseOrder;
-        $allItemsCancelled = $purchaseOrder->poItems->every(function ($item) {
-            return $item->status === 'Void';
-        });
+    //     $purchaseOrder = $this->purchaseOrder;
+    //     $allItemsCancelled = $purchaseOrder->poItems->every(function ($item) {
+    //         return $item->status === 'Void';
+    //     });
 
-        if ($allItemsCancelled) {
-            $purchaseOrder->status = 'Void';
-            $purchaseOrder->is_cancelled = 1;
-            $purchaseOrder->save();
-        }
+    //     if ($allItemsCancelled) {
+    //         $purchaseOrder->status = 'Void';
+    //         $purchaseOrder->is_cancelled = 1;
+    //         $purchaseOrder->save();
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function calculatePending()
     {
@@ -247,15 +248,15 @@ class PoItems extends Model
 
     public function recalculateQtyCancelValidation()
     {
-        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+        $this->qty_cancel = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
     
         // Log each value for debugging or tracking
         Log::info('Recalculating Cancelled Quantity Validation', [
-            'purchase_request_item_id' => $this->id,
+            'purchase_order_item_id' => $this->id,
             'qty' => $this->qty,
-            'qty_purchase' => $this->received_qty,
+            'received_qty' => $this->received_qty,
             // 'qty_po' => $this->qty_po,
-            'qty_cancel' => $this->cancelled_qty,
+            'cancelled_qty' => $this->cancelled_qty,
             'remaining_qty' => $this->qty - $this->received_qty,
         ]);
     
