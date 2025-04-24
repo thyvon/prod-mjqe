@@ -41,6 +41,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'microsoft_token',
+        'microsoft_refresh_token',
+        'microsoft_token_expires', // Added
     ];
 
     /**
