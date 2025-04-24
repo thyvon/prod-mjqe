@@ -819,8 +819,8 @@ onMounted(() => {
         <a href="#nav-create" id="nav-create-tab" data-bs-toggle="tab" class="nav-link" @click="openCreatePage">Form</a>
       </li>
       <li class="nav-item">
-        <!-- Navigate to the cancellation index page -->
-        <a href="/cancellations" class="btn btn-sm btn-secondary">Cancellations List</a>
+          <!-- Pass 'cancellations_docs' as a query parameter when navigating -->
+          <a href="/cancellations?cancellations_docs=1" class="btn btn-sm btn-secondary">PR Cancellations</a>
       </li>
     </ul>
     <div class="tab-content panel p-3 rounded-0 rounded-bottom">

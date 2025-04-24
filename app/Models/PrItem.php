@@ -105,7 +105,10 @@ class PrItem extends Model
         }
     
         $this->isCalculating = true;
-        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)
+        ->whereNull('purchase_order_item_id')
+        ->sum('qty');
+
     
         // Check if the cancelled quantity equals the total quantity
         if ($this->qty_cancel == $this->qty) {
@@ -179,7 +182,10 @@ class PrItem extends Model
 
     public function recalculateQtyCancelValidation()
     {
-        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)->sum('qty');
+        $this->qty_cancel = CancellationItems::where('purchase_request_item_id', $this->id)
+        ->whereNull('purchase_order_item_id')
+        ->sum('qty');
+
     
         // Log each value for debugging or tracking
         Log::info('Recalculating Cancelled Quantity Validation', [

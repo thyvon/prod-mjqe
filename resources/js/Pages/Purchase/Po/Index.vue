@@ -32,7 +32,6 @@ const cancellationForm = reactive({
   // cancellation_docs: '',
   // cancellation_by: '',
   approved_by: null,
-  authorized_by: null,
   items: [],
 });
 
@@ -188,38 +187,6 @@ const initializeCancellationItemsTable = () => {
   });
 };
 
-// const selectPoItem = (item) => {
-
-//   const isDuplicate = cancellationForm.items.some(
-//     (existingItem) => existingItem.purchase_order_item_id === item.id
-//   );
-
-//   if (isDuplicate) {
-//     toastr.warning('This item is already added.', 'Warning');
-//     return;
-//   }
-
-//   cancellationForm.items.push({
-//     name: item.product.product_description,
-//     qty: item.pending,
-//     purchase_request_id: item.pr_id,
-//     purchase_order_id: item.purchase_order.id,
-//     pr_number: item.purchase_request.pr_number,
-//     po_number: item.purchase_order.po_number,
-//     sku: item.product.sku,
-//     purchase_order_item_id: item.id,
-//     purchase_request_item_id: item.pr_item_id,
-//     cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
-//   });
-
-//   console.log('Selected PO Item:', item);
-
-//   if (cancellationItemsTableInstance) {
-//     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
-//   }
-
-//   toastr.success('PO item added successfully.', 'Success');
-// };
 
 const selectPoItem = (item) => {
   const isDuplicate = cancellationForm.items.some(
@@ -269,7 +236,7 @@ const selectAllPoItems = () => {
     if (!isDuplicate) {
       cancellationForm.items.push({
         name: item.product.product_description,
-        qty: item.qty_pending,
+        qty: item.pending,
         purchase_request_id: item.pr_id,
         purchase_order_id: item.purchase_order.id,
         pr_number: item.purchase_request.pr_number,
@@ -339,7 +306,6 @@ const saveCancellation = async () => {
       ...cancellationForm,
       pr_po_id: cancellationForm.pr_po_id, // Include pr_po_id in the payload
       approved_by: cancellationForm.approved_by,
-      authorized_by: cancellationForm.authorized_by,
       items: cancellationForm.items,
     };
 
@@ -359,7 +325,6 @@ const saveCancellation = async () => {
       cancellation_by: '',
       pr_po_id: null,
       approved_by: null,
-      authorized_by: null,
       items: [], // Clear items
     });
     validationErrors.value = {};
@@ -599,24 +564,6 @@ const initializeSelect2 = () => {
           cancellationForm.approved_by = $(this).val();
         });
       }
-
-      if ($('#authorized_by').length) {
-        if ($.fn.select2 && $('#authorized_by').data('select2')) {
-          $('#authorized_by').select2('destroy');
-        }
-
-        // Initialize select2 with dropdownParent set to the modal
-        $('#authorized_by').select2({
-          placeholder: 'Select an authorized person',
-          allowClear: true,
-          width: '100%',
-          dropdownParent: $('#cancellationModal'), // Ensure dropdown is rendered inside the modal
-        }).on('change', function () {
-          // Sync the selected value with the reactive form
-          cancellationForm.authorized_by = $(this).val();
-        });
-      }
-
     }, 300);
   });
 };
@@ -1233,6 +1180,10 @@ onMounted(() => {
       <li class="nav-item">
         <a href="#nav-create" id="nav-create-tab" data-bs-toggle="tab" class="nav-link" @click="openCreatePage">Form</a>
       </li>
+      <li class="nav-item">
+        <!-- Pass 'cancellations_docs' as a query parameter when navigating -->
+        <a href="/cancellations?cancellations_docs=2" class="btn btn-sm btn-secondary">PO Cancellations</a>
+    </li>
     </ul>
     <div class="tab-content panel p-3 rounded-0 rounded-bottom">
       <div class="tab-pane fade active show" id="nav-index">
@@ -1660,25 +1611,14 @@ onMounted(() => {
                     <div class="row">
                       <span class="text-center">Approved By</span>
                     </div>
-                    <div class="col-sm-12">
-                      <select v-model="cancellationForm.approved_by" class="form-select select2" id="approved_by">
-                        <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                      </select>
-                      <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                      <div class="col-sm-12">
+                        <select v-model="cancellationForm.approved_by" class="form-select select2" id="approved_by">
+                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        </select>
+                        <div v-if="validationErrors.approved_by" class="text-danger">{{ validationErrors.approved_by[0] }}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="col-6 border">
-                    <div class="row">
-                      <span class="text-center">Authized By</span>
-                    </div>
-                    <div class="col-sm-12">
-                      <select v-model="cancellationForm.authorized_by" class="form-select select2" id="authorized_by">
-                        <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                      </select>
-                      <div v-if="validationErrors.authorized_by" class="text-danger">{{ validationErrors.authorized_by[0] }}</div>
-                    </div>
-                  </div>
-              </div>
+                </div>
               </div>
 
               <div class="modal-footer">
