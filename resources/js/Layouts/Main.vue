@@ -1,12 +1,119 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { usePage, useForm, Link } from '@inertiajs/vue3';
 // import { router } from '@inertiajs/core';
 import Sidebar from '@/Components/Sidebar.vue';
 import Loading from '@/Components/Loading.vue';
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+
+
+dayjs.extend(relativeTime)
 
 const loadingRef = ref(null);
 const { url } = usePage();
+const page = usePage();
+
+// Nottification count
+const approvals = computed(() => page.props.auth.approvals || [])
+const pendingApprovals = computed(() => approvals.value.filter(approval => approval.status === 0))
+const pendingCount = computed(() => pendingApprovals.value.length)
+const friendlyDate = (date) => {
+  const dateString = dayjs(date).fromNow()
+  return dateString.charAt(0).toUpperCase() + dateString.slice(1)
+}
+
+const getApprovalTitle = (docs_type, status_type) => {
+  const docsMap = {
+    1: 'Request Petty Cash',
+    2: 'Request Advance',
+    3: 'Clear Petty Cash',
+    4: 'Clear Advance',
+    5: 'Clear Credit',
+    6: 'Purchase Request Cancel',
+    7: 'Purchase Order Cancel',
+  }
+
+  
+
+  const docLabel = docsMap[docs_type] || 'Unknown Document'
+  return `${docLabel}`
+}
+
+// const for getStatusText
+const getStatusText = (status_type) => {
+  switch (status_type) {
+    case 1:
+      return 'Need Check'
+    case 2:
+      return 'Need Acknowledge'
+    case 3:
+      return 'Need Approve'
+    case 4:
+      return 'Need Receive'
+    default:
+      return 'Unknown Status'
+  }
+}
+
+// const for getStatusBadgeClass
+const getStatusBadgeClass = (statusType) => {
+  switch (statusType) {
+    case 1:
+      return 'badge-warning' // Yellow badge for "Need Check"
+    case 2:
+      return 'badge-info' // Blue badge for "Need Acknowledge"
+    case 3:
+      return 'badge-primary' // Blue badge for "Need Approve"
+    case 4:
+      return 'badge-success' // Green badge for "Need Receive"
+    default:
+      return 'badge-secondary' // Grey badge for "Unknown Status"
+  }
+}
+
+const getApprovalStatus = (status_type) => {
+  const statusMap = {
+	0: 'Pending',
+	1: 'Need Check',
+	2: 'Need Acknowledge',
+	3: 'Need Approve',
+	4: 'Need Receive',
+  }
+
+  return statusMap[status_type] || 'Unknown Status'
+}
+
+function viewApproval(docsType, approvalId) {
+  let url = '';
+  switch (docsType) {
+    case 1:
+    case 2:
+      url = `/cash-request/${approvalId}`;
+      break;
+    case 3:
+    case 4:
+      url = `/clear-invoice/${approvalId}`;
+      break;
+    case 5:
+      url = `/statements/${approvalId}`;
+      break;
+    case 6:
+      url = `/cancellations/${approvalId}`;
+      break;
+    case 7:
+      url = `/cancellations/${approvalId}`;
+      break;
+    default:
+      console.error('Unknown docs_type:', docsType);
+      return;
+  }
+  window.location.href = url; // Navigate to the URL in the same tab
+}
+
+//End Notitfication
+
+
 
 // Loading handlers
 const showLoader = () => {
@@ -64,14 +171,41 @@ const logout = () => {
         <div class="navbar-item dropdown">
           <a href="#" data-bs-toggle="dropdown" class="navbar-link dropdown-toggle fs-14px">
             <i class="fa fa-bell"></i>
-            <span class="badge">0</span>
+            <span class="badge">{{ pendingCount }}</span>
           </a>
-          <div class="dropdown-menu media-list dropdown-menu-end">
-            <div class="dropdown-header">NOTIFICATIONS (0)</div>
-            <div class="text-center w-300px py-3">
-              No notification found
-            </div>
-          </div>
+		  <div class="dropdown-menu media-list dropdown-menu-end w-300px">
+			<div class="dropdown-header">
+			NOTIFICATIONS ({{ pendingCount }})
+			</div>
+			<template v-if="pendingCount > 0">
+			<div
+				v-for="approval in pendingApprovals"
+				:key="approval.approval_id"
+				class="d-flex align-items-center px-3 py-2 border-bottom notification-item"
+				@click="viewApproval(approval.docs_type, approval.approval_id)"
+			>
+				<div class="flex-grow-1">
+				<div class="fw-bold">
+					<!-- Badge with status type -->
+					{{ getApprovalTitle(approval.docs_type, approval.status_type) }}
+					<span :class="['badge', getStatusBadgeClass(approval.status_type)]">
+					{{ getStatusText(approval.status_type) }}
+					</span>
+				</div>
+				<div class="small text-primary">
+					Requested at: {{ friendlyDate(approval.created_at) }}
+				</div>
+				</div>
+			</div>
+			</template>
+			<div v-else class="text-center w-300px py-3">
+			No notification found
+			</div>
+			<div class="dropdown-footer">
+			<a href="/approvals" class="dropdown-item text-center">View All Approvals</a>
+			</div>
+		</div> <!-- Closing the dropdown-menu -->
+
         </div>
         <div class="navbar-item navbar-user dropdown">
           <a href="#" class="navbar-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
@@ -223,5 +357,58 @@ const logout = () => {
 .brand-text {
     font-size: 24px; /* Set specific font size */
     margin-left: 8px;
+}
+
+.dropdown-menu {
+  max-height: 400px; /* Set the max height to limit the size */
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on touch devices */
+}
+
+.notification-item {
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s ease;
+}
+
+.notification-item:hover {
+  background-color: #f1f1f1; /* Light background color on hover */
+  transform: scale(1.02); /* Slight pop effect */
+}
+
+.notification-item:active {
+  background-color: #e0e0e0; /* Darker background when clicked */
+}
+
+/* Optional custom styles for badge */
+.badge {
+  font-size: 0.875rem; /* Adjust font size */
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem; /* Rounded edges */
+}
+
+.badge-warning {
+  background-color: #f0ad4e; /* Yellow */
+  color: white;
+}
+
+.badge-info {
+  background-color: #17a2b8; /* Blue */
+  color: white;
+}
+
+.badge-primary {
+  background-color: #007bff; /* Dark Blue */
+  color: white;
+}
+
+.badge-success {
+  background-color: #28a745; /* Green */
+  color: white;
+}
+
+.badge-secondary {
+  background-color: #6c757d; /* Grey */
+  color: white;
 }
 </style>
