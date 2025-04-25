@@ -1,10 +1,11 @@
 <script setup>
 // Import usePage from Inertia to get the current route
 import { usePage, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 // Get the current page's URL and props
-const { url, props } = usePage();
-
+const { url } = usePage();
+const page = usePage();
 // Helper function to check if the menu item is active
 const isActive = (targetRoute) => {
   // Check if the current URL starts with the target route
@@ -12,10 +13,11 @@ const isActive = (targetRoute) => {
 };
 
 // Flatten grouped approvals into a single array
-const flattenedApprovals = Object.values(props.approvals || {}).flat();
+// Access approvals from the shared props
+const approvals = computed(() => page.props.auth.approvals || [])
 
-// Get the count of pending approvals
-const pendingApprovalsCount = flattenedApprovals.filter(approval => approval.status === 0).length;
+// Compute pending approvals count
+const pendingApprovalsCount = computed(() => approvals.value.filter(approval => approval.status === 0).length)
 </script>
 
 
