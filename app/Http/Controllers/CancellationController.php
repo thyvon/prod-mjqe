@@ -315,6 +315,7 @@ class CancellationController extends Controller
                 'approved_by' => 'required|integer',
                 'authorized_by' => 'nullable|integer',
                 'items' => 'sometimes|array',
+                'items.*.id' => 'required|exists:cancellation_items,id',
                 'items.*.purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'items.*.purchase_order_item_id' => 'nullable|exists:po_items,id',
                 'items.*.purchase_request_id' => 'nullable|exists:purchase_requests,id',
