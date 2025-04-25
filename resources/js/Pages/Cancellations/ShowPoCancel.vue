@@ -461,11 +461,11 @@ const rejectRequest = async (statusType) => {
     margin: 10mm auto; /* Ensure margin is applied during printing */
     padding: 20mm !important; /* Enforce padding for print */
     box-shadow: none; /* Remove any shadow for clean printing */
+    font-family: 'TW Cen MT', 'Khmer OS Content', 'Khmer OS Moul Light' !important; /* Ensure font is applied */
   }
 
   #printable-area {
     padding: 20mm !important; /* Ensure padding is applied to the printable area */
-    font-family: 'TW Cen MT', 'Khmer OS Content', 'Khmer OS Moul Light' !important; /* Ensure font is applied */
   }
 }
 </style>
