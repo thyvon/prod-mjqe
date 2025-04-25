@@ -144,7 +144,7 @@ class CashRequestController extends Controller
     private function storeApprovals($cashRequestId, $request)
     {
         $docsType = $request->request_type; // Set docs_type based on request_type
-
+    
         $approvalData = [
             ['status_type' => 1, 'user_id' => $request->checked_by],
             ['status_type' => 2, 'user_id' => $request->acknowledged_by],
@@ -154,17 +154,21 @@ class CashRequestController extends Controller
 
         foreach ($approvalData as $data) {
             if ($data['user_id']) {
-                // Check if an approval record already exists
-                $approval = Approval::where('approval_id', $cashRequestId)
-                    ->where('status_type', $data['status_type'])
-                    ->first();
+                // Check if an approval record already exists with docs_type criteria
+                $approval = Approval::where([
+                    'approval_id' => $cashRequestId,
+                    'status_type' => $data['status_type'],
+                    'docs_type' => $docsType, // Added docs_type criteria here
+                ])->first();
 
+                $approvalName = $this->generateApprovalName($data['status_type']);
+    
                 if ($approval) {
                     // Update the existing record
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
-                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance', // Set approval_name based on docsType
+                        'approval_name' => $docsType == 1 ? 'Cash Request-'.$approvalName : 'Cash Advance-'.$approvalName, // Set approval_name based on docsType
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -173,11 +177,24 @@ class CashRequestController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
-                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance', // Set approval_name based on docsType
+                        'approval_name' => $docsType == 1 ? 'Cash Request-'.$approvalName : 'Cash Advance-'.$approvalName, // Set approval_name based on docsType
                     ]);
                 }
             }
         }
+    }
+    
+
+    private function generateApprovalName($statusType)
+    {
+        $statusLabel = match ($statusType) {
+            1 => 'Check',
+            2 => 'Acknowledge',
+            3 => 'Approve',
+            4 => 'Receive',
+            default => 'Processed',
+        };
+        return $statusLabel;
     }
 
     // Fetch approvals for a specific cash request
@@ -205,8 +222,23 @@ class CashRequestController extends Controller
             ], 400); // Return a 400 Bad Request response
         }
 
-        // Delete related approvals
-        Approval::where('approval_id', $cashRequest->id)->delete();
+        // Map docs_type dynamically (modify logic as per your requirements)
+        $docsType = match ($cashRequest->request_type) { // Assuming request_type is a property of CashRequest
+            1 => 1, // Map type 1 to docs_type 6
+            2 => 2, // Map type 2 to docs_type 7
+            default => null, // Handle unexpected values
+        };
+
+        if (!$docsType) {
+            return response()->json([
+                'message' => 'Invalid request type for determining docs_type.'
+            ], 400);
+        }
+
+        Approval::where([
+            'approval_id' => $cashRequest->id,
+            'docs_type' => $docsType, // Dynamically set docs_type
+        ])->delete();
 
         // Delete the cash request
         $cashRequest->delete();
@@ -274,19 +306,27 @@ class CashRequestController extends Controller
             ]);
 
             $currentUser = Auth::user();
+            $docsType = match ($cashRequest->request_type) { // Assuming `request_type` is a property of CashRequest
+                1 => 1, // Map request_type 1 to docs_type 6
+                2 => 2, // Map request_type 2 to docs_type 7
+                default => null, // Handle unexpected values
+            };
 
-            // Find the approval record for the current user and status type
-            $approval = Approval::where('approval_id', $cashRequest->id)
-                ->where('status_type', $request->status_type)
-                ->where('user_id', $currentUser->id)
-                ->first();
-
+            if (!$docsType) {
+                return response()->json([
+                    'message' => 'Invalid request type for determining docs_type.'
+                ], 400); // Return a 400 Bad Request response
+            }
+    
+            // Find the approval record for the current user, status type, and docs_type
+            $approval = Approval::where([
+                'approval_id' => $cashRequest->id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
+    
             if (!$approval) {
-                \Log::warning('Approval record not found or unauthorized.', [
-                    'cashRequestId' => $cashRequest->id,
-                    'statusType' => $request->status_type,
-                    'userId' => $currentUser->id,
-                ]);
                 return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
             }
 
@@ -320,19 +360,26 @@ class CashRequestController extends Controller
             ]);
 
             $currentUser = Auth::user();
+            $docsType = match ($cashRequest->request_type) { // Assuming `request_type` is a property of CashRequest
+                1 => 1, // Map request_type 1 to docs_type 6
+                2 => 2, // Map request_type 2 to docs_type 7
+                default => null, // Handle unexpected values
+            };
+
+            if (!$docsType) {
+                return response()->json([
+                    'message' => 'Invalid request type for determining docs_type.'
+                ], 400); // Return a 400 Bad Request response
+            }
 
             // Find the approval record for the current user and status type
             $approval = Approval::where('approval_id', $cashRequest->id)
                 ->where('status_type', $request->status_type)
                 ->where('user_id', $currentUser->id)
+                ->where('docs_type', $docsType) // Added docs_type condition
                 ->first();
-
+    
             if (!$approval) {
-                \Log::warning('Approval record not found or unauthorized.', [
-                    'cashRequestId' => $cashRequest->id,
-                    'statusType' => $request->status_type,
-                    'userId' => $currentUser->id,
-                ]);
                 return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
             }
 
