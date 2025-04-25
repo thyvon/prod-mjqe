@@ -372,6 +372,10 @@ class CancellationController extends Controller
                 default => 0,
             };
             $this->updateApprovals($cancellation->id, $validated['approved_by'], $validated['authorized_by'], $docsType);
+            Log::info('Approvals updated:', [
+                'approved_by' => $validated['approved_by'],
+                'authorized_by' => $validated['authorized_by'],
+            ]);
     
             DB::commit();
     
@@ -404,6 +408,16 @@ class CancellationController extends Controller
             foreach ($cancellation->items as $item) {
                 $item->update(['qty' => 0]); // Set qty to 0
             }
+
+            $docsType = match ($cancellation->cancellation_docs) {
+                1 => 6, // If cancellation_docs = 1, docs_type = 6
+                2 => 7, // If cancellation_docs = 2, docs_type = 7
+                default => null, // Handle unexpected values
+            };
+
+            if (!$docsType) {
+                return response()->json(['message' => 'Invalid cancellation_docs value.'], 400);
+            }
     
             // Recalculate quantities for related PrItems
             foreach ($cancellation->items as $item) {
@@ -416,8 +430,10 @@ class CancellationController extends Controller
                 }
             }  
     
-            // Delete related approvals
-            Approval::where('approval_id', $cancellation->id)->delete();
+            Approval::where([
+                'approval_id' => $cancellation->id,
+                'docs_type' => $docsType, // Filter by dynamically set docs_type
+            ])->delete();
     
             // Delete the cancellation record
             $cancellation->delete();
@@ -478,7 +494,8 @@ class CancellationController extends Controller
             7 => 'PO',
             default => 'Document',
         };
-        // Update Approved By (status_type 3)
+    
+        // Update Approved By (status_type 3) or create if not exist
         $approval = Approval::where('approval_id', $cancelId)
             ->where('status_type', 3)
             ->where('docs_type', $docsType)
@@ -487,11 +504,19 @@ class CancellationController extends Controller
         if ($approval) {
             $approval->update([
                 'user_id' => $approvedBy,
-                'approval_name' => "Request for Cancel $docLabel - Approved",
+                'approval_name' => "Request for Cancel $docLabel - Approve",
+            ]);
+        } else {
+            Approval::create([
+                'approval_id' => $cancelId,
+                'status_type' => 3,
+                'docs_type' => $docsType,
+                'user_id' => $approvedBy,
+                'approval_name' => "Request for Cancel $docLabel - Approve",
             ]);
         }
     
-        // Update Authorized By (status_type 4) if provided
+        // Update Authorized By (status_type 4) or create if not exist
         if (!empty($authorizedBy)) {
             $authorization = Approval::where('approval_id', $cancelId)
                 ->where('status_type', 4)
@@ -501,11 +526,20 @@ class CancellationController extends Controller
             if ($authorization) {
                 $authorization->update([
                     'user_id' => $authorizedBy,
-                    'approval_name' => "Request for Cancel $docLabel - Approved",
+                    'approval_name' => "Request for Cancel $docLabel - Authorize",
+                ]);
+            } else {
+                Approval::create([
+                    'approval_id' => $cancelId,
+                    'status_type' => 4,
+                    'docs_type' => $docsType,
+                    'user_id' => $authorizedBy,
+                    'approval_name' => "Request for Cancel $docLabel - Authorize",
                 ]);
             }
         }
     }
+    
 
     public function approve(Request $request, $id)
     {
@@ -529,26 +563,17 @@ class CancellationController extends Controller
                 default => 0,
             };
     
-            $approvalName = match ((int) $cancellation->cancellation_docs) {
-                1 => 'Request for Cancel PR',
-                2 => 'Request for Cancel PO',
-                default => 'Request for Cancel',
-            };
-    
-            // Find or create the approval record
-            $approval = Approval::firstOrCreate(
-                [
-                    'approval_id' => $id,
-                    'status_type' => $request->status_type,
-                    'user_id' => $currentUser->id,
-                    'docs_type' => $docsType,
-                ],
-                [
-                    'approval_name' => $approvalName,
-                    'status' => 0,
-                ]
-            );
-    
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType,
+            ])->first();
+            
+            if (!$approval) {
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+            
             // Update the approval record
             $approval->update([
                 'status' => 1,
@@ -591,7 +616,6 @@ class CancellationController extends Controller
                 'error' => $e->getMessage(),
                 'stack' => $e->getTraceAsString(),
             ]);
-    
             return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
         }
     }
