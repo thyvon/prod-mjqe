@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
         $approvals = $user ? $user->approvals()
         ->select('id', 'status', 'created_at', 'approval_name', 'status_type', 'docs_type', 'approval_id')
         ->where('status', 0) // Filter by status = 0
+        ->orderBy('created_at', 'desc')
         ->orderBy('status_type') // Sort by status_type
         ->get()
         ->unique('approval_id') // Ensure uniqueness by approval_id
