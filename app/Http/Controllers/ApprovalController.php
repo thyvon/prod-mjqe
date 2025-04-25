@@ -65,6 +65,7 @@ class ApprovalController extends Controller
             ->select('id', 'user_id', 'docs_type', 'status', 'created_at', 'approval_name', 'status_type', 'approval_id')
             ->where('status', 0)
             ->where('user_id', Auth::id()) // Filter by authenticated user
+            ->orderBy('created_at', 'desc')
             ->orderBy('status_type', 'asc') // Sort by status_type
             ->get()
             ->unique('approval_id') // Filter unique by approval_id
