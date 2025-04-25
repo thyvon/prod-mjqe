@@ -204,7 +204,7 @@ const rejectRequest = async (statusType) => {
       </div>
       <!-- Wrap the content in a unique ID -->
       <div id="printable-area">
-        <div class="row justify-content-center">
+        <div class="row justify-content-center px-2">
           <!-- Header Section -->
           <div class="row mb-3">
             <div class="col-3">
