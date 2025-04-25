@@ -478,6 +478,7 @@ const printPage = () => {
   
     #printable-area {
       padding: 20mm !important; /* Ensure padding is applied to the printable area */
+      font-family: 'TW Cen MT', 'Khmer OS Content', 'Khmer OS Moul Light' !important; /* Ensure font is applied */
     }
   }
   </style>
