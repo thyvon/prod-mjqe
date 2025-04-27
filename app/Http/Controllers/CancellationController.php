@@ -171,7 +171,7 @@ class CancellationController extends Controller
             ->map(function ($approval) {
                 $labels = [
                     3 => 'Approved By',
-                    4 => 'Authorized By',
+                    5 => 'Authorized By',
                 ];
     
                 return [
@@ -479,7 +479,7 @@ class CancellationController extends Controller
         if (!empty($authorizedBy)) {
             Approval::create([
                 'approval_id' => $cancelId,
-                'status_type' => 4,
+                'status_type' => 5,
                 'docs_type' => $docsType,
                 'user_id' => $authorizedBy,
                 'approval_name' => "Request for Cancel $docLabel - Authorized",
@@ -519,7 +519,7 @@ class CancellationController extends Controller
         // Update Authorized By (status_type 4) or create if not exist
         if (!empty($authorizedBy)) {
             $authorization = Approval::where('approval_id', $cancelId)
-                ->where('status_type', 4)
+                ->where('status_type', 5)
                 ->where('docs_type', $docsType)
                 ->first();
     
@@ -531,7 +531,7 @@ class CancellationController extends Controller
             } else {
                 Approval::create([
                     'approval_id' => $cancelId,
-                    'status_type' => 4,
+                    'status_type' => 5,
                     'docs_type' => $docsType,
                     'user_id' => $authorizedBy,
                     'approval_name' => "Request for Cancel $docLabel - Authorize",
