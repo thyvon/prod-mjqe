@@ -74,7 +74,7 @@ class InvoiceController extends Controller
             $this->validateCashAmount($validatedData['cash_ref'], $validatedData['items']);
 
             // Use the purchased_by value from the request
-            $validatedData['purchased_by'] = $request->input('purchased_by');
+            $validatedData['purchased_by'] = $request->input('purchased_by') ?? auth()->id();
             $validatedData['created_by'] = auth()->id();
 
             $invoice = PurchaseInvoice::create($validatedData);
