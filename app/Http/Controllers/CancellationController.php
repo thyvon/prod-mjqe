@@ -495,7 +495,7 @@ class CancellationController extends Controller
             default => 'Document',
         };
     
-        // Update Approved By (status_type 3) or create if not exist
+        // -- Handle Approved By (status_type 3) --
         $approval = Approval::where('approval_id', $cancelId)
             ->where('status_type', 3)
             ->where('docs_type', $docsType)
@@ -516,7 +516,7 @@ class CancellationController extends Controller
             ]);
         }
     
-        // Update Authorized By (status_type 4) or create if not exist
+        // -- Handle Authorized By (status_type 5) --
         if (!empty($authorizedBy)) {
             $authorization = Approval::where('approval_id', $cancelId)
                 ->where('status_type', 5)
@@ -540,7 +540,6 @@ class CancellationController extends Controller
         }
     }
     
-
     public function approve(Request $request, $id)
     {
         try {
