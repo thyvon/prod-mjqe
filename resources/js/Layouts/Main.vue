@@ -33,9 +33,6 @@ const getApprovalTitle = (docs_type, status_type) => {
     6: 'Purchase Request Cancel',
     7: 'Purchase Order Cancel',
   }
-
-  
-
   const docLabel = docsMap[docs_type] || 'Unknown Document'
   return `${docLabel}`
 }
