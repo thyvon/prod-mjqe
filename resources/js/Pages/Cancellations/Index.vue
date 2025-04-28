@@ -512,7 +512,7 @@ initializeSummernote(); // Initialize Summernote editor
           { data: 'user.name', defaultContent: 'N/A' }, // User who created the cancellation
           { data: 'status', render: (data) => {
               if (data === 3) return '<span class="badge bg-success">Approved</span>';
-              if (data === 4) return '<span class="badge bg-success">Authorized</span>';
+              if (data === 5) return '<span class="badge bg-success">Authorized</span>';
               if (data === -1) return '<span class="badge bg-danger">Rejected</span>';
               return '<span class="badge bg-warning">Pending</span>'; // Default case
             },
