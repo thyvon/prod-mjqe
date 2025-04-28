@@ -583,7 +583,7 @@ onMounted(() => {
                           <span class="text-center">Acknowledged By</span>
                         </div>
                         <div class="col-sm-12">
-                          <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by" :disabled="isAcknowledgedDisabled">
+                          <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by" :disabled="isAcknowledgedByDisabled">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
                           <div v-if="validationErrors.acknowledged_by" class="text-danger">{{ validationErrors.acknowledged_by[0] }}</div>
