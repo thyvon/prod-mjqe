@@ -9,14 +9,15 @@
     <meta content="" name="description" />
     <meta content="" name="author" />
 
-    <!-- Include Poppins font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <!-- Load only the main CSS files for the root, login, or register pages -->
     @if(request()->is('/') || request()->is('login') || request()->is('register'))
+        <!-- Include Poppins font -->
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
         <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
     @else
+        <!-- Include Poppins font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- ================== BEGIN core-css ================== -->
     <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
