@@ -254,7 +254,7 @@ class CancellationController extends Controller
             ->map(function ($approval) {
                 $labels = [
                     3 => 'Approved By',
-                    4 => 'Authorized By',
+                    5 => 'Authorized By',
                 ];
 
                 return [
