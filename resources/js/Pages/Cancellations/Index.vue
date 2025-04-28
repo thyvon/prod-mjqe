@@ -53,7 +53,7 @@ const openEditModal = async (rowData) => {
       cancellation_docs: cancellation.cancellation_docs,
       cancellation_by: cancellation.cancellation_by,
       approved_by: approvals.find(a => a.status_type === 3)?.user_id || null, // Set approved_by dynamically
-      authorized_by: approvals.find(a => a.status_type === 4)?.user_id || null, // Set authorized_by dynamically
+      authorized_by: approvals.find(a => a.status_type === 5)?.user_id || null, // Set authorized_by dynamically
       items: cancellation.items.map((item) => ({
         id: item.id,
         name: `${item.purchase_request_item?.product?.product_description || ''} - ${item.purchase_request_item?.remark || ''}` || item.purchase_order_item?.product?.product_description || null,
@@ -724,7 +724,7 @@ const deleteCancellation = async (cancellationId) => {
                   </div>
                   <div v-if="cancellationForm.cancellation_docs == 1" class="col-6 border"> <!-- Updated condition to true -->
                     <div class="row">
-                      <span class="text-center">Authized By</span>
+                      <span class="text-center">Authorized By</span>
                     </div>
                     <div class="col-sm-12">
                       <select v-model="cancellationForm.authorized_by" class="form-select select2" id="authorized_by">

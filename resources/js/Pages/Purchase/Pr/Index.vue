@@ -1133,7 +1133,7 @@ onMounted(() => {
                   </div>
                   <div class="col-6 border">
                     <div class="row">
-                      <span class="text-center">Authized By</span>
+                      <span class="text-center">Authorized By</span>
                     </div>
                     <div class="col-sm-12">
                       <select v-model="cancellationForm.authorized_by" class="form-select select2" id="authorized_by">
