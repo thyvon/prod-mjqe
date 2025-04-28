@@ -497,7 +497,7 @@ class CancellationController extends Controller
     
         // Update Approved By (status_type 3) or create if not exist
         $approval = Approval::where('approval_id', $cancelId)
-            ->where('status_type', 3)
+            ->whereIn('status_type', [3, 4])
             ->where('docs_type', $docsType)
             ->first();
     
