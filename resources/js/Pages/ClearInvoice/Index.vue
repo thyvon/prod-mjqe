@@ -269,12 +269,16 @@ const viewClearInvoice = (clearInvoiceId) => {
 
 const initializeSelect2 = () => {
   $('#clearInvoiceModal .select2').select2({
-    dropdownParent: $('#clearInvoiceModal')
+    dropdownParent: $('#clearInvoiceModal'),
+    placeholder: 'Select an option', // 👈 required for allowClear to work
+    allowClear: true,
+    width: 'resolve', // 👈 optional but recommended inside modal
   }).on('change', function () {
     const field = $(this).attr('id');
     clearInvoiceForm[field] = $(this).val();
   });
 };
+
 
 // Helper function to format dates
 const format = (value, type) => {

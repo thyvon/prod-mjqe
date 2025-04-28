@@ -228,7 +228,10 @@ const clearForm = () => {
 
 const initializeSelect2 = () => {
   $('#cashRequestModal .select2').select2({
-    dropdownParent: $('#cashRequestModal')
+    dropdownParent: $('#cashRequestModal'),
+    placeholder: 'Select an option', // 👈 must set placeholder
+    allowClear: true,
+    width: 'resolve', // optional, but helps Select2 fit better
   }).on('change', function () {
     const field = $(this).attr('id');
     cashRequestForm[field] = $(this).val();
