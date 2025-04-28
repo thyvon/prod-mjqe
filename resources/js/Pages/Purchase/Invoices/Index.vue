@@ -668,23 +668,11 @@ const initializeSupplierSelect = () => {
     },
   }).on('select2:select', function (e) {
     form.supplier = e.params.data.id;
-    form.purchased_by = e.params.data.id; // Update v-model
   }).on('select2:unselect', function () {
     form.supplier = '';
     form.vat_rate = 0;
-    form.purchased_by = null; // Clear v-model when unselected
+    // form.purchased_by = null; // Clear v-model when unselected
   });
-
-    // Set the default value for the dropdown
-    if (form.purchased_by) {
-    const selectedOption = new Option(
-      props.users.find(user => user.id === form.purchased_by)?.name || 'Unknown',
-      form.purchased_by,
-      true,
-      true
-    );
-    $('#purchased_by').append(selectedOption).trigger('change');
-  }
 };
 
 watch(() => form.supplier, (newSupplierId) => {
@@ -1264,6 +1252,7 @@ const initializeDataTable = (selector, options) => {
 };
 
 onMounted(() => {
+  initializeSupplierSelect();
   try {
     console.log('purchaseInvoices:', props.purchaseInvoices); // Debugging
     const invoices = (props.purchaseInvoices || []).map(invoice => ({
@@ -1403,8 +1392,6 @@ onMounted(() => {
     }).on('changeDate', function (e) {
       form.invoice_date = e.format('yyyy-mm-dd');
     });
-
-    initializeSupplierSelect();
 
     // Initialize Select2 for Purchased By
     $('#purchased_by').select2({
