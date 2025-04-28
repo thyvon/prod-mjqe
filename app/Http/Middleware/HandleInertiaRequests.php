@@ -41,10 +41,26 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        // Log user information
+        \Log::info('User:', ['id' => $user?->id, 'name' => $user?->name]);
+
+        $approvals = $user ? $user->approvals()
+        ->select('id', 'status', 'created_at', 'approval_name', 'status_type', 'docs_type', 'approval_id')
+        ->where('status', 0) // Filter by status = 0
+        ->orderBy('created_at', 'desc')
+        ->orderBy('status_type') // Sort by status_type
+        ->get()
+        ->unique('approval_id') // Ensure uniqueness by approval_id
+        ->values() // Reindex the collection
+        ->toArray() : null;
+
+        // Log the approvals data
+        \Log::info('Approvals:', ['approvals' => $approvals]);
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user,
-                'approvals' => $user ? $user->approvals()->select('id', 'status', 'created_at', 'approval_name', 'status_type', 'docs_type', 'approval_id')->get() : null,
+                'approvals' => $approvals,
             ],
         ]);
     }
