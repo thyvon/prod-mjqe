@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick, watch } from 'vue';
+import { ref, reactive, onMounted, nextTick, watch, computed } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
@@ -87,11 +87,18 @@ const filterCashRequests = () => {
 };
 
 watch(() => clearInvoiceForm.clear_type, () => {
+  // Call filterCashRequests as before
   filterCashRequests();
+
+  // Disable/enable the "checked_by" field based on clear_type
   nextTick(() => {
-    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change'); // Update Select2 component after filtering
+    $('#checked_by').prop('disabled', clearInvoiceForm.clear_type == 1).trigger('change.select2');
+    
+    // Update the "cash_id" field after filtering
+    $('#cash_id').val(clearInvoiceForm.cash_id).trigger('change');
   });
 });
+
 
 // Watch for changes in cash_id and fetch purchaseInvoice data
 watch(() => clearInvoiceForm.cash_id, (newCashId) => {
@@ -279,6 +286,8 @@ const initializeSelect2 = () => {
   });
 };
 
+const isCheckedByDisabled = computed(() => clearInvoiceForm.clear_type == 1);
+
 
 // Helper function to format dates
 const format = (value, type) => {
@@ -463,13 +472,13 @@ onMounted(() => {
                           <div v-if="validationErrors.cash_id" class="text-danger">{{ validationErrors.cash_id[0] }}</div>
                         </div>
                       </div>
-                      <div class="mb-3 row">
+                      <!-- <div class="mb-3 row">
                         <label for="clear_by" class="col-sm-4 col-form-label">Clear By</label>
                         <div class="col-sm-8">
                           <input v-model="props.currentUser.name" type="text" class="form-control" id="clear_by" readonly />
                           <div v-if="validationErrors.clear_by" class="text-danger">{{ validationErrors.clear_by[0] }}</div>
                         </div>
-                      </div>
+                      </div> -->
                     </div>
                     <!-- Right side for other information -->
                     <div class="col-md-6">
@@ -530,8 +539,8 @@ onMounted(() => {
                         <span class="text-center">Checked By</span>
                       </div>
                       <div class="col-sm-12">
-                        <select v-model="clearInvoiceForm.checked_by" class="form-select select2" id="checked_by">
-                          <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                        <select v-model="clearInvoiceForm.checked_by" class="form-select select2" id="checked_by" :disabled="isCheckedByDisabled">
+                          <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }}</option>
                         </select>
                         <div v-if="validationErrors.checked_by" class="text-danger">{{ validationErrors.checked_by[0] }}</div>
                       </div>

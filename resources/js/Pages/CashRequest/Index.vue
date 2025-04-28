@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed, watch } from 'vue';
 import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
@@ -237,6 +237,15 @@ const initializeSelect2 = () => {
     cashRequestForm[field] = $(this).val();
   });
 };
+
+const isAcknowledgedByDisabled = computed(() => cashRequestForm.request_type == 1);
+
+watch(() => cashRequestForm.request_type, () => {
+  // Disable/enable the "checked_by" field based on clear_type
+  nextTick(() => {
+    $('#acknowledged_by').prop('disabled', cashRequestForm.request_type == 1).trigger('change.select2');
+  });
+});
 
 // Function to clear select2 fields
 const clearSelect2 = () => {
@@ -574,7 +583,7 @@ onMounted(() => {
                           <span class="text-center">Acknowledged By</span>
                         </div>
                         <div class="col-sm-12">
-                          <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by">
+                          <select v-model="cashRequestForm.acknowledged_by" class="form-select select2" id="acknowledged_by" :disabled="isAcknowledgedDisabled">
                             <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
                           </select>
                           <div v-if="validationErrors.acknowledged_by" class="text-danger">{{ validationErrors.acknowledged_by[0] }}</div>
