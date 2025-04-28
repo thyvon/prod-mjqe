@@ -39,7 +39,8 @@ onMounted(() => {
 
 <template>
     <Head title="Log in" />
-
+    <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
+    <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
     <!-- BEGIN login -->
     <div class="login login-v2 fw-bold" data-bs-theme="dark">
         <!-- Cover -->
