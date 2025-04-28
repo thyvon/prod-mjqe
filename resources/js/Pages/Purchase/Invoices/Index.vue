@@ -6,7 +6,6 @@ import axios from 'axios';
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import SupplierFormModal from '@/Components/SupplierFormModal.vue';
-import PdfViewer from '@/Components/PdfViewer.vue';
 import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFileThumbnail, openPdfViewer } from './helpers.js'; // Import helper functions
 
 toastr.options = {
@@ -275,8 +274,7 @@ const submitForm = async () => {
   calculateItemDiscounts(); // Ensure discounts are calculated correctly before submitting
 
   if (!form.purchased_by) {
-    toastr.error('Please select a user for "Purchased By".');
-    return;
+    form.purchased_by = props.currentUser.id; // Default to props.currentUser.id if blank
   }
 
   let response = null;
@@ -328,7 +326,7 @@ const createInvoice = async () => {
         item.invoice_date = form.invoice_date;
         item.payment_type = form.payment_type;
         item.invoice_no = form.invoice_no;
-        item.purchased_by = form.created_by;
+        item.purchased_by = form.purchased_by;
 
         if (props.prItems) {
           const prItem = props.prItems.find(pr => pr.id === item.pr_item);
@@ -385,7 +383,7 @@ const updateInvoice = async () => {
         item.invoice_date = form.invoice_date;
         item.payment_type = form.payment_type;
         item.invoice_no = form.invoice_no;
-        item.purchased_by = form.created_by;
+        item.purchased_by = form.purchased_by;
 
         if (props.prItems) {
           const prItem = props.prItems.find(pr => pr.id === item.pr_item);
@@ -559,7 +557,7 @@ const selectPrItem = (prItem) => {
       cash_ref: form.cash_ref,
       transaction_type: form.transaction_type,
       payment_term: form.payment_term,
-      purchased_by: form.created_by,
+      purchased_by: form.purchased_by,
       currency_rate: form.currency_rate,
       currency: form.currency,
       invoice_date: form.invoice_date,
@@ -626,7 +624,7 @@ const selectPoItem = (poItem) => {
       cash_ref: form.cash_ref,
       transaction_type: form.transaction_type,
       payment_term: form.payment_term,
-      purchased_by: form.created_by,
+      purchased_by: form.purchased_by,
       currency_rate: form.currency_rate,
       currency: form.currency,
       invoice_date: form.invoice_date,
@@ -1417,6 +1415,14 @@ onMounted(() => {
     }).on('select2:unselect', () => {
       form.purchased_by = null; // Clear v-model when unselected
     });
+
+    // After initializing Select2, set default selected value
+    if (props.currentUser) {
+      const option = new Option(props.currentUser.name, props.currentUser.id, true, true);
+      $('#purchased_by').append(option).trigger('change'); // Add and select it
+      form.purchased_by = props.currentUser.id; // Also update the form binding
+    }
+
 
     // Retain selected purchaser during edit mode
     watch(() => form.purchased_by, (newValue) => {
