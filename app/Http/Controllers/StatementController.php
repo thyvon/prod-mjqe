@@ -320,12 +320,14 @@ class StatementController extends Controller
                     ->where('docs_type', $docsType) // Add docs_type condition
                     ->first();
 
+                    $approvalName = $this->generateApprovalName($data['status_type']);
+
                 if ($approval) {
                     // Update the existing record
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
-                        'approval_name' => 'Clear Statement', // Set approval_name based on docs_type
+                        'approval_name' => 'Clear Statement-'.$approvalName, // Set approval_name based on docs_type
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -334,11 +336,23 @@ class StatementController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
-                        'approval_name' => 'Clear Statement', // Set approval_name based on docs_type
+                        'approval_name' => 'Clear Statement-'.$approvalName, // Set approval_name based on docs_type
                     ]);
                 }
             }
         }
+    }
+
+    private function generateApprovalName($statusType)
+    {
+        $statusLabel = match ($statusType) {
+            1 => 'Check',
+            2 => 'Acknowledge',
+            3 => 'Approve',
+            4 => 'Receive',
+            default => 'Processed',
+        };
+        return $statusLabel;
     }
 
     public function destroy($id)
@@ -348,7 +362,6 @@ class StatementController extends Controller
             \DB::beginTransaction();
 
             $statement = Statement::with('invoices')->findOrFail($id);
-
             // Check if the statement has related invoices
             if ($statement->invoices->isNotEmpty()) {
                 $invoiceIds = $statement->invoices->pluck('invoice_id')->toArray();
@@ -364,8 +377,10 @@ class StatementController extends Controller
             // Delete related StatementIvoice records
             StatementIvoice::where('clear_statement_id', $id)->delete();
 
-            // Delete related approvals
-            Approval::where('approval_id', $statement->id)->delete();
+            Approval::where([
+                'approval_id' => $statement->id,
+                'docs_type' => 5, // Dynamically set docs_type
+            ])->delete();
 
             // Delete the statement
             $statement->delete();
@@ -427,18 +442,16 @@ class StatementController extends Controller
             $docsType = 5;
 
             // Find or create the approval record for the current user, status type, and docs_type
-            $approval = Approval::firstOrCreate(
-                [
-                    'approval_id' => $id,
-                    'status_type' => $request->status_type,
-                    'user_id' => $currentUser->id,
-                    'docs_type' => $docsType,
-                ],
-                [
-                    'approval_name' => 'Clear Statement',
-                    'status' => 0, // Default status
-                ]
-            );
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
+
+            if (!$approval) {
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
 
             // Update the approval status
             $approval->update([
@@ -479,19 +492,17 @@ class StatementController extends Controller
             ]);
 
             $currentUser = Auth::user();
+            $docsType = 5;
 
-            // Find the approval record for the current user and status type
-            $approval = Approval::where('approval_id', $id)
-                ->where('status_type', $request->status_type)
-                ->where('user_id', $currentUser->id)
-                ->first();
+            // Find or create the approval record for the current user, status type, and docs_type
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
 
             if (!$approval) {
-                \Log::warning('Approval record not found or unauthorized.', [
-                    'statementId' => $id,
-                    'statusType' => $request->status_type,
-                    'userId' => $currentUser->id,
-                ]);
                 return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
             }
 

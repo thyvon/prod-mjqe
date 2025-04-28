@@ -23,7 +23,7 @@ const friendlyDate = (date) => {
   return dateString.charAt(0).toUpperCase() + dateString.slice(1)
 }
 
-const getApprovalTitle = (docs_type, status_type) => {
+const getApprovalTitle = (docs_type) => {
   const docsMap = {
     1: 'Request Petty Cash',
     2: 'Request Advance',
@@ -37,36 +37,16 @@ const getApprovalTitle = (docs_type, status_type) => {
   return `${docLabel}`
 }
 
-// const for getStatusText
-const getStatusText = (status_type) => {
-  switch (status_type) {
-    case 1:
-      return 'Need Check'
-    case 2:
-      return 'Need Acknowledge'
-    case 3:
-      return 'Need Approve'
-    case 4:
-      return 'Need Receive'
-    default:
-      return 'Unknown Status'
+const getStatusInfo = (statusType) => {
+  const statusMap = {
+    1: { text: 'Need Check', badge: 'border border-warning text-warning bg-transparent', icon: 'fa-exclamation-triangle' },  // Icon for 'Need Check'
+    2: { text: 'Need Acknowledge', badge: 'border border-info text-info bg-transparent', icon: 'fa-check-circle' }, // Icon for 'Need Acknowledge'
+    3: { text: 'Need Approve', badge: 'border border-primary text-primary bg-transparent', icon: 'fa-thumbs-up' }, // Icon for 'Need Approve'
+    4: { text: 'Need Receive', badge: 'border border-success text-success bg-transparent', icon: 'fa-download' }, // Icon for 'Need Receive'
+    5: { text: 'Need Authorize', badge: 'border border-warning text-warning bg-transparent', icon: 'fa-check-circle' }, // Updated for Authorize
   }
-}
 
-// const for getStatusBadgeClass
-const getStatusBadgeClass = (statusType) => {
-  switch (statusType) {
-    case 1:
-      return 'badge-warning' // Yellow badge for "Need Check"
-    case 2:
-      return 'badge-info' // Blue badge for "Need Acknowledge"
-    case 3:
-      return 'badge-primary' // Blue badge for "Need Approve"
-    case 4:
-      return 'badge-success' // Green badge for "Need Receive"
-    default:
-      return 'badge-secondary' // Grey badge for "Unknown Status"
-  }
+  return statusMap[+statusType] || { text: 'Unknown Status', badge: 'border border-secondary text-secondary bg-transparent', icon: 'fa-question-circle' }
 }
 
 const getApprovalStatus = (status_type) => {
@@ -185,12 +165,14 @@ const logout = () => {
 				<div class="fw-bold">
 					<!-- Badge with status type -->
 					{{ getApprovalTitle(approval.docs_type, approval.status_type) }}
-					<span :class="['badge', getStatusBadgeClass(approval.status_type)]">
-					{{ getStatusText(approval.status_type) }}
-					</span>
+          <span :class="['badge', getStatusInfo(approval.status_type).badge]">
+            <i :class="['fa', getStatusInfo(approval.status_type).icon, 'me-2']"></i>  <!-- Icon with margin-right -->
+            {{ getStatusInfo(approval.status_type).text }}
+          </span>
+
 				</div>
 				<div class="small text-primary">
-					Requested at: {{ friendlyDate(approval.created_at) }}
+					{{ friendlyDate(approval.created_at) }}
 				</div>
 				</div>
 			</div>
@@ -375,37 +357,5 @@ const logout = () => {
 
 .notification-item:active {
   background-color: #e0e0e0; /* Darker background when clicked */
-}
-
-/* Optional custom styles for badge */
-.badge {
-  font-size: 0.875rem; /* Adjust font size */
-  padding: 0.25rem 0.5rem;
-  border-radius: 1rem; /* Rounded edges */
-}
-
-.badge-warning {
-  background-color: #f0ad4e; /* Yellow */
-  color: white;
-}
-
-.badge-info {
-  background-color: #17a2b8; /* Blue */
-  color: white;
-}
-
-.badge-primary {
-  background-color: #007bff; /* Dark Blue */
-  color: white;
-}
-
-.badge-success {
-  background-color: #28a745; /* Green */
-  color: white;
-}
-
-.badge-secondary {
-  background-color: #6c757d; /* Grey */
-  color: white;
 }
 </style>

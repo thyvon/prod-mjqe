@@ -184,7 +184,13 @@ class ClearInvoiceController extends Controller
     private function storeApprovals($clearInvoiceId, $request)
     {
         // Set docs_type based on clear_type
-        $docsType = $request->clear_type == 1 ? 3 : 4;
+        if ($request->clear_type == 1) {
+            $docsType = 3;
+        } elseif ($request->clear_type == 2) {
+            $docsType = 4;
+        } else {
+            return response()->json(['message' => 'Invalid clear_type provided.'], 400);
+        }
 
         $approvalData = [
             ['status_type' => 1, 'user_id' => $request->checked_by], // Checked By
@@ -193,18 +199,21 @@ class ClearInvoiceController extends Controller
 
         foreach ($approvalData as $data) {
             if ($data['user_id']) {
-                // Check if an approval record already exists
-                $approval = Approval::where('approval_id', $clearInvoiceId)
-                    ->where('status_type', $data['status_type']) // Correctly chain the where conditions
-                    ->where('docs_type', $docsType) // Add docs_type condition
-                    ->first();
+                // Check if an approval record already exists 
+                $approval = Approval::where([
+                    'approval_id' => $clearInvoiceId,
+                    'status_type' => $data['status_type'],
+                    'docs_type' => $docsType, // Added docs_type criteria here
+                ])->first();
+
+                    $approvalName = $this->generateApprovalName($data['status_type']);
 
                 if ($approval) {
                     // Update the existing record
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
-                        'approval_name' => $docsType == 3 ? 'Clear Petty Cash' : 'Clear Advance', // Set approval_name based on docs_type
+                        'approval_name' => $docsType == 3 ? 'Clear Petty Cash-'.$approvalName : 'Clear Advance-'.$approvalName, // Set approval_name based on docs_type
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -213,16 +222,40 @@ class ClearInvoiceController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
-                        'approval_name' => $docsType == 3 ? 'Clear Petty Cash' : 'Clear Advance', // Set approval_name based on docs_type
+                        'approval_name' => $docsType == 3 ? 'Clear Petty Cash-'.$approvalName : 'Clear Advance-'.$approvalName, // Set approval_name based on docs_type
                     ]);
                 }
             }
         }
     }
 
+    private function generateApprovalName($statusType)
+    {
+        $statusLabel = match ($statusType) {
+            1 => 'Check',
+            2 => 'Acknowledge',
+            3 => 'Approve',
+            4 => 'Receive',
+            default => 'Processed',
+        };
+        return $statusLabel;
+    }
+
     public function destroy($id)
     {
         $clearInvoice = ClearInvoice::findOrFail($id);
+
+        $docsType = match ($clearInvoice->clear_type) {
+            1 => 3,
+            2 => 4,
+            default => null, // Handle unexpected values
+        };
+
+        if (!$docsType) {
+            return response()->json([
+                'message' => 'Invalid request type for determining docs_type.'
+            ], 400);
+        }
 
         // Update related PurchaseInvoice records where cash_ref matches clearInvoice cash_id
         PurchaseInvoice::where('cash_ref', $clearInvoice->cash_id)
@@ -232,9 +265,10 @@ class ClearInvoiceController extends Controller
         ->update(['status' => 0]);
 
         // Delete related approval records where docs_type is 3 or 4
-        Approval::where('approval_id', $id)
-            ->whereIn('docs_type', [3, 4])
-            ->delete();
+        Approval::where([
+            'approval_id' => $id,
+            'docs_type' => $docsType, // Dynamically set docs_type
+        ])->delete();
 
         // Delete the clear invoice
         $clearInvoice->delete();
@@ -253,21 +287,29 @@ class ClearInvoiceController extends Controller
 
             // Determine docs_type based on clear_type
             $clearInvoice = ClearInvoice::findOrFail($id);
-            $docsType = $clearInvoice->clear_type == 1 ? 3 : 4;
+            $docsType = match ($cashRequest->clear_type) {
+                1 => 3,
+                2 => 4,
+                default => null, // Handle unexpected values
+            };
+            if (!$docsType) {
+                return response()->json([
+                    'message' => 'Invalid request type for determining docs_type.'
+                ], 400); // Return a 400 Bad Request response
+            }
 
             // Find or create the approval record for the current user, status type, and docs_type
-            $approval = Approval::firstOrCreate(
-                [
-                    'approval_id' => $id,
-                    'status_type' => $request->status_type,
-                    'user_id' => $currentUser->id,
-                    'docs_type' => $docsType,
-                ],
-                [
-                    'approval_name' => $docsType == 3 ? 'Clear Petty Cash' : 'Clear Advance',
-                    'status' => 0, // Default status
-                ]
-            );
+
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
+
+            if (!$approval) {
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
 
             // Update the approval status
             $approval->update([
@@ -306,19 +348,27 @@ class ClearInvoiceController extends Controller
             ]);
 
             $currentUser = Auth::user();
+            $docsType = match ($cashRequest->clear_type) {
+                1 => 3,
+                2 => 4,
+                default => null, // Handle unexpected values
+            };
+            if (!$docsType) {
+                return response()->json([
+                    'message' => 'Invalid request type for determining docs_type.'
+                ], 400); // Return a 400 Bad Request response
+            }
 
-            // Find the approval record for the current user and status type
-            $approval = Approval::where('approval_id', $id)
-                ->where('status_type', $request->status_type)
-                ->where('user_id', $currentUser->id)
-                ->first();
+            // Find or create the approval record for the current user, status type, and docs_type
+
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
 
             if (!$approval) {
-                \Log::warning('Approval record not found or unauthorized.', [
-                    'clearInvoiceId' => $id,
-                    'statusType' => $request->status_type,
-                    'userId' => $currentUser->id,
-                ]);
                 return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
             }
 
