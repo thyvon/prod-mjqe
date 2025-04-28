@@ -589,8 +589,8 @@ class CancellationController extends Controller
                         $item->purchaseOrderItem->recalculateQtyCancel();
                     }
                 }
-            } elseif ($request->status_type == 4) {
-                $cancellation->status = 4; // Authorized
+            } elseif ($request->status_type == 5) {
+                $cancellation->status = 5; // Authorized
     
                 // Recalculate quantities
                 foreach ($cancellation->items as $item) {
