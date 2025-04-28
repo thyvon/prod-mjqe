@@ -12,6 +12,11 @@
     <!-- Include Poppins font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Load only the main CSS files for the root, login, or register pages -->
+    @if(request()->is('/') || request()->is('login') || request()->is('register'))
+        <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
+        <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
+    @else
     <!-- ================== BEGIN core-css ================== -->
     <link href="/coloradmin/css/vendor.min.css" rel="stylesheet" defer />
     <link href="/coloradmin/css/default/app.min.css" rel="stylesheet" defer />
@@ -29,10 +34,17 @@
     <link href="/coloradmin/plugins/nvd3/build/nv.d3.css" rel="stylesheet" defer />
     <link href="/coloradmin/plugins/summernote/dist/summernote-lite.css" rel="stylesheet" defer />
     <!-- ================== END plugin-css ================== -->
+    @endif
 
     @inertiaHead
 </head>
 <body>
+    <!-- Load only the main JS files for the root, login, or register pages -->
+    @if(request()->is('/') || request()->is('login') || request()->is('register'))
+        <script src="/coloradmin/js/vendor.min.js" defer></script>
+        <script src="/coloradmin/js/app.min.js" defer></script>
+    @else
+
     <!-- ================== BEGIN core-js ================== -->
     <script src="/coloradmin/js/vendor.min.js" defer></script>
     <script src="/coloradmin/js/app.min.js" defer></script>
@@ -64,7 +76,7 @@
     <script src="/coloradmin/plugins/chart.js/dist/chart.umd.js" defer></script>
     <script src="/coloradmin/plugins/chart.js/dist/chart.umd.js" defer></script>
     <!-- ================== END dashboard-js ================== -->
-
+    @endif
     @vite(['resources/js/app.js'])
     @routes
     @inertia
