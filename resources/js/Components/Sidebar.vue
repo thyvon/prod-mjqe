@@ -167,6 +167,14 @@ const pendingApprovalsCount = computed(() => approvals.value.filter(approval => 
                     </div>
                 </div>
             </div>
+            <div class="menu-item">
+                <a href="/documents" class="menu-link" v-bind:target="'_blank'">
+                    <div class="menu-icon">
+                        <i class="fa fa-file-alt"></i> <!-- Updated icon -->
+                    </div>
+                    <div class="menu-text">Documents</div>
+                </a>
+            </div>
 
             <!-- BEGIN minify-button -->
             <div class="menu-item d-flex">

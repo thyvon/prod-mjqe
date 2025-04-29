@@ -13,6 +13,7 @@
         "laravel/socialite": "^5.19",
         "laravel/tinker": "^2.8",
         "league/oauth2-client": "^2.8",
+        "mews/purifier": "^3.4",
         "socialiteproviders/microsoft": "^4.6",
         "tightenco/ziggy": "^2.0"
     },

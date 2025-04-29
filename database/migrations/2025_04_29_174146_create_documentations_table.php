@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('documentations', function (Blueprint $table) {
             $table->id();
             $table->string('section_name');
+            $table->string('icon_class')->nullable();
             $table->string('description');
             $table->integer('status')->default(0);
             $table->timestamps();

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('documentation_id')->constrained('documentations')->onDelete('cascade');
             $table->string('article_name');
-            $table->string('description');
+            $table->text('description');
             $table->string('file_name')->nullable();
             $table->string('file_path')->nullable();
             $table->integer('status')->default(0);
