@@ -15,14 +15,14 @@
     <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700&display=swap" rel="stylesheet">
     
     <!-- FontAwesome JS-->
-    <script defer src="{{ asset('documentation/fontawesome/js/all.min.js') }}"></script>
+    <script defer src="{{ asset('documentation/fontawesome/js/all.min.js') }}" defer></script>
     
     <!-- Plugins CSS -->
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.2/styles/atom-one-dark.min.css">
-    <link rel="stylesheet" href="{{ asset('documentation/plugins/simplelightbox/simple-lightbox.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('documentation/plugins/simplelightbox/simple-lightbox.min.css') }}" defer>
 
     <!-- Theme CSS -->  
-    <link id="theme-style" rel="stylesheet" href="{{ asset('documentation/css/theme.css') }}">
+    <link id="theme-style" rel="stylesheet" href="{{ asset('documentation/css/theme.css') }}" defer>
 
     <style>
         #docs-sidebar-toggler span {
@@ -113,12 +113,12 @@
     
     
     <!-- Page Specific JS -->
-    <script src="{{ asset('documentation/plugins/smoothscroll.min.js') }}"></script>
+    <script src="{{ asset('documentation/plugins/smoothscroll.min.js') }}" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/highlight.min.js') }}"></script>
-    <script src="{{ asset('documentation/js/highlight-custom.js') }}"></script> 
-    <script src="{{ asset('documentation/plugins/simplelightbox/simple-lightbox.min.js') }}"></script>      
-    <script src="{{ asset('documentation/plugins/gumshoe/gumshoe.polyfills.min.js') }}"></script> 
-    <script src="{{ asset('documentation/js/docs.js') }}"></script> 
+    <script src="{{ asset('documentation/js/highlight-custom.js') }}" defer></script> 
+    <script src="{{ asset('documentation/plugins/simplelightbox/simple-lightbox.min.js') }}" defer></script>      
+    <script src="{{ asset('documentation/plugins/gumshoe/gumshoe.polyfills.min.js') }}" defer></script> 
+    <script src="{{ asset('documentation/js/docs.js') }}" defer></script> 
 
 </body>
 </html> 
