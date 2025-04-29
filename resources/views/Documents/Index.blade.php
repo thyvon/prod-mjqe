@@ -32,6 +32,20 @@
             margin: 5px auto; /* Adjust spacing */
             background-color: white;
         }
+        @font-face {
+  font-family: 'Tw Cen MT';
+  src: url('/Fonts/TwCenMT.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Khmer OS Content';
+  src: url('/Fonts/KhmerOScontent.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Khmer OS Moul Light';
+  src: url('/Fonts/KhmerOSmuollight.woff2') format('woff2');
+}
     </style>
 
 </head> 
