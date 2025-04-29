@@ -16,12 +16,13 @@ class InvoiceController extends Controller
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with([
                 'items:id,pi_number,pi_number',
-                'supplier:id,name,vat,currency'
+                'supplier:id,name,vat,currency',
+                'cashRequest:id,ref_no',
             ])
             ->select([
                 'id', 'pi_number', 'invoice_date', 'total_amount',
                 'paid_amount', 'paid_usd', 'currency', 'currency_rate',
-                'transaction_type', 'payment_type', 'status', 'supplier' // Include foreign key
+                'transaction_type', 'payment_type', 'status', 'supplier', 'cash_ref' // Include foreign key
             ])
             ->get(),
             'users' => User::select('id', 'name')->get(),
@@ -88,7 +89,7 @@ class InvoiceController extends Controller
             $invoice->save();
 
             // Fetch updated invoices
-            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
+            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier', 'cashRequest'])->get();
 
             // Return the invoice with related data for consistency
             return response()->json([
@@ -183,7 +184,7 @@ class InvoiceController extends Controller
             $invoice->save();
 
             // Fetch updated invoices
-            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier'])->get();
+            $updatedInvoices = PurchaseInvoice::with(['items', 'supplier', 'cashRequest'])->get();
 
             // Ensure cash_ref is included in the response
             return response()->json([
