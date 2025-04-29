@@ -19,6 +19,7 @@ use App\Http\Controllers\{
     CancellationController,
     StatementController,
     ApprovalController,
+    DocumentController,
 };
 
 /*
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function () {
         'invoices' => InvoiceController::class,
         'cancellations' => CancellationController::class,
         'statements' => StatementController::class,
+        'documents' => DocumentController::class,
     ]);
 
     Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
