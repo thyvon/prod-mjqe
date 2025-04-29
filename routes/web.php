@@ -173,6 +173,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/cancellations/{cancellation}/approve', [CancellationController::class, 'approve'])->name('cancellations.approve');
     Route::post('/cancellations/{cancellation}/reject', [CancellationController::class, 'reject'])->name('cancellations.reject');
 
+    Route::get('/documents-admin', [DocumentController::class, 'backend'])->name('documents.backend');
+    Route::post('/upload-article-image', [DocumentController::class, 'uploadArticleImage']);
+
+
     // Ad
 });
 // Routes for Statement Invoices
