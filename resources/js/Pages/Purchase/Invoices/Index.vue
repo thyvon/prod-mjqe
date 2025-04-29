@@ -304,6 +304,7 @@ const updateInvoiceListTable = (invoices) => {
       currency_rate: invoice.currency_rate || 0,
       paid_usd: invoice.paid_usd || 0,
       transaction_type: invoice.transaction_type || 0,
+      cash_ref: invoice.cash_request ? invoice.cash_request.ref_no : '',
       payment_type: invoice.payment_type || 0,
       status: invoice.status || 0,
     }));
@@ -1261,6 +1262,7 @@ onMounted(() => {
       // total_amount: invoice.total_amount || 0,
       paid_amount: invoice.paid_amount || 0,
       transaction_type: invoice.transaction_type || 0,
+      cash_ref: invoice.cash_request ? invoice.cash_request.ref_no : '',
       payment_type: invoice.payment_type || 0,
       paid_usd: invoice.paid_usd || 0,
       currency: invoice.currency || 0,
@@ -1298,6 +1300,7 @@ onMounted(() => {
             return `<span class="${badgeClasses[data] || 'badge bg-secondary'}">${transactionTypes[data] || 'Unknown'}</span>`;
           } 
         },
+        { data: 'cash_ref' },
         { data: 'payment_type', render: (data) => getPaymentType(data) },
         { data: 'status', render: (data) => data === 1 ? '<span class="badge bg-success">Cleared</span>' : '<span class="badge bg-danger">Pending</span>' },
         { data: null, render: (data) => `
@@ -1666,6 +1669,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <th>Exchange Rate</th>
                 <th>Paid USD</th>
                 <th>Transaction Type</th>
+                <th>Cash Ref</th>
                 <th>Payment Type</th>
                 <th>Payment Status</th>
                 <th>Actions</th>
