@@ -24,7 +24,10 @@ export default defineConfig({
     server: {
         watch: {
             // Exclude the public/coloradmin directory to reduce watch load
-            ignored: ['**/public/coloradmin/**'],
+            ignored: [
+                '**/public/coloradmin/**',
+                '**/public/documentation/**'
+            ],
         },
     },
     resolve: {
