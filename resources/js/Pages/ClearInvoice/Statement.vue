@@ -394,7 +394,11 @@ const initializePurchaseInvoiceTable = () => {
         title: '<input type="checkbox" id="select-all-invoices" />', 
         render: (data) => `<input type="checkbox" class="select-invoice" data-id="${data.id}" />` 
       },
-      { data: 'id', title: '#' },
+      {
+        data: null,
+        title: '#',
+        render: (data, type, row, meta) => meta.row + 1
+      },
       { data: 'pi_number', title: 'PI Ref' },
       { data: 'invoice_no', title: 'Invoice No' },
       { data: 'invoice_date', title: 'Invoice Date' },
