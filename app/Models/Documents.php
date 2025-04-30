@@ -13,6 +13,7 @@ class Documents extends Model
     protected $fillable = [
         'section_name',
         'description',
+        'icon_class',
         'status'
     ];
 
