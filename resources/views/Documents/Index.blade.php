@@ -100,7 +100,7 @@
                             	</span>
 							</h1>
 							<section class="docs-intro">
-								<p>{{ $document->description }}</p>
+								<p>{!! $document->description !!}}</p>
 							</section>
 						</header>
 						<!-- Loop through document items (subsections) under each document -->
