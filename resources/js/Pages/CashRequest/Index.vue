@@ -81,8 +81,7 @@ const openCreateModal = () => {
 const openEditModal = async (cashRequest) => {
   isEdit.value = true;
   Object.assign(cashRequestForm, cashRequest);
-  cashRequestForm.request_date = cashRequestForm.request_date.split('T')[0]; // Ensure date format is "yyyy-MM-dd"
-
+  
   try {
     // Fetch approval data for the cash request
     const response = await axios.get(`/cash-request/${cashRequest.id}/approvals`);
