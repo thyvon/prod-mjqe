@@ -275,7 +275,10 @@ const fetchInvoiceItems = async () => {
       columns: [
         { data: null, render: (data, type, row, meta) => meta.row + 1 },
         { data: 'invoice_date', render: (data) => moment(data).format('MMM DD, YYYY') },
-        { data: 'invoice.pi_number' },
+        { 
+          data: 'invoice.pi_number', 
+          render: (data, type, row) => `<a href="/invoices/${row.invoice.id}" class="text-primary">${data}</a>` 
+        },
         { data: 'invoice_no' },
         { data: 'supplier.name' },
         { data: 'product.sku' },
