@@ -85,7 +85,7 @@ class Product extends Model
     
         $purchases = PurchaseInvoiceItem::where('item_code', $this->id)
             ->where('payment_type', 1)
-            ->where('created_at', '>=', $threeMonthsAgo)
+            ->where('invoice_date', '>=', $threeMonthsAgo)
             ->get();
     
         $totalPrice = 0;
