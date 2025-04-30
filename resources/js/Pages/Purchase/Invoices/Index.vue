@@ -166,7 +166,7 @@ const calculateGrandTotal = () => {
 
   if (form.payment_type === 2) { // Deposit
     vatAmount = (deposit * vat) / 100;
-    editItemForm.paid_amount = (parseFloat(deposit) + parseFloat(vatAmount)).toFixed(2);
+    editItemForm.paid_amount = (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
   } else {
     vatAmount = ((qty * unit_price - discount) * vat) / 100;
     editItemForm.total_price = (qty * unit_price);
@@ -198,7 +198,7 @@ const calculateTotalPrice = (item) => {
 
   if (form.payment_type === 2) { // Deposit
     vatAmount = (deposit * vat) / 100;
-    return (parseFloat(deposit) + parseFloat(vatAmount)).toFixed(2);
+    return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(returnAmount) - parseFloat(retention)).toFixed(2);
   } else {
     vatAmount = ((total_price - discount) * vat) / 100;
     return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
@@ -515,7 +515,7 @@ const selectPrItem = (prItem) => {
   const existingItem = form.items.find(item => item.pr_item === prItem.id);
   if (!existingItem) {
     const qty = form.payment_type === 2 ? 0 : parseFloat(prItem.qty_pending) || 0;
-    const unit_price = parseFloat(prItem.unit_price) || 0;
+    const unit_price = form.payment_type === 2 ? 0 : parseFloat(prItem.unit_price) || 0;
     const discount = 0;
     const service_charge = 0;
     const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge });
@@ -581,7 +581,7 @@ const selectPoItem = (poItem) => {
   const existingItem = form.items.find(item => item.po_item === poItem.id);
   if (!existingItem) {
     const qty = form.payment_type === 2 ? 0 : parseFloat(poItem.pending) || 0;
-    const unit_price = parseFloat(poItem.unit_price) || 0;
+    const unit_price = form.payment_type === 2 ? 0 : parseFloat(poItem.unit_price) || 0;
     const discount = parseFloat(poItem.discount) || 0;
     const service_charge = 0;
     const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge });
