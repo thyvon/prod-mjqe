@@ -413,7 +413,7 @@ initializeSummernote(); // Initialize Summernote editor
 
         <!-- Modal -->
         <div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true" ref="modalRef">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">{{ isEdit ? 'Edit Document' : 'New Document' }}</h5>
