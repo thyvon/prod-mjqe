@@ -351,7 +351,7 @@ onMounted(() => {
                 Address: {{ form.supplier_address }}<br />
                 Payment Term: {{ form.payment_term }}<br />
                 Purpose: {{ form.purpose }}<br/>
-                Cancell Reason: {{ form.cancelled_reason }}
+                <!-- Cancell Reason: {{ form.cancelled_reason }} -->
               </address>
             </div>
 
@@ -465,7 +465,7 @@ onMounted(() => {
     </div>
 
     <!-- Modal for Cancel Reason -->
-    <div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelReasonModalLabel" aria-hidden="true">
+    <!-- <div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelReasonModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -484,10 +484,10 @@ onMounted(() => {
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Modal for Cancel Item Reason -->
-    <div class="modal fade" id="cancelItemReasonModal" tabindex="-1" aria-labelledby="cancelItemReasonModalLabel" aria-hidden="true">
+    <!-- <div class="modal fade" id="cancelItemReasonModal" tabindex="-1" aria-labelledby="cancelItemReasonModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -527,7 +527,7 @@ onMounted(() => {
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
   </Main>
 </template>
 
