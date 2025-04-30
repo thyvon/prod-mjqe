@@ -45,6 +45,72 @@ const removeArticle = (index) => {
 };
 
 
+// const initializeSummernote = () => {
+//   nextTick(() => {
+//     if ($('.summernote').length) {
+//       $('.summernote').each(function () {
+//         const el = $(this);
+//         const index = el.data('index');
+
+//         const options = {
+//           placeholder: 'Article Content',
+//           height: 300,
+//           toolbar: [
+//             ['style', ['bold', 'italic', 'underline', 'clear']],
+//             ['font', ['strikethrough', 'superscript', 'subscript']],
+//             ['fontname', ['fontname']],
+//             ['fontsize', ['fontsize']],
+//             ['color', ['color']],
+//             ['para', ['ul', 'ol', 'paragraph', 'lineheight']],
+//             ['insert', ['link', 'picture', 'video']],
+//             ['view', ['fullscreen', 'codeview', 'help']],
+//             ['table', ['table']],
+//             ['height', ['height']],
+//           ],
+//           callbacks: {
+//             onChange: function (contents) {
+//               if (typeof index === 'undefined') {
+//                 documentForm.description = contents;
+//               } else {
+//                 documentForm.items[index].description = contents;
+//               }
+//             }
+//           }
+//         };
+
+//         // Only allow image upload for article items
+//         if (typeof index !== 'undefined') {
+//           options.callbacks.onImageUpload = function (files) {
+//             uploadArticleImage(files[0], index, el);
+//           };
+//         }
+
+//         el.summernote(options);
+
+//         // Set initial content
+//         if (typeof index === 'undefined') {
+//           el.summernote('code', documentForm.description);
+//         } else {
+//           el.summernote('code', documentForm.items[index].description || '');
+//         }
+//       });
+//     }
+//   });
+// };
+
+// deleteDocumennt = async (id) => {
+//   try {
+//     const response = await axios.delete(`/documents/${id}`);
+//     if (response.status === 200) {
+//       toastr.success('Document deleted successfully');
+//       dataTableInstance.ajax.reload(); // Reload the DataTable
+//     }
+//   } catch (error) {
+//     console.error('Error deleting document:', error);
+//     toastr.error('Failed to delete Document. Please try again.', 'Error');
+//   }
+// };
+
 const initializeSummernote = () => {
   nextTick(() => {
     if ($('.summernote').length) {
@@ -62,11 +128,25 @@ const initializeSummernote = () => {
             ['fontsize', ['fontsize']],
             ['color', ['color']],
             ['para', ['ul', 'ol', 'paragraph', 'lineheight']],
-            ['insert', ['link', 'picture', 'video']],
+            ['insert', ['link', 'picture', 'video', 'codeSnippet']], // 👈 Add custom button
             ['view', ['fullscreen', 'codeview', 'help']],
             ['table', ['table']],
             ['height', ['height']],
           ],
+          fontNames: ['Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Tw Cen MT', 'Khmer OS Content'],
+          fontNamesIgnoreCheck: ['Tw Cen MT', 'Khmer OS Content'],
+          buttons: {
+            codeSnippet: function (context) {
+              let ui = $.summernote.ui;
+              return ui.button({
+                contents: '<i class="note-icon-code"/> Code',
+                tooltip: 'Insert Code Snippet',
+                click: function () {
+                  context.invoke('editor.pasteHTML', '<pre><code>\nYour code here\n</code></pre>');
+                }
+              }).render();
+            }
+          },
           callbacks: {
             onChange: function (contents) {
               if (typeof index === 'undefined') {
@@ -78,7 +158,6 @@ const initializeSummernote = () => {
           }
         };
 
-        // Only allow image upload for article items
         if (typeof index !== 'undefined') {
           options.callbacks.onImageUpload = function (files) {
             uploadArticleImage(files[0], index, el);
@@ -87,7 +166,6 @@ const initializeSummernote = () => {
 
         el.summernote(options);
 
-        // Set initial content
         if (typeof index === 'undefined') {
           el.summernote('code', documentForm.description);
         } else {
@@ -98,18 +176,6 @@ const initializeSummernote = () => {
   });
 };
 
-// deleteDocumennt = async (id) => {
-//   try {
-//     const response = await axios.delete(`/documents/${id}`);
-//     if (response.status === 200) {
-//       toastr.success('Document deleted successfully');
-//       dataTableInstance.ajax.reload(); // Reload the DataTable
-//     }
-//   } catch (error) {
-//     console.error('Error deleting document:', error);
-//     toastr.error('Failed to delete Document. Please try again.', 'Error');
-//   }
-// };
 
 const openCreateModal = () => {
   resetForm();
@@ -480,3 +546,9 @@ initializeSummernote(); // Initialize Summernote editor
 
     </Main>
 </template>
+
+<style scoped>
+  .note-editable {
+    font-family: 'Noto Sans Khmer', 'Khmer OS Content', 'Tw Cen MT', sans-serif;
+  }
+</style>
