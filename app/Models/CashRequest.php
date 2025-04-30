@@ -34,12 +34,6 @@ class CashRequest extends Model
         'approval_status',
     ];
 
-    protected $casts = [
-        'request_date' => 'datetime',
-        'exchange_rate' => 'decimal:2',
-        'amount' => 'decimal:2',
-    ];
-
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

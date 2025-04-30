@@ -35,7 +35,7 @@ class CashRequestController extends Controller
         try {
             $validated = $request->validate([
                 'request_type' => 'required|integer', // Changed to integer
-                'request_date' => 'required|date_format:Y-m-d',
+                'request_date' => 'required|date',
                 'user_id' => 'required|integer|exists:users,id',
                 'position' => 'required|string|max:255',
                 'id_card' => 'required|string|max:255',
