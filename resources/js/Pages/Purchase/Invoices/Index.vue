@@ -191,18 +191,32 @@ watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, e
 const formErrors = reactive({});
 const editItemFormErrors = reactive({});
 
-const calculateTotalPrice = (item) => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit = 0 } = item;
-  const total_price = qty * unit_price;
-  let vatAmount;
+// const calculateTotalPrice = (item) => {
+//   const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit = 0 } = item;
+//   const total_price = qty * unit_price;
+//   let vatAmount;
 
-  if (form.payment_type === 2) { // Deposit
-    vatAmount = (deposit * vat) / 100;
-    return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(returnAmount) - parseFloat(retention)).toFixed(2);
-  } else {
-    vatAmount = ((total_price - discount) * vat) / 100;
-    return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
+//   if (form.payment_type === 2) { // Deposit
+//     vatAmount = (deposit * vat) / 100;
+//     return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(returnAmount) - parseFloat(retention)).toFixed(2);
+//   } else {
+//     vatAmount = ((total_price - discount) * vat) / 100;
+//     return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
+//   }
+// };
+
+const calculateTotalPrice = (item) => {
+  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0 } = item;
+  
+  // Skip calculation if payment_type is 2
+  if (form.payment_type === 2) {
+    return 0;
   }
+
+  const total_price = qty * unit_price;
+  const vatAmount = ((total_price - discount) * vat) / 100;
+
+  return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
 };
 
 const formatNumber = (value, decimalPlaces = 2) => {
