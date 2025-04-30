@@ -160,7 +160,7 @@ const pendingApprovalsCount = computed(() => approvals.value.filter(approval => 
                             </div>
                             <div class="menu-item" :class="{'active': isActive('/statements')}">
                                 <Link href="/statements" class="menu-link">
-                                    <div class="menu-text">Clear Statement</div>
+                                    <div class="menu-text">Clear Credit</div>
                                 </Link>
                             </div>
                         </div>

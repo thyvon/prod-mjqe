@@ -294,11 +294,11 @@ const rejectRequest = async (statusType) => {
               <div class="row">
                 <div class="col-2 text-start p-0">
                   <div class="row mt-2">
-                    <span>លេខទូរស័ព្ទ/Phone:</span>
+                    <span>តួនាទី/Position:</span>
                   </div>
                 </div>
                 <div class="col-3 border-black px-1 d-flex align-items-center" style="min-height: 30px; height: auto;">
-                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.phone}}</span>
+                  <span class="w-100 text-start ps-1 fw-bold">{{ clearInvoice.user?.position}}</span>
                 </div>
 
                 <div class="col-2">
