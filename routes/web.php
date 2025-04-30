@@ -180,6 +180,6 @@ Route::middleware('auth')->group(function () {
     // Ad
 });
 // Routes for Statement Invoices
-
+Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
 
 require __DIR__.'/auth.php';
