@@ -122,7 +122,7 @@ watch(() => form.discount_total, () => {
 
 watch(() => [form.service_charge, form.discount_total], () => {
   form.items.forEach(item => {
-    item.paid_amount = calculateGrandTotal(item);
+    item.paid_amount = calculateTotalPrice(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -167,12 +167,10 @@ const calculateGrandTotal = () => {
   if (form.payment_type === 2) { // Deposit
     vatAmount = (deposit * vat) / 100;
     editItemForm.paid_amount = (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
-    return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
   } else {
     vatAmount = ((qty * unit_price - discount) * vat) / 100;
     editItemForm.total_price = (qty * unit_price);
     editItemForm.paid_amount = (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
-    return (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
   }
 };
 
@@ -193,26 +191,16 @@ watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, e
 const formErrors = reactive({});
 const editItemFormErrors = reactive({});
 
-// const calculateTotalPrice = (item) => {
-//   const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit = 0 } = item;
-//   const total_price = qty * unit_price;
-//   let vatAmount;
-
-//   if (form.payment_type === 2) { // Deposit
-//     vatAmount = (deposit * vat) / 100;
-//     return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(returnAmount) - parseFloat(retention)).toFixed(2);
-//   } else {
-//     vatAmount = ((total_price - discount) * vat) / 100;
-//     return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
-//   }
-// };
-
 const calculateTotalPrice = (item) => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0 } = item;
-  
-  // Skip calculation if payment_type is 2
+  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit } = item;
+
+  // If payment_type is 2, override total price logic
   if (form.payment_type === 2) {
-    return 0;
+    let total_price = 0; // ✅ use 'let' so you can reassign if needed
+    const paid_amount = (deposit - returnAmount - retention);
+    const vat_amount = (paid_amount * vat) / 100;
+    total_price = paid_amount + parseFloat(vat_amount);
+    return total_price.toFixed(2);
   }
 
   const total_price = qty * unit_price;
@@ -232,7 +220,6 @@ const prepareInvoiceItems = (items) => {
   return items.map(item => ({
     ...item,
     total_price: calculateTotalPrice(item),
-    paid_amount: calculateGrandTotal(item),
     service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
     discount: form.discount_total > 0 ? (parseFloat(item.total_price) * rateDiscount).toFixed(2) : formatNumber(item.discount), // Ensure discount is calculated correctly
     service_charge: formatNumber(item.service_charge, 4), // Ensure service charge is formatted correctly
@@ -894,7 +881,7 @@ watch(() => form.vat_rate, (newVatRate) => {
   form.items.forEach(item => {
     item.vat = newVatRate;
     item.total_price = calculateTotalPrice(item);
-    item.paid_amount = calculateGrandTotal(item);
+    item.paid_amount = calculateTotalPrice(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -920,6 +907,9 @@ watch(() => form.payment_term, (newValue) => {
   }
   form.items.forEach(item => {
     item.payment_term = newValue;
+    item.discount = 0;
+    item.service_charge = 0;
+    invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
   });
 });
 
@@ -943,43 +933,75 @@ const editItem = (rowIndex) => {
   const item = form.items[rowIndex];
   editItemForm.id = item.id || rowIndex;
   Object.assign(editItemForm, item);
-  const modal = new bootstrap.Modal(document.getElementById('editInvoiceItemModal'));
-  modal.show();
-  if (form.discount_total > 0 && form.discount_total !== '') {
-    document.getElementById('editDiscount').setAttribute('disabled', 'true');
-    document.getElementById('editDiscount').classList.add('bg-light');
-  } else {
-    document.getElementById('editDiscount').removeAttribute('disabled');
-    document.getElementById('editDiscount').classList.remove('bg-light');
+
+  const modalEl = document.getElementById('editInvoiceItemModal');
+  if (modalEl) {
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
   }
-  if (isServiceChargeDisabled.value) {
-    document.getElementById('editServiceCharge').setAttribute('disabled', 'true');
-    document.getElementById('editServiceCharge').classList.add('bg-light');
-  } else {
-    document.getElementById('editServiceCharge').removeAttribute('disabled');
-    document.getElementById('editServiceCharge').classList.remove('bg-light');
+
+  // Handle editDiscount field
+  const editDiscountEl = document.getElementById('editDiscount');
+  if (editDiscountEl) {
+    if (form.discount_total > 0 && form.discount_total !== '') {
+      editDiscountEl.setAttribute('disabled', 'true');
+      editDiscountEl.classList.add('bg-light');
+    } else {
+      editDiscountEl.removeAttribute('disabled');
+      editDiscountEl.classList.remove('bg-light');
+    }
   }
-  if (form.payment_type === 1) { // Final
-    document.getElementById('editDeposit').setAttribute('disabled', 'true');
-    document.getElementById('editDeposit').classList.add('bg-light');
-  } else {
-    document.getElementById('editDeposit').removeAttribute('disabled');
-    document.getElementById('editDeposit').classList.remove('bg-light');
+
+  // Handle editServiceCharge field
+  const editServiceChargeEl = document.getElementById('editServiceCharge');
+  if (editServiceChargeEl) {
+    if (isServiceChargeDisabled.value) {
+      editServiceChargeEl.setAttribute('disabled', 'true');
+      editServiceChargeEl.classList.add('bg-light');
+    } else {
+      editServiceChargeEl.removeAttribute('disabled');
+      editServiceChargeEl.classList.remove('bg-light');
+    }
   }
-  if (form.payment_type === 2) { // Deposit
-    document.getElementById('editQty').setAttribute('disabled', 'true');
-    document.getElementById('editQty').classList.add('bg-light');
-    document.getElementById('editDeposit').removeAttribute('disabled');
-    document.getElementById('editDeposit').classList.remove('bg-light');
+
+  // Handle editDeposit and editQty fields
+  const editDepositEl = document.getElementById('editDeposit');
+  const editQtyEl = document.getElementById('editQty');
+
+  if (form.payment_type === 1) {
+    // Final
+    if (editDepositEl) {
+      editDepositEl.setAttribute('disabled', 'true');
+      editDepositEl.classList.add('bg-light');
+    }
+    if (editQtyEl) {
+      editQtyEl.removeAttribute('disabled');
+      editQtyEl.classList.remove('bg-light');
+    }
+  } else if (form.payment_type === 2) {
+    // Deposit
+    if (editDepositEl) {
+      editDepositEl.removeAttribute('disabled');
+      editDepositEl.classList.remove('bg-light');
+    }
+    if (editQtyEl) {
+      editQtyEl.setAttribute('disabled', 'true');
+      editQtyEl.classList.add('bg-light');
+    }
   } else {
-    document.getElementById('editQty').removeAttribute('disabled');
-    document.getElementById('editQty').classList.remove('bg-light');
-    document.getElementById('editDeposit').setAttribute('disabled', 'true');
-    document.getElementById('editDeposit').classList.add('bg-light');
+    // Default (editable both)
+    if (editDepositEl) {
+      editDepositEl.removeAttribute('disabled');
+      editDepositEl.classList.remove('bg-light');
+    }
+    if (editQtyEl) {
+      editQtyEl.removeAttribute('disabled');
+      editQtyEl.classList.remove('bg-light');
+    }
   }
-  // Ensure deposit field is correctly set in the editItemForm
+
+  // Ensure values are present in editItemForm
   editItemForm.deposit = item.deposit || 0;
-  // Ensure qty field is correctly set in the editItemForm
   editItemForm.qty = item.qty || 0;
 };
 
@@ -990,7 +1012,7 @@ const updateInvoiceItem = () => {
       Object.assign(form.items[index], editItemForm);
       form.items[index].service_charge_overwritten = form.service_charge === 0 || form.service_charge === '' || editItemForm.service_charge !== 0;
       form.items[index].total_price = calculateTotalPrice(form.items[index]);
-      form.items[index].paid_amount = calculateGrandTotal(form.items[index]);
+      form.items[index].paid_amount = calculateTotalPrice(form.items[index]);
       invoiceItemsTableInstance.value.row(index).data(form.items[index]).draw();
       toastr.success('Invoice item updated successfully.');
     } else {
@@ -1874,14 +1896,30 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                     <div class="row mb-1 align-items-center">
                       <label for="service_charge" class="col-sm-4 col-form-label">Delivery</label>
                       <div class="col-sm-4">
-                        <input type="number" v-model="form.service_charge" class="form-control" id="service_charge">
+                        <input 
+                          type="number" 
+                          v-model="form.service_charge" 
+                          class="form-control" 
+                          id="service_charge"
+                          :disabled="form.payment_type === 2" 
+                          :value="form.payment_type === 2 ? 0 : form.service_charge" 
+                        />
                         <div v-if="formErrors.service_charge" class="text-danger">{{ formErrors.service_charge }}</div>
                       </div>
                     </div>
+
+
                     <div class="row mb-1 align-items-center">
                       <label for="discount_total" class="col-sm-4 col-form-label">Discount Overall</label>
                       <div class="col-sm-4">
-                        <input type="number" v-model="form.discount_total" class="form-control" id="discount_total">
+                        <input 
+                          type="number" 
+                          v-model="form.discount_total" 
+                          class="form-control" 
+                          id="discount_total"
+                          :disabled="form.payment_type === 2" 
+                          :value="form.payment_type === 2 ? 0 : form.discount_total" 
+                        />
                         <div v-if="formErrors.discount_total" class="text-danger">{{ formErrors.discount_total }}</div>
                       </div>
                     </div>
@@ -2152,14 +2190,21 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                             <input type="text" v-model="editItemForm.product_price" class="form-control text-danger border-0" readonly>
                           </td>
                           <td class="p-0">
-                            <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 2">
+                            <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001">
                             <div v-if="editItemFormErrors.unit_price" class="text-danger small">{{ editItemFormErrors.unit_price }}</div>
                           </td>
                           <td class="p-0">
                             <input type="number" v-model="editItemForm.total_price" class="form-control border-0" readonly>
                           </td>
                           <td class="p-0">
-                            <input type="number" v-model="editItemForm.discount" class="form-control border-0" step="0.0001" :readonly="form.discount_total > 0 && form.discount_total !== ''">
+                            <input 
+                              type="number" 
+                              v-model="editItemForm.discount" 
+                              class="form-control border-0" 
+                              step="0.0001" 
+                              :readonly="form.discount_total > 0 && form.discount_total !== ''" 
+                              :value="form.discount_total > 0 ? 0 : editItemForm.discount" 
+                            >
                           </td>
                           <td class="p-0">
                             <input 
@@ -2167,7 +2212,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                               v-model="editItemForm.service_charge" 
                               class="form-control border-0" 
                               step="0.0001" 
-                              :readonly="form.service_charge > 0 && form.service_charge !== ''"
+                              :readonly="form.service_charge > 0 && form.service_charge !== ''" 
+                              :value="form.service_charge > 0 ? 0 : editItemForm.service_charge" 
                             >
                             <div v-if="editItemFormErrors.service_charge" class="text-danger small">{{ editItemFormErrors.service_charge }}</div>
                           </td>
