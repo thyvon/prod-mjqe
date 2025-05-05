@@ -122,7 +122,7 @@ watch(() => form.discount_total, () => {
 
 watch(() => [form.service_charge, form.discount_total], () => {
   form.items.forEach(item => {
-    item.paid_amount = calculateTotalPrice(item);
+    item.paid_amount = calculateGrandTotal(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -167,10 +167,12 @@ const calculateGrandTotal = () => {
   if (form.payment_type === 2) { // Deposit
     vatAmount = (deposit * vat) / 100;
     editItemForm.paid_amount = (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
+    return (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
   } else {
     vatAmount = ((qty * unit_price - discount) * vat) / 100;
     editItemForm.total_price = (qty * unit_price);
     editItemForm.paid_amount = (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
+    return (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
   }
 };
 
@@ -230,6 +232,7 @@ const prepareInvoiceItems = (items) => {
   return items.map(item => ({
     ...item,
     total_price: calculateTotalPrice(item),
+    paid_amount: calculateGrandTotal(item),
     service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
     discount: form.discount_total > 0 ? (parseFloat(item.total_price) * rateDiscount).toFixed(2) : formatNumber(item.discount), // Ensure discount is calculated correctly
     service_charge: formatNumber(item.service_charge, 4), // Ensure service charge is formatted correctly
@@ -891,7 +894,7 @@ watch(() => form.vat_rate, (newVatRate) => {
   form.items.forEach(item => {
     item.vat = newVatRate;
     item.total_price = calculateTotalPrice(item);
-    item.paid_amount = calculateTotalPrice(item);
+    item.paid_amount = calculateGrandTotal(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -987,7 +990,7 @@ const updateInvoiceItem = () => {
       Object.assign(form.items[index], editItemForm);
       form.items[index].service_charge_overwritten = form.service_charge === 0 || form.service_charge === '' || editItemForm.service_charge !== 0;
       form.items[index].total_price = calculateTotalPrice(form.items[index]);
-      form.items[index].paid_amount = calculateTotalPrice(form.items[index]);
+      form.items[index].paid_amount = calculateGrandTotal(form.items[index]);
       invoiceItemsTableInstance.value.row(index).data(form.items[index]).draw();
       toastr.success('Invoice item updated successfully.');
     } else {
@@ -2149,7 +2152,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                             <input type="text" v-model="editItemForm.product_price" class="form-control text-danger border-0" readonly>
                           </td>
                           <td class="p-0">
-                            <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001">
+                            <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 2">
                             <div v-if="editItemFormErrors.unit_price" class="text-danger small">{{ editItemFormErrors.unit_price }}</div>
                           </td>
                           <td class="p-0">

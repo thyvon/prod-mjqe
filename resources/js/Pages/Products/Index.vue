@@ -19,9 +19,9 @@ const productForm = reactive({
   category_id: null,
   group_id: null,
   price: '',
-  avg_price: '',
+  avg_price: 0,
   uom: '',
-  quantity: '',
+  quantity: 0,
   status: 1,
 });
 
