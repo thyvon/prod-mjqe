@@ -342,7 +342,7 @@ class CancellationController extends Controller
     
                 foreach ($validated['items'] as $item) {
                     $itemId = $item['id'] ?? null;
-    
+                
                     if ($itemId) {
                         $existingItem = $cancellation->items()->find($itemId);
                         if ($existingItem) {
@@ -351,15 +351,16 @@ class CancellationController extends Controller
                     } else {
                         $item['cancellation_id'] = $cancellation->id;
                         $item['cancellation_by'] = auth()->id();
-                        $newItem = CancellationItems::create($item);
-    
-                        if ($validated['cancellation_docs'] == 1 && isset($item['purchase_request_item_id'])) {
-                            PrItem::find($item['purchase_request_item_id'])?->recalculateQtyCancelValidation();
-                        }
-    
-                        if ($validated['cancellation_docs'] == 2 && isset($item['purchase_order_item_id'])) {
-                            PoItems::find($item['purchase_order_item_id'])?->recalculateQtyCancelValidation();
-                        }
+                        $cancellation->items()->create($item);
+                    }
+                
+                    // Recalculate after update or create
+                    if ($validated['cancellation_docs'] == 1 && isset($item['purchase_request_item_id'])) {
+                        PrItem::find($item['purchase_request_item_id'])?->recalculateQtyCancelValidation();
+                    }
+                
+                    if ($validated['cancellation_docs'] == 2 && isset($item['purchase_order_item_id'])) {
+                        PoItems::find($item['purchase_order_item_id'])?->recalculateQtyCancelValidation();
                     }
                 }
             } else {
