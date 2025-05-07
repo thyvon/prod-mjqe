@@ -90,7 +90,9 @@ const openEditModal = async (rowData) => {
 
 let addItemModalInstance = null;
 const prItems = ref([]);
+const poItems = ref([]);
 let prItemsTableInstance;
+let poItemsTableInstance;
 let cancellationItemsTableInstance;
 
 const filterPrNumber = ref(''); // Initialize as an empty string
@@ -111,6 +113,25 @@ const fetchPrItems = async (purchaseRequestId = null) => {
   }
 };
 
+// PO
+const filterPoNumber = ref(''); // Initialize as an empty string
+const fetchPoItems = async (purchaseOrderId = null) => {
+  try {
+    const response = await axios.get(route('po-items-cancellation')); // Use the named route
+    let items = response.data;
+
+    // Filter items by purchase_request_id if provided
+    if (purchaseOrderId) {
+      items = items.filter(item => item.purchase_order.id === purchaseOrderId);
+    }
+
+    poItems.value = items; // Assign the filtered data to `prItems`
+    console.log('Fetched PO Items:', prItems.value);
+  } catch (error) {
+    console.error('Failed to fetch PR items:', error); // Log any errors
+  }
+};
+
 // Watch for changes in filterPrNumber and reinitialize the PR items table
 watch(filterPrNumber, (newVal) => {
   const filteredPrItems = prItems.value.filter((item) =>
@@ -118,6 +139,15 @@ watch(filterPrNumber, (newVal) => {
   );
   if (prItemsTableInstance) {
     prItemsTableInstance.clear().rows.add(filteredPrItems).draw();
+  }
+});
+
+watch(filterPoNumber, (newVal) => {
+  const filteredPoItems = poItems.value.filter((item) =>
+    newVal ? item.purchase_order.id === newVal : true
+  );
+  if (poItemsTableInstance) {
+    poItemsTableInstance.clear().rows.add(filteredPoItems).draw();
   }
 });
 
@@ -157,6 +187,50 @@ const initializePrItemsTable = () => {
         const rowData = prItemsTableInstance.row($(this).closest('tr')).data();
         if (rowData) {
           selectPrItem(rowData);
+        }
+      });
+    }
+  });
+};
+
+const initializePoItemsTable = () => {
+  nextTick(() => {
+    const table = $('#po-items-table');
+    if (table.length) {
+      // Check if the DataTable is already initialized
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy(); // Destroy the existing DataTable instance
+        table.empty(); // Clear the table content to avoid duplication
+      }
+      poItemsTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: poItems.value,
+        columns: [
+          { data: 'purchase_order.po_number', title: 'PO Number' },
+          { data: 'product.sku', title: 'SKU' },
+          { data: 'product.product_description', title: 'Product Description' },
+          { data: 'pending', title: 'Pending Qty' }, // Ensure this matches the backend field
+          { data: 'unit_price', title: 'Unit Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          { data: 'discount', title: 'Discount', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          { data: 'vat', title: 'VAT', render: (data) => `${parseFloat(data).toFixed(2)}%` },
+          { data: 'grand_total', title: 'Total Price', render: (data) => `$${parseFloat(data).toFixed(2)}` },
+          {
+            data: null,
+            title: 'Actions',
+            render: (data) => `
+              <button class="btn btn-primary btn-sm btn-select">Select</button>
+            `,
+            className: 'text-center',
+          },
+        ],
+      });
+
+      // Attach event listener for the "Select" button
+      $('#po-items-table').on('click', '.btn-select', function () {
+        const rowData = poItemsTableInstance.row($(this).closest('tr')).data();
+        if (rowData) {
+          selectPoItem(rowData);
         }
       });
     }
@@ -266,6 +340,41 @@ const selectPrItem = (item) => {
   toastr.success('PR item added successfully.', 'Success');
 };
 
+const selectPoItem = (item) => {
+  const isDuplicate = cancellationForm.items.some(
+    (existingItem) => existingItem.purchase_order_item_id === item.id
+  );
+
+  if (isDuplicate) {
+    toastr.warning('This item is already added.', 'Warning');
+    return;
+  }
+
+  const newItem = {
+    name: item.product.product_description,
+    qty: item.pending,
+    purchase_request_id: item.pr_id > 0 ? item.pr_id : null,
+    purchase_order_id: item.purchase_order.id,
+    pr_number: item.purchase_request?.pr_number || '',
+    po_number: item.purchase_order?.po_number || '',
+    sku: item.product.sku,
+    purchase_order_item_id: item.id,
+    purchase_request_item_id: item.pr_item_id > 0 ? item.pr_item_id : null,
+    cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
+  };
+
+  cancellationForm.items.push(newItem);
+
+  console.log('✅ New cancellation item added:', newItem);
+  console.log('📦 Updated cancellationForm.items:', cancellationForm.items);
+
+  if (cancellationItemsTableInstance) {
+    cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+  }
+
+  toastr.success('PO item added successfully.', 'Success');
+};
+
 const selectAllPrItems = () => {
 
   let addedCount = 0;
@@ -300,17 +409,74 @@ const selectAllPrItems = () => {
   }
 };
 
+const selectAllPoItems = () => {
+
+let addedCount = 0;
+
+poItems.value.forEach((item) => {
+  const isDuplicate = cancellationForm.items.some(
+    (existingItem) => existingItem.purchase_order_item_id === item.id
+  );
+
+  if (!isDuplicate) {
+    cancellationForm.items.push({
+      name: item.product.product_description,
+      qty: item.pending,
+      purchase_request_id: item.pr_id,
+      purchase_order_id: item.purchase_order.id,
+      pr_number: item.purchase_request.pr_number,
+      po_number: item.purchase_order.po_number,
+      sku: item.product.sku,
+      purchase_request_item_id: item.pr_item_id,
+      cancellation_reason: cancellationForm.cancellation_reason || '', // Default from main form
+    });
+    addedCount++;
+  }
+});
+
+if (cancellationItemsTableInstance) {
+  cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
+}
+
+if (addedCount > 0) {
+  toastr.success(`${addedCount} PO items added successfully.`, 'Success');
+} else {
+  toastr.warning('No new PR items were added.', 'Warning');
+}
+};
+
 const removeItemCancel = (item) => {
-  const index = cancellationForm.items.findIndex((i) => i.name === item.name && i.purchase_request_item_id === item.purchase_request_item_id);
+  let index = -1;
+
+  // Check if it's a PR item
+  if (item.purchase_request_item_id) {
+    index = cancellationForm.items.findIndex(
+      (i) =>
+        i.name === item.name &&
+        i.purchase_request_item_id === item.purchase_request_item_id
+    );
+  }
+
+  // Check if it's a PO item
+  else if (item.purchase_order_item_id) {
+    index = cancellationForm.items.findIndex(
+      (i) =>
+        i.name === item.name &&
+        i.purchase_order_item_id === item.purchase_order_item_id
+    );
+  }
+
+  // Remove the item if found
   if (index !== -1) {
     cancellationForm.items.splice(index, 1);
   }
 
-  // Update the DataTable with the modified items array
+  // Update the DataTable
   if (cancellationItemsTableInstance) {
     cancellationItemsTableInstance.clear().rows.add(cancellationForm.items).draw();
   }
 };
+
 
 const saveCancellation = async () => {
   try {
@@ -367,14 +533,17 @@ const saveCancellation = async () => {
 };
 
 const openAddItemModal = () => {
-  // Fetch PR items filtered by the selected purchase request ID
-  fetchPrItems(cancellationForm.pr_po_id).then(() => {
-    // Initialize the PR items table after fetching the data
-    initializePrItemsTable();
-    if (addItemModalInstance) {
-      addItemModalInstance.show(); // Show the modal
-    }
-  });
+  if (cancellationForm.cancellation_docs === 1) {
+    fetchPrItems(cancellationForm.pr_po_id).then(() => {
+      initializePrItemsTable();
+      addItemModalInstance?.show();
+    });
+  } else if (cancellationForm.cancellation_docs === 2) {
+    fetchPoItems(cancellationForm.pr_po_id).then(() => {
+      initializePoItemsTable();
+      addItemModalInstance?.show();
+    });
+  }
 };
 
 const selectedPurchaseRequestId = computed(() => {
@@ -700,7 +869,10 @@ const deleteCancellation = async (cancellationId) => {
               </div>
 
               <div class="d-flex justify-content-between mt-2">
-                <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal"> <i class="fas fa-plus-circle"></i> SELECT PR ITEMS</button>
+                <button type="button" class="btn btn-success btn-sm" @click="openAddItemModal">
+                  <i class="fas fa-plus-circle"></i>
+                  {{ cancellationForm.cancellation_docs === 1 ? 'SELECT PR ITEMS' : 'SELECT PO ITEMS' }}
+                </button>
               </div>
               <div class="panel panel-inverse border mt-3 p-3">
                 <div class="panel-heading bg-warning text-white mb-2">
@@ -751,16 +923,34 @@ const deleteCancellation = async (cancellationId) => {
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="addItemModalLabel">Select PR ITEM</h5>
+            <h5 class="modal-title" id="addItemModalLabel">
+              {{ cancellationForm.cancellation_docs === 1 ? 'Select PR ITEM' : 'Select PO ITEM' }}
+            </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="table-responsive">
-              <table id="pr-items-table" class="table table-bordered border-secondary align-middle" width="100%"></table>
+              <table
+                id="pr-items-table"
+                v-show="cancellationForm.cancellation_docs === 1"
+                class="table table-bordered border-secondary align-middle"
+                width="100%"
+              ></table>
+
+              <table
+                id="po-items-table"
+                v-show="cancellationForm.cancellation_docs === 2"
+                class="table table-bordered border-secondary align-middle"
+                width="100%"
+              ></table>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-primary" @click="selectAllPrItems">
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="cancellationForm.cancellation_docs === 1 ? selectAllPrItems() : selectAllPoItems()"
+            >
               <i class="fas fa-check-double"></i> Cancel All
             </button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
