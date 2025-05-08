@@ -322,7 +322,7 @@ const printPage = () => {
     switch (statusType) {
       case 1:
         return 'Check';
-      case 2:
+      case 3:
         return 'Approve';
       default:
         return 'Unknown';
