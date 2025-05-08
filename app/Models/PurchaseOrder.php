@@ -31,7 +31,7 @@ class PurchaseOrder extends Model
         'paid_amount',
         'due_amount',
         'is_cancelled',
-        'cancelled_reason',
+        // 'cancelled_reason',
         'status',
         'purchased_by',
     ];
@@ -54,30 +54,6 @@ class PurchaseOrder extends Model
     public function purchaser()
     {
         return $this->belongsTo(User::class, 'purchased_by');
-    }
-
-    public function cancel($cancelled_reason)
-    {
-        $this->status = 'Cancelled';
-        $this->is_cancelled = 1;
-        $this->cancelled_reason = $cancelled_reason;
-        $this->save();
-
-        // Update cancelled_qty and pending for each item
-        foreach ($this->poItems as $item) {
-            $item->cancelled_qty = $item->qty;
-            $item->pending = 0;
-            $item->cancelled_reason = $cancelled_reason; // Copy cancelled_reason to PO item
-            if ($item->cancelled_qty == $item->qty) {
-                $item->is_cancelled = 1;
-                $item->status = 'Cancelled';
-            }
-            $item->save();
-        }
-
-        $this->load(['poItems.prItem.product', 'user', 'supplier']);
-
-        return $this;
     }
 
     public function updateTotalItem()

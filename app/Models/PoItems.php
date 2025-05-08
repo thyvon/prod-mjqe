@@ -110,41 +110,6 @@ class PoItems extends Model
         return $this->belongsTo(User::class, 'purchaser_id');
     }
 
-    // public function cancelItem($cancelled_reason, $cancelled_qty)
-    // {
-    //     $remainingQty = $this->qty - $this->cancelled_qty;
-
-    //     if ($cancelled_qty > $remainingQty) {
-    //         throw new \Exception('Cancelled quantity cannot exceed remaining quantity.');
-    //     }
-
-    //     $this->cancelled_reason = $cancelled_reason;
-    //     $this->cancelled_qty += $cancelled_qty;
-    //     $this->pending = $this->qty - $this->cancelled_qty;
-
-    //     if ($this->cancelled_qty == $this->qty) {
-    //         $this->status = 'Void';
-    //         $this->is_cancelled = 1;
-    //     }
-
-    //     $this->save();
-
-    //     $this->calculatePending();
-
-    //     $purchaseOrder = $this->purchaseOrder;
-    //     $allItemsCancelled = $purchaseOrder->poItems->every(function ($item) {
-    //         return $item->status === 'Void';
-    //     });
-
-    //     if ($allItemsCancelled) {
-    //         $purchaseOrder->status = 'Void';
-    //         $purchaseOrder->is_cancelled = 1;
-    //         $purchaseOrder->save();
-    //     }
-
-    //     return $this;
-    // }
-
     public function calculatePending()
     {
         if ($this->isCalculating) {
@@ -249,16 +214,6 @@ class PoItems extends Model
     public function recalculateQtyCancelValidation()
     {
         $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
-    
-        // Log each value for debugging or tracking
-        Log::info('Recalculating Cancelled Quantity Validation', [
-            'purchase_order_item_id' => $this->id,
-            'qty' => $this->qty,
-            'received_qty' => $this->received_qty,
-            // 'qty_po' => $this->qty_po,
-            'cancelled_qty' => $this->cancelled_qty,
-            'remaining_qty' => $this->qty - $this->received_qty,
-        ]);
     
         if ($this->cancelled_qty > ($this->qty - $this->received_qty)) {
             throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');

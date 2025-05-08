@@ -46,54 +46,6 @@
               </div>
             </div>
           </div>
-        <!-- <div class="row mb-3">
-          <div class="col-md-6">
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Invoice No:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ invoice.invoice_no }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Invoice Date:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ formatDate(invoice.invoice_date) }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Supplier:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ invoice.supplier.name }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Transaction Type:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ getTransactionType(invoice.transaction_type) }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Payment Type:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ getPaymentType(invoice.payment_type) }}</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Currency:</label>
-              <div class="col-sm-8">
-                <p class="form-control-plaintext">{{ invoice.currency === 1 ? 'USD' : 'KHR' }}</p>
-              </div>
-            </div>
-            <div class="row mb-1">
-              <label class="col-sm-4 col-form-label">Currency Rate:</label>
-              <div class="col-sm-8 border">
-                <p class="form-control-plaintext">{{ invoice.currency_rate }}</p>
-              </div>
-            </div>
-          </div>
-        </div> -->
         <div class="row">
           <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table id="invoice-items-table" class="table table-bordered mb-0">
@@ -110,7 +62,10 @@
                   <th>Total Price</th>
                   <th>Discount</th>
                   <th>Service Charge</th>
+                  <th>Return</th>
+                  <th>Retention</th>
                   <th>VAT</th>
+                  <th>Deposit</th>
                   <th>Grand Total</th>
                 </tr>
               </thead>
@@ -127,7 +82,10 @@
                   <td>{{ formatCurrency(item.total_price, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.discount, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.service_charge, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.return, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.retention, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.vat, invoice.currency) }}</td>
+                  <td>{{ formatCurrency(item.deposit, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.paid_amount, invoice.currency) }}</td>
                 </tr>
                 <tr class="no-datatable fw-bold">
