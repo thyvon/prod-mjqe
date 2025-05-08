@@ -865,25 +865,37 @@ watch(() => form.cash_ref, (newValue) => {
   }
 });
 
-watch(() => form.payment_type, (newValue) => {
-  if (formErrors.payment_type) {
-    delete formErrors.payment_type;
-  }
-  if (newValue === 2) { // Deposit
+watch(
+  () => form.payment_type,
+  (newValue) => {
+    if (formErrors.payment_type) {
+      delete formErrors.payment_type;
+    }
+
+    if (newValue === 2) {
+      form.items.forEach(item => {
+        item.qty = 0;
+        item.unit_price = 0;
+        item.deposit = item.deposit || 0;
+      });
+    } else {
+      form.items.forEach(item => {
+        item.qty = item.qty || 0;
+        item.deposit = 0;
+      });
+    }
+
+    // Calculate total price for each item
     form.items.forEach(item => {
-      item.qty = 0;
-      item.unit_price = 0;
-      item.deposit = item.deposit || 0;
+      item.total_price = calculateTotalPrice(item); // Add total_price to each item
     });
-  } else {
-    form.items.forEach(item => {
-      item.qty = item.qty || 0;
-      item.deposit = 0; // Reset deposit to 0 when not Deposit
-    });
+
+    calculateTotalPaidAmount(); // Update total paid amount based on recalculated total_price values
+
+    invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
   }
-  calculateTotalPaidAmount();
-  invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
-});
+);
+
 
 watch(() => form.invoice_date, (newValue) => {
   if (formErrors.invoice_date) {
