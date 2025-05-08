@@ -888,6 +888,7 @@ watch(
     // Calculate total price for each item
     form.items.forEach(item => {
       item.total_price = calculateTotalPrice(item); // Add total_price to each item
+      item.paid_amount = calculateGrandTotal(item);
     });
 
     calculateTotalPaidAmount(); // Update total paid amount based on recalculated total_price values
