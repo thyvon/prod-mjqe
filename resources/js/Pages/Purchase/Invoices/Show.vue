@@ -93,7 +93,10 @@
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.service_charge) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.return) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.retention) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.vat) || 0), 0), invoice.currency) }}</td>
+                  <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.deposit) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0), invoice.currency) }}</td>
                 </tr>
               </tbody>
