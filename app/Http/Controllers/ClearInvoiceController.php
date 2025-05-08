@@ -72,7 +72,8 @@ class ClearInvoiceController extends Controller
                 'product:id,product_description,sku', 
                 'purchaseRequest:id,pr_number', 
                 'supplier:id,name', 
-                'purchasedBy:id,name'
+                'purchasedBy:id,name',
+                'invoice:id,invoice_no'
             )
             ->where('cash_ref', $clearInvoice->cash_id)
             ->orderBy('campus') // Sort by campus

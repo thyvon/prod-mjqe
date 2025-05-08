@@ -231,6 +231,7 @@ const rejectRequest = async (statusType) => {
                 <tr class="text-center">
                     <th style="width: 3%;">No.</th>
                     <th style="width: 8%;">Date Invoice</th>
+                    <th style="width: 8%;">Invoice No.</th>
                     <th style="width: 12%;">Ref: PR</th>
                     <th style="width: 9%;">Purchaser</th>
                     <th style="width: 20%;">Description (English/Khmer)</th>
@@ -251,6 +252,7 @@ const rejectRequest = async (statusType) => {
                 <tr v-for="(item, index) in purchaseInvoiceItems" :key="index">
                     <td>{{ index + 1 }}</td>
                     <td>{{ formatDate(item.invoice_date) }}</td>
+                    <td>{{ item.invoice?.invoice_no }}</td>
                     <td>{{ item.purchase_request?.pr_number }}</td>
                     <td>{{ item.purchased_by?.name }}</td>
                     <td>{{ item.description }}</td>
