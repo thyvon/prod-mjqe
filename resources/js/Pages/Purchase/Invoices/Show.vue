@@ -61,7 +61,7 @@
                   <th>Unit Price</th>
                   <th>Total Price</th>
                   <th>Discount</th>
-                  <th>Service Charge</th>
+                  <th>Delivery</th>
                   <th>Return</th>
                   <th>Retention</th>
                   <th>VAT</th>
