@@ -122,7 +122,7 @@ watch(() => form.discount_total, () => {
 
 watch(() => [form.service_charge, form.discount_total], () => {
   form.items.forEach(item => {
-    item.paid_amount = calculateTotalPrice(item);
+    item.paid_amount = calculateGrandTotal(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -160,21 +160,72 @@ const editItemForm = reactive({
   stop_purchase: 0,
 });
 
-const calculateGrandTotal = () => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge, deposit } = editItemForm;
-  let vatAmount;
+const calculateGrandTotal = (item) => {
+  const {
+    qty = 0,
+    unit_price = 0,
+    discount = 0,
+    return: returnAmount = 0,
+    retention = 0,
+    vat = 0,
+    service_charge = 0,
+    deposit = 0
+  } = item;
 
-  if (form.payment_type === 2) { // Deposit
-    vatAmount = (deposit * vat) / 100;
-    editItemForm.paid_amount = (parseFloat(deposit) + parseFloat(vatAmount) - parseFloat(retention) - parseFloat(returnAmount)).toFixed(2);
+  if (form.payment_type === 2) {
+    // Deposit-based payment
+    const vatAmount = (deposit * vat) / 100;
+    const grandTotal = parseFloat(deposit) + vatAmount - parseFloat(retention) - parseFloat(returnAmount);
+    return grandTotal.toFixed(2);
   } else {
-    vatAmount = ((qty * unit_price - discount) * vat) / 100;
-    editItemForm.total_price = (qty * unit_price);
-    editItemForm.paid_amount = (qty * unit_price) - discount + parseFloat(vatAmount) - returnAmount - retention + parseFloat(service_charge);
+    // Regular calculation
+    const total_price = qty * unit_price;
+    const vatAmount = ((total_price - discount) * vat) / 100;
+    const grandTotal = total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge);
+    return grandTotal.toFixed(2);
   }
 };
 
-watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat, editItemForm.service_charge, editItemForm.deposit], calculateGrandTotal);
+
+const calculateTotalPrice = (item) => {
+  const { qty = 0, unit_price = 0 } = item;
+
+  if (form.payment_type === 2) {
+    return "0.00";
+  }
+
+  const total_price = qty * unit_price;
+  return total_price.toFixed(2);
+};
+
+watch(
+  () => [
+    editItemForm.qty,
+    editItemForm.unit_price,
+    editItemForm.discount,
+    editItemForm.return,
+    editItemForm.retention,
+    editItemForm.vat,
+    editItemForm.service_charge,
+    editItemForm.deposit
+  ],
+  () => {
+    const grandTotal = calculateGrandTotal(editItemForm);
+    // Optionally assign it somewhere:
+    editItemForm.paid_amount = grandTotal;
+  },
+  { immediate: true }
+);
+
+watch(
+  () => [editItemForm.qty, editItemForm.unit_price],
+  () => {
+    const totalPrice = calculateTotalPrice(editItemForm);
+    editItemForm.total_price = totalPrice;
+  },
+  { immediate: true }
+);
+
 
 const grandTotal = computed(() => {
   const total = form.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
@@ -186,28 +237,8 @@ const totalServiceCharge = computed(() => {
   return form.items.reduce((sum, item) => sum + (parseFloat(item.service_charge) || 0), 0).toFixed(2);
 });
 
-watch(() => [editItemForm.qty, editItemForm.unit_price, editItemForm.discount, editItemForm.return, editItemForm.retention, editItemForm.vat, editItemForm.service_charge, editItemForm.deposit], calculateGrandTotal);
-
 const formErrors = reactive({});
 const editItemFormErrors = reactive({});
-
-const calculateTotalPrice = (item) => {
-  const { qty, unit_price, discount, return: returnAmount, retention, vat, service_charge = 0, deposit } = item;
-
-  // If payment_type is 2, override total price logic
-  if (form.payment_type === 2) {
-    let total_price = 0; // ✅ use 'let' so you can reassign if needed
-    const paid_amount = (deposit - returnAmount - retention);
-    const vat_amount = (paid_amount * vat) / 100;
-    total_price = paid_amount + parseFloat(vat_amount);
-    return total_price.toFixed(2);
-  }
-
-  const total_price = qty * unit_price;
-  const vatAmount = ((total_price - discount) * vat) / 100;
-
-  return (total_price - discount - returnAmount - retention + parseFloat(vatAmount) + parseFloat(service_charge)).toFixed(2);
-};
 
 const formatNumber = (value, decimalPlaces = 2) => {
   return isNaN(parseFloat(value)) ? '0.00' : parseFloat(value).toFixed(decimalPlaces);
@@ -220,6 +251,7 @@ const prepareInvoiceItems = (items) => {
   return items.map(item => ({
     ...item,
     total_price: calculateTotalPrice(item),
+    paid_amount: calculateGrandTotal(item),
     service_charge: item.service_charge_overwritten ? parseFloat(item.service_charge) : (form.service_charge > 0 ? parseFloat(form.service_charge / form.items.length).toFixed(10) : parseFloat(item.service_charge) || 0),
     discount: form.discount_total > 0 ? (parseFloat(item.total_price) * rateDiscount).toFixed(2) : formatNumber(item.discount), // Ensure discount is calculated correctly
     service_charge: formatNumber(item.service_charge, 4), // Ensure service charge is formatted correctly
@@ -521,8 +553,10 @@ const selectPrItem = (prItem) => {
     const qty = form.payment_type === 2 ? 0 : parseFloat(prItem.qty_pending) || 0;
     const unit_price = form.payment_type === 2 ? 0 : parseFloat(prItem.unit_price) || 0;
     const discount = 0;
+    const deposit = 0;
     const service_charge = 0;
     const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge });
+    const paid_amount = calculateGrandTotal({qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge, deposit})
 
     const receivedQty = form.items.reduce((sum, currentItem) => {
       return sum + (currentItem.pr_item === prItem.id ? parseFloat(currentItem.qty) : 0);
@@ -548,7 +582,7 @@ const selectPrItem = (prItem) => {
       return: 0,
       retention: 0,
       service_charge: service_charge,
-      paid_amount: total_price,
+      paid_amount: paid_amount,
       campus: prItem.campus,
       division: prItem.division,
       department: prItem.department,
@@ -588,7 +622,9 @@ const selectPoItem = (poItem) => {
     const unit_price = form.payment_type === 2 ? 0 : parseFloat(poItem.unit_price) || 0;
     const discount = parseFloat(poItem.discount) || 0;
     const service_charge = 0;
+    const deposit = 0;
     const total_price = calculateTotalPrice({ qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge });
+    const paid_amount = calculateGrandTotal({qty, unit_price, discount, return: 0, retention: 0, vat: form.vat_rate, service_charge, deposit})
 
     const receivedQty = form.items.reduce((sum, currentItem) => {
       return sum + (currentItem.po_item === poItem.id ? parseFloat(currentItem.qty) : 0);
@@ -615,7 +651,7 @@ const selectPoItem = (poItem) => {
       return: 0,
       retention: 0,
       service_charge: service_charge,
-      paid_amount: total_price,
+      paid_amount: paid_amount,
       campus: poItem.campus,
       division: poItem.division,
       department: poItem.department,
@@ -836,7 +872,7 @@ watch(() => form.payment_type, (newValue) => {
   if (newValue === 2) { // Deposit
     form.items.forEach(item => {
       item.qty = 0;
-      // Preserve existing deposit values instead of setting to 0
+      item.unit_price = 0;
       item.deposit = item.deposit || 0;
     });
   } else {
@@ -881,7 +917,7 @@ watch(() => form.vat_rate, (newVatRate) => {
   form.items.forEach(item => {
     item.vat = newVatRate;
     item.total_price = calculateTotalPrice(item);
-    item.paid_amount = calculateTotalPrice(item);
+    item.paid_amount = calculateGrandTotal(item);
   });
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
@@ -1012,7 +1048,7 @@ const updateInvoiceItem = () => {
       Object.assign(form.items[index], editItemForm);
       form.items[index].service_charge_overwritten = form.service_charge === 0 || form.service_charge === '' || editItemForm.service_charge !== 0;
       form.items[index].total_price = calculateTotalPrice(form.items[index]);
-      form.items[index].paid_amount = calculateTotalPrice(form.items[index]);
+      form.items[index].paid_amount = calculateGrandTotal(form.items[index]);
       invoiceItemsTableInstance.value.row(index).data(form.items[index]).draw();
       toastr.success('Invoice item updated successfully.');
     } else {
