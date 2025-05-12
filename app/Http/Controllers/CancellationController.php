@@ -226,26 +226,6 @@ class CancellationController extends Controller
             // Log the retrieved cancellation data
             \Log::info('Cancellation retrieved from database:', $cancellation->toArray());
 
-            // Map items to include only necessary fields
-            // $cancellation->items = $cancellation->items->map(function ($item) {
-            //     return [
-            //         'id' => $item->id,
-            //         'name' => $item->purchaseRequestItem?->product?->product_description 
-            //                   ?? $item->purchaseOrderItem?->product?->product_description,
-            //         'pr_number' => $item->purchaseRequestItem?->purchaseRequest?->pr_number 
-            //                        ?? $item->purchaseOrderItem?->purchaseRequest?->pr_number,
-            //         'po_number' => $item->purchaseOrderItem?->purchaseOrder?->po_number,
-            //         'sku' => $item->purchaseRequestItem?->product?->sku 
-            //                  ?? $item->purchaseOrderItem?->product?->sku,
-            //         'qty' => $item->qty,
-            //         'purchase_request_id' => $item->purchase_request_id,
-            //         'purchase_request_item_id' => $item->purchase_request_item_id,
-            //         'purchase_order_id' => $item->purchase_order_id,
-            //         'purchase_order_item_id' => $item->purchase_order_item_id,
-            //         'cancellation_reason' => $item->cancellation_reason,
-            //     ];
-            // });
-
             // Retrieve approvals for the cancellation
             $approvals = Approval::where('approval_id', $id)
             ->whereIn('docs_type', [6,7]) // Filter by docs_type for ClearInvoice

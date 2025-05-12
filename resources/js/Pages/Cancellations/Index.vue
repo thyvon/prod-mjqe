@@ -673,7 +673,7 @@ initializeSummernote(); // Initialize Summernote editor
           {
             data: null,
             render: function (data, type, row) {
-              return row.purchase_request?.pr_number || row.purchase_order?.po_number || '-';
+              return row.cancellation_docs == 1 && row.purchase_request?.pr_number || row.purchase_order?.po_number || '-';
             },
           },
           { data: 'cancellation_date', render: (data) => format(data, 'date') }, // Cancellation date
