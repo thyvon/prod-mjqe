@@ -7,8 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Models\Documents;
-
-
+use App\Models\DocumentsItems;
 
 class DocumentController extends Controller
 {
@@ -29,6 +28,15 @@ class DocumentController extends Controller
     
         // Pass the documents to the view
         return view('Documents.Index', compact('documents'));
+    }
+
+    public function showAllItems()
+    {
+        $items = DocumentsItems::with('documentation')->get();
+    
+        return Inertia::render('Documents/ItemList', [
+            'items' => $items,
+        ]);
     }
 
     public function backend ()
@@ -189,4 +197,17 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function updateItemStatus(Request $request, $itemId)
+    {
+        $request->validate([
+            'status' => 'required|string|max:255', // Adjust as needed (e.g. enum validation)
+        ]);
+
+        $item = DocumentsItems::findOrFail($itemId);
+
+        $item->status = $request->status;
+        $item->save();
+
+        return response()->json(['message' => 'Item status updated successfully.']);
+    }
 }
