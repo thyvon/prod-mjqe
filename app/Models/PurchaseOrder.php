@@ -89,7 +89,7 @@ class PurchaseOrder extends Model
             $this->status = 'Closed';
         } elseif ($this->cancelled_item == $this->total_item) {
             $this->status = 'Void';
-        } elseif ($this->purchased_item < ($this->total_item - $this->$cancelled_item) && $this->purchased_item !=0){
+        } elseif ($this->purchased_item < ($this->total_item - $this->cancelled_item) && $this->purchased_item !=0){
             $this->status ='Partial';
         }else {
             $this->status = 'Pending';
