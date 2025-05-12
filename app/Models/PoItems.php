@@ -211,9 +211,29 @@ class PoItems extends Model
         $this->save();
     }
 
+    // public function recalculateQtyCancelValidation()
+    // {
+    //     $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
+    
+    //     if ($this->cancelled_qty > ($this->qty - $this->received_qty)) {
+    //         throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
+    //     }
+    // }
+
     public function recalculateQtyCancelValidation()
     {
-        $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)->sum('qty');
+        $this->cancelled_qty = CancellationItems::where('purchase_order_item_id', $this->id)
+        ->sum('qty');
+
+    
+        // Log each value for debugging or tracking
+        Log::info('Recalculating Cancelled Quantity Validation', [
+            'purchase_order_item_id' => $this->id,
+            'qty' => $this->qty,
+            'qty_purchase' => $this->received_qty,
+            'qty_cancel' => $this->cancelled_qty,
+            'remaining_qty' => $this->qty - $this->received_qty,
+        ]);
     
         if ($this->cancelled_qty > ($this->qty - $this->received_qty)) {
             throw new \Exception('Cancelled quantity cannot exceed the remaining quantity.');
