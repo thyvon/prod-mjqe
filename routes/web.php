@@ -106,7 +106,7 @@ Route::middleware('auth')->group(function () {
         'invoices' => InvoiceController::class,
         'cancellations' => CancellationController::class,
         'statements' => StatementController::class,
-        'documents' => DocumentController::class,
+        // 'documents' => DocumentController::class,
     ]);
 
     Route::put('/purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
@@ -175,6 +175,20 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/documents-admin', [DocumentController::class, 'backend'])->name('documents.backend');
     Route::post('/upload-article-image', [DocumentController::class, 'uploadArticleImage']);
+    Route::get('/documents/items', [DocumentController::class, 'showAllItems']);
+
+    // Document section routes
+    Route::get('/documents', [DocumentController::class, 'index']);
+    Route::get('/documents-admin', [DocumentController::class, 'backend'])->name('documents.backend');
+    Route::post('/documents', [DocumentController::class, 'store']);
+    Route::get('/documents/{id}/edit', [DocumentController::class, 'edit']);
+    Route::put('/documents/{id}', [DocumentController::class, 'update']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
+
+    // Document item routes
+    Route::get('/documents-items', [DocumentController::class, 'showAllItems']); // Table view
+    // File upload route
+    Route::post('/documents/upload-image', [DocumentController::class, 'uploadArticleImage']);
 
 
     // Ad

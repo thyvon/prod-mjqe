@@ -15,6 +15,7 @@ class DocumentsItems extends Model
         'description',
         'file_path',
         'file_name',
+        'status',
     ];
 
     public function documentation()
