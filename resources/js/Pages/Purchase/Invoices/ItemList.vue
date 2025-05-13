@@ -83,7 +83,7 @@ const forceClose = async (id, isChecked) => {
 
 onMounted(() => {
   invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
-    responsive: true,
+    responsive: false,
     autoWidth: false,
     scrollX: false,
     select: true,
