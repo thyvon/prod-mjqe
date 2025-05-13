@@ -236,7 +236,7 @@ const fetchInvoiceItems = async () => {
     invoiceItems.value = response.data;
 
     poItemsTableInstance.value = initializeDataTable('#po-items-table', {
-      responsive: true,
+      responsive: false,
       autoWidth: false,
       scrollX: false,
       select: true,
@@ -267,7 +267,7 @@ const fetchInvoiceItems = async () => {
     });
 
     invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
-      responsive: true,
+      responsive: false,
       autoWidth: false,
       scrollX: false,
       select: true,

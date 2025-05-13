@@ -82,7 +82,7 @@ onMounted(async () => {
     invoiceItems.value = response.data;
 
     prItemsTableInstance.value = initializeDataTable('#pr-items-table', {
-      responsive: true,
+      responsive: false,
       autoWidth: false,
       scrollX: false,
       select: true,
@@ -108,7 +108,7 @@ onMounted(async () => {
     });
 
     invoiceItemsTableInstance.value = initializeDataTable('#invoice-items-table', {
-      responsive: true,
+      responsive: false,
       autoWidth: false,
       scrollX: false,
       select: true,
