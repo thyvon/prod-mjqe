@@ -22,6 +22,7 @@ class Product extends Model
         'uom',
         'quantity',
         'status',
+        'image_path',
     ];
 
     // Set up the "creating" event to auto-generate the SKU
