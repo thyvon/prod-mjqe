@@ -23,6 +23,7 @@ const productForm = reactive({
   uom: '',
   quantity: 0,
   status: 1,
+  image: null, // Add image field
 });
 
 const validationErrors = ref({});
@@ -56,18 +57,30 @@ const openEditModal = (product) => {
 };
 
 const saveProduct = async () => {
+  const formData = new FormData();
+  for (const key in productForm) {
+    if (productForm[key] !== null) {
+      formData.append(key, productForm[key]);
+    }
+  }
+
   try {
     if (isEdit.value) {
-      const response = await axios.put(`/products/${productForm.id}`, productForm);
+      const response = await axios.post(`/products/${productForm.id}?_method=PUT`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       const updatedProduct = response.data;
       const rowIndex = dataTableInstance.row((idx, data) => data.id === updatedProduct.id).index();
       dataTableInstance.row(rowIndex).data(updatedProduct).draw();
       swal('Success!', 'Product updated successfully!', 'success', { timer: 2000 });
     } else {
-      const response = await axios.post('/products', productForm);
+      const response = await axios.post('/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       dataTableInstance.row.add(response.data).draw();
       swal('Success!', 'Product created successfully!', 'success', { timer: 2000 });
     }
+
     const modalElement = document.getElementById('productFormModal');
     const modal = bootstrap.Modal.getInstance(modalElement);
     modal.hide();
@@ -79,6 +92,12 @@ const saveProduct = async () => {
     }
   }
 };
+
+const handleFileChange = (event) => {
+  const file = event.target.files[0];
+  productForm.image = file;
+};
+
 
 const deleteProduct = async (productId) => {
   swal({
@@ -156,6 +175,32 @@ onMounted(() => {
         data: props.products,
         columns: [
           { data: null, render: (data, type, row, meta) => meta.row + 1 },
+          {
+            data: 'image_path',
+            render: (data) => {
+              const imgSrc = data ? `/storage/${data}` : 'default.jpg';
+              return `
+                <div class="image-popup-container" style="position: relative; display: inline-block;">
+                  <img src="${imgSrc}" alt="Product Image" style="width: 50px; height: 50px; object-fit: contain; cursor: pointer;" />
+                  <div class="image-popup" style="
+                    display: none;
+                    position: absolute;
+                    top: 0;
+                    left: 60px;
+                    background: white;
+                    padding: 5px;
+                    z-index: 1000;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                  ">
+                    <img src="${imgSrc}" alt="Product Image" style="width: 400px; height: 400px; object-fit: contain;" />
+                  </div>
+                </div>
+              `;
+            },
+            orderable: false,
+            searchable: false,
+            className: 'text-center',
+          },
           { data: 'sku' },
           { data: 'product_description' },
           { data: 'brand' },
@@ -173,7 +218,7 @@ onMounted(() => {
                   <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item btn-view"><i class="fas fa-eye"></i> View</a></li>
+                  <li><a class="dropdown-item btn-view"><i class="fas fa-eye"></i> View Details</a></li>
                   <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
                   <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
                 </ul>
@@ -218,6 +263,15 @@ onMounted(() => {
       });
     }
   });
+
+  $('#product-table').on('mouseenter', '.image-popup-container', function () {
+    $(this).find('.image-popup').show();
+  });
+
+  $('#product-table').on('mouseleave', '.image-popup-container', function () {
+    $(this).find('.image-popup').hide();
+  });
+
 });
 </script>
 
@@ -238,10 +292,11 @@ onMounted(() => {
         <button @click="openCreateModal" class="btn btn-primary mb-4 btn-sm">Add New Product</button>
 
         <!-- Product Table -->
-        <table id="product-table" class="table table-bordered align-middle text-nowrap" width="100%">
+        <table id="product-table" class="table table-bordered align-middle" width="100%">
           <thead>
             <tr>
               <th>#</th>
+              <th>Image</th>
               <th>SKU</th>
               <th>Description</th>
               <th>Brand</th>
@@ -320,6 +375,11 @@ onMounted(() => {
                           <option value="1">Active</option>
                           <option value="0">Inactive</option>
                         </select>
+                      </div>
+                      <div class="mb-3">
+                        <label for="image" class="form-label">Product Image</label>
+                        <input @change="handleFileChange" type="file" class="form-control" id="image" />
+                        <div v-if="validationErrors.image" class="text-danger">{{ validationErrors.image[0] }}</div>
                       </div>
                     </div>
                   </div>

@@ -15,7 +15,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::with(['category:id,name', 'group:id,name'])
-        ->select('id', 'sku', 'product_description', 'brand', 'uom', 'category_id', 'group_id', 'price', 'avg_price', 'quantity', 'status')
+        ->select('id', 'sku', 'product_description', 'brand', 'uom', 'category_id', 'group_id', 'price', 'avg_price', 'quantity', 'status', 'image_path')	
         ->get(); // Only load necessary fields
         $categories = ProductCategory::select('id', 'name')->get();
         $groups = ProductGroup::select('id', 'name')->get();
@@ -30,43 +30,8 @@ class ProductController extends Controller
     // Store a new product
     public function store(Request $request)
     {
-        // Debugging: Log the request data
         \Log::info('Store Product Request Data:', $request->all());
 
-        // Validation...
-        try {
-            $validated = $request->validate([
-                'product_description' => 'required|string|max:255',
-                'brand' => 'required|string|max:255',
-                'category_id' => 'required|exists:product_categories,id',
-                'group_id' => 'required|exists:product_groups,id',
-                'price' => 'required|numeric',
-                'uom'   => 'required|string|max:255',
-                'quantity' => 'required|numeric',
-                'status' => 'required|in:0,1', // Validating status as 0 or 1
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation Errors:', $e->errors());
-            return response()->json(['errors' => $e->errors()], 422);
-        }
-
-        // Debugging: Log the validated data
-        \Log::info('Validated Product Data:', $validated);
-
-        // If creating a new product
-        $product = Product::create($validated);
-
-        // Load the relationships
-        $product->load(['category:id,name', 'group:id,name']);
-
-        // Return success response
-        return response()->json($product, 201);
-    }
-
-    // Update the specified product
-    public function update(Request $request, Product $product)
-    {
-        // Validation...
         try {
             $validated = $request->validate([
                 'product_description' => 'required|string|max:255',
@@ -77,27 +42,67 @@ class ProductController extends Controller
                 'uom'   => 'required|string|max:255',
                 'quantity' => 'required|numeric',
                 'status' => 'required|in:0,1',
+                'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', // 2MB max
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation Errors:', $e->errors());
             return response()->json(['errors' => $e->errors()], 422);
         }
 
-        // Update the product
-        $product->update($validated);
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $validated['image_path'] = $path;
+        }
 
-        // Load the relationships
+        $product = Product::create($validated);
         $product->load(['category:id,name', 'group:id,name']);
 
-        // Return success response
-        return response()->json($product);
+        return response()->json($product, 201);
     }
+
+    // Update the specified product
+public function update(Request $request, Product $product)
+{
+    try {
+        $validated = $request->validate([
+            'product_description' => 'required|string|max:255',
+            'brand' => 'required|string|max:255',
+            'category_id' => 'required|exists:product_categories,id',
+            'group_id' => 'required|exists:product_groups,id',
+            'price' => 'required|numeric',
+            'uom'   => 'required|string|max:255',
+            'quantity' => 'required|numeric',
+            'status' => 'required|in:0,1',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Validation Errors:', $e->errors());
+        return response()->json(['errors' => $e->errors()], 422);
+    }
+
+    if ($request->hasFile('image')) {
+        // Delete old image if exists
+        if ($product->image_path && \Storage::disk('public')->exists($product->image_path)) {
+            \Storage::disk('public')->delete($product->image_path);
+        }
+
+        // Store new image
+        $path = $request->file('image')->store('products', 'public');
+        $validated['image_path'] = $path;
+    }
+
+    $product->update($validated);
+    $product->load(['category:id,name', 'group:id,name']);
+
+    return response()->json($product);
+}
+
 
     public function show($id)
     {
         // Fetch the product with its category and group relationships
         $product = Product::with(['category:id,name', 'group:id,name'])
-        ->select('id', 'sku', 'product_description', 'uom',)
+        ->select('id', 'sku', 'product_description', 'uom','avg_price','price','category_id','created_at', 'updated_at','status','image_path')
         ->find($id);
         $purchasedItems = PurchaseInvoiceItem::with(['product:id,sku,product_description', 'purchasedBy:id,name', 'supplier:id,name', 'invoice:id,pi_number'])
         ->select('id', 'invoice_date', 'item_code','description', 'purchased_by', 'supplier', 'pi_number', 'qty', 'unit_price', 'total_price','currency')
