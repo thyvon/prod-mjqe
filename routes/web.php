@@ -2,7 +2,7 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-// use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Auth\MicrosoftAuthController;
 use App\Http\Controllers\{
     ProductController,
@@ -47,6 +47,14 @@ Route::get('/', function () {
 //         return 'Migration failed: ' . $e->getMessage();
 //     }
 // });
+Route::get('/run-storage-link', function () {
+    try {
+        Artisan::call('storage:link', ['--force' => true]);
+        return 'Storage link created successfully!';
+    } catch (\Exception $e) {
+        return 'Storage link creation failed: ' . $e->getMessage();
+    }
+});
 
 // Dashboard routes (protected with 'auth' middleware)
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
