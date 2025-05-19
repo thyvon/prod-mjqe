@@ -2,7 +2,7 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Artisan;
+// use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Auth\MicrosoftAuthController;
 use App\Http\Controllers\{
     ProductController,
@@ -39,14 +39,14 @@ Route::get('/', function () {
     return Auth::check() ? redirect()->route('dashboard.index') : redirect()->route('login');
 });
 
-Route::get('/run-migrations', function () {
-    try {
-        Artisan::call('migrate', ['--force' => true]);
-        return 'Migrations ran successfully!';
-    } catch (\Exception $e) {
-        return 'Migration failed: ' . $e->getMessage();
-    }
-});
+// Route::get('/run-migrations', function () {
+//     try {
+//         Artisan::call('migrate', ['--force' => true]);
+//         return 'Migrations ran successfully!';
+//     } catch (\Exception $e) {
+//         return 'Migration failed: ' . $e->getMessage();
+//     }
+// });
 
 // Dashboard routes (protected with 'auth' middleware)
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
