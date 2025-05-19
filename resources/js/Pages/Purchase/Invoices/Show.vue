@@ -26,7 +26,12 @@
             <div class="col-3">
               <div class="row">
                 <div class="col-6 text-end">Ref: </div>
-                <div class="col-6">{{ invoice.pi_number }}</div>
+                <div class="col-6">
+                  {{ invoice.pi_number }}
+                  <span class="badge bg-primary">
+                    {{ invoice.payment_type == 1 ? 'Final' : invoice.payment_type == 2 ? 'Deposit' : invoice.payment_type }}
+                  </span>
+                </div>
               </div>
               <div class="row">
                 <div class="col-6 text-end">No: </div>
