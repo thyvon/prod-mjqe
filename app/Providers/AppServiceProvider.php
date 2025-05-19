@@ -5,6 +5,7 @@ namespace App\Providers;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
 
@@ -32,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
             SocialiteWasCalled::class,
             MicrosoftExtendSocialite::class
         );
+
+        URL::forceScheme('https');
     }
 }
