@@ -83,7 +83,7 @@ class PurchaseRequestController extends Controller
         return Inertia::render('Purchase/Pr/Show', [
             'purchaseRequest' => PurchaseRequest::with(['prItems.product:id,product_description,sku,uom'])->findOrFail($id),
             'products' => Product::select('id', 'product_description', 'sku', 'uom')->get(),
-            'users' => User::select('id', 'name')->get(),
+            'users' => User::select('id', 'name', 'position','card_id','phone', 'extension')->get(),
         ]);
     }
 
