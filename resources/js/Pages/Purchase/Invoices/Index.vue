@@ -160,6 +160,25 @@ const editItemForm = reactive({
   stop_purchase: 0,
 });
 
+const modalDiscount = computed(() => {
+  if (form.discount_total > 0 && form.items.length > 0) {
+    const totalPriceSum = form.items.reduce((sum, item) => sum + (parseFloat(item.qty) * parseFloat(item.unit_price) || 0), 0);
+    if (totalPriceSum > 0) {
+      const itemTotal = parseFloat(editItemForm.qty) * parseFloat(editItemForm.unit_price) || 0;
+      return ((itemTotal / totalPriceSum) * form.discount_total).toFixed(4);
+    }
+    return '0.0000';
+  }
+  return parseFloat(editItemForm.discount || 0).toFixed(4);
+});
+
+const modalServiceCharge = computed(() => {
+  if (form.service_charge > 0 && form.items.length > 0) {
+    return (form.service_charge / form.items.length).toFixed(4);
+  }
+  return parseFloat(editItemForm.service_charge || 0).toFixed(4);
+});
+
 const calculateGrandTotal = (item) => {
   const {
     qty = 0,
@@ -2252,7 +2271,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                               class="form-control border-0" 
                               step="0.0001" 
                               :readonly="form.discount_total > 0 && form.discount_total !== ''" 
-                              :value="form.discount_total > 0 ? 0 : editItemForm.discount" 
+                              :value="form.discount_total > 0 ? modalDiscount : editItemForm.discount" 
                             >
                           </td>
                           <td class="p-0">
@@ -2262,9 +2281,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                               class="form-control border-0" 
                               step="0.0001" 
                               :readonly="form.service_charge > 0 && form.service_charge !== ''" 
-                              :value="form.service_charge > 0 ? 0 : editItemForm.service_charge" 
+                              :value="form.service_charge > 0 ? modalServiceCharge : editItemForm.service_charge" 
                             >
-                            <div v-if="editItemFormErrors.service_charge" class="text-danger small">{{ editItemFormErrors.service_charge }}</div>
                           </td>
                           <td class="p-0">
                             <input type="number" v-model="editItemForm.vat" class="form-control border-0" step="0.01" readonly>

@@ -33,7 +33,9 @@ class AppServiceProvider extends ServiceProvider
             SocialiteWasCalled::class,
             MicrosoftExtendSocialite::class
         );
-
-        URL::forceScheme('https');
+        // Force HTTPS and set the root URL for production
+        if ($this->app->environment('production')) {
+            URL::forceRootUrl(config('app.url'));
+        }
     }
 }
