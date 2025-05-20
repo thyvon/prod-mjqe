@@ -41,16 +41,14 @@ const submit = () => {
         <!-- BEGIN login-container -->
         <div class="login-container" style="max-width: 900px;">
             <!-- BEGIN login-header -->
-            <div class="login-header">
-                <div class="brand">
-                    <div class="d-flex align-items-center">
-                        <span class="logo"></span> <b>PROD</b> SYSTEM
-                    </div>
-                </div>
-                <div class="icon">
-                    <i class="fa fa-user"></i>
+        <div class="login-header justify-content-center d-flex pb-2">
+            <div class="brand">
+                <div class="d-flex align-items-center justify-content-center flex-column">
+                    <img src="https://mjqeducation.edu.kh//storage/photos/MJQEGroupLogo/mjqe-white-logo.png" alt="MJQ Logo" class="logo-size" />
+                    <span class="e-purchasing-text mt-2">E-PURCHASING system</span>
                 </div>
             </div>
+        </div>
             <!-- END login-header -->
 
             <!-- BEGIN login-content -->
@@ -227,6 +225,18 @@ const submit = () => {
 </template>
 
 <style scoped>
-/* Optional styling specific to this component */
+.logo-size {
+    width: 200px;
+    height: auto;
+}
+
+.e-purchasing-text {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    font-family: 'TW Cen MT', sans-serif;
+}
 </style>
 

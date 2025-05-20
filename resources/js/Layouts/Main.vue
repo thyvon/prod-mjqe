@@ -13,6 +13,13 @@ dayjs.extend(relativeTime)
 const loadingRef = ref(null);
 const { url } = usePage();
 const page = usePage();
+const isDarkMode = ref(false);
+
+const checkDarkMode = () => {
+  isDarkMode.value =
+    document.body.getAttribute('data-bs-theme') === 'dark' ||
+    document.documentElement.getAttribute('data-bs-theme') === 'dark';
+};
 
 // Nottification count
 const approvals = computed(() => page.props.auth.approvals || [])
@@ -101,12 +108,20 @@ const hideLoader = () => {
   if (loadingRef.value) loadingRef.value.isLoading = false;
 };
 
+let observer;
+
 onMounted(() => {
+  checkDarkMode();
+  observer = new MutationObserver(checkDarkMode);
+  observer.observe(document.body, { attributes: true, attributeFilter: ['data-bs-theme'] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
   document.addEventListener('inertia:start', showLoader);
   document.addEventListener('inertia:finish', hideLoader);
 });
 
 onUnmounted(() => {
+  if (observer) observer.disconnect();
   document.removeEventListener('inertia:start', showLoader);
   document.removeEventListener('inertia:finish', hideLoader);
 });
@@ -125,10 +140,19 @@ const logout = () => {
     <!-- BEGIN #header -->
     <div id="header" class="app-header">
       <div class="navbar-header">
-        <a href="/dashboard" class="navbar-brand">
-          <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="Logo">
-          <span class="brand-text"><b>| PROD</b></span>
-        </a>
+	<a href="/dashboard" class="navbar-brand d-flex align-items-center">
+	<img
+		:src="isDarkMode
+		? 'https://mjqeducation.edu.kh//storage/photos/MJQEGroupLogo/mjqe-white-logo.png'
+		: 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png'"
+		alt="Logo"
+		class="main-logo-img"
+	>
+	<span
+		class="brand-text"
+		:style="{ color: isDarkMode ? '#fff' : '#222' }"
+	><b>| E-Purchasing</b></span>
+	</a>
 
         <button type="button" class="navbar-mobile-toggler" data-toggle="app-sidebar-mobile">
             <span class="icon-bar"></span>
@@ -334,8 +358,9 @@ const logout = () => {
 <style scoped>
 /* Optional styling specific to this component */
 .brand-text {
-    font-size: 24px; /* Set specific font size */
-    margin-left: 8px;
+    font-size: 18px; /* Set specific font size */
+    margin-left: 5px;
+	margin-top: 13px;
 }
 
 .dropdown-menu {

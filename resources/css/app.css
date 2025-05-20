@@ -45,7 +45,7 @@ button {
 }
 
 body {
-    /* font-size: 12px; */
+    font-size: 14px !important;
     font-family: 'TW Cen MT','Khmer OS Content','Khmer OS Moul Light','Poppins', 'Montserrat', sans-serif;
 }
 

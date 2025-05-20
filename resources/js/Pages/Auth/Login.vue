@@ -52,17 +52,14 @@ onMounted(() => {
         <!-- Container -->
         <div class="login-container">
             <!-- Header -->
-            <div class="login-header">
-                <div class="brand">
-                    <div class="d-flex align-items-center">
-                        <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" alt="MJQ Logo" class="logo-size" />
-                        <span class="pt-4 ml-2"><b> | PROD</b></span>
-                    </div>
-                </div>
-                <div class="icon">
-                    <i class="fa fa-lock"></i>
+        <div class="login-header justify-content-center d-flex pb-2">
+            <div class="brand">
+                <div class="d-flex align-items-center justify-content-center flex-column">
+                    <img src="https://mjqeducation.edu.kh//storage/photos/MJQEGroupLogo/mjqe-white-logo.png" alt="MJQ Logo" class="logo-size" />
+                    <span class="e-purchasing-text mt-2">E-PURCHASING system</span>
                 </div>
             </div>
+        </div>
 
             <!-- Content -->
             <div class="login-content">
@@ -151,7 +148,13 @@ onMounted(() => {
     width: 200px;
     height: auto;
 }
-[data-bs-theme="dark"] .logo-size {
-    filter: invert(1);
+
+.e-purchasing-text {
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    font-family: 'TW Cen MT', sans-serif;
 }
 </style>
