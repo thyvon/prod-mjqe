@@ -14,11 +14,17 @@ const loadingRef = ref(null);
 const { url } = usePage();
 const page = usePage();
 const isDarkMode = ref(false);
+const isHeaderInverse = ref(false);
 
 const checkDarkMode = () => {
   isDarkMode.value =
     document.body.getAttribute('data-bs-theme') === 'dark' ||
     document.documentElement.getAttribute('data-bs-theme') === 'dark';
+};
+
+const checkHeaderInverse = () => {
+  const header = document.getElementById('header');
+  isHeaderInverse.value = header && header.getAttribute('data-bs-theme') === 'dark';
 };
 
 // Nottification count
@@ -110,11 +116,21 @@ const hideLoader = () => {
 
 let observer;
 
+let headerObserver;
+
 onMounted(() => {
   checkDarkMode();
   observer = new MutationObserver(checkDarkMode);
   observer.observe(document.body, { attributes: true, attributeFilter: ['data-bs-theme'] });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+  // Observe header for data-bs-theme changes
+  checkHeaderInverse();
+  const header = document.getElementById('header');
+  if (header) {
+    headerObserver = new MutationObserver(checkHeaderInverse);
+    headerObserver.observe(header, { attributes: true, attributeFilter: ['data-bs-theme'] });
+  }
 
   document.addEventListener('inertia:start', showLoader);
   document.addEventListener('inertia:finish', hideLoader);
@@ -122,6 +138,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (observer) observer.disconnect();
+  if (headerObserver) headerObserver.disconnect();
   document.removeEventListener('inertia:start', showLoader);
   document.removeEventListener('inertia:finish', hideLoader);
 });
@@ -138,21 +155,21 @@ const logout = () => {
   <div id="app" class="app app-header-fixed app-sidebar-fixed app-content-full-height">
     <Loading ref="loadingRef" />
     <!-- BEGIN #header -->
-    <div id="header" class="app-header">
+    <div id="header" class="app-header" data-bs-theme="dark">
       <div class="navbar-header">
-	<a href="/dashboard" class="navbar-brand d-flex align-items-center">
-	<img
-		:src="isDarkMode
-		? 'https://mjqeducation.edu.kh//storage/photos/MJQEGroupLogo/mjqe-white-logo.png'
-		: 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png'"
-		alt="Logo"
-		class="main-logo-img"
-	>
-	<span
-		class="brand-text"
-		:style="{ color: isDarkMode ? '#fff' : '#222' }"
-	><b>| E-Purchasing</b></span>
-	</a>
+		<a href="/dashboard" class="navbar-brand d-flex align-items-center">
+		<img
+			:src="isDarkMode || isHeaderInverse
+			? 'https://mjqeducation.edu.kh//storage/photos/MJQEGroupLogo/mjqe-white-logo.png'
+			: 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png'"
+			alt="Logo"
+			class="main-logo-img"
+		>
+		<span
+			class="brand-text"
+			:style="{ color: (isDarkMode || isHeaderInverse) ? '#fff' : '#222' }"
+		><b>| E-Purchasing</b></span>
+		</a>
 
         <button type="button" class="navbar-mobile-toggler" data-toggle="app-sidebar-mobile">
             <span class="icon-bar"></span>
