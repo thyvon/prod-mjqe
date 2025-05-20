@@ -400,7 +400,7 @@ onMounted(() => {
 
         <!-- Cash Request Table -->
         <div class="table-responsive">
-          <table id="cash-request" class="table table-bordered table-sm align-middle text-nowrap" width="100%">
+          <table id="cash-request" class="table table-bordered table-sm align-middle" width="100%">
           <thead>
             <tr>
               <th>#</th>
