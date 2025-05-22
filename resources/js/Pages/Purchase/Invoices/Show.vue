@@ -72,6 +72,7 @@
                   <th>VAT</th>
                   <th>Deposit</th>
                   <th>Grand Total</th>
+                  <th v-if="showRoundingColumn">Rounding</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,6 +93,14 @@
                   <td>{{ formatCurrency(item.vat, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.deposit, invoice.currency) }}</td>
                   <td>{{ formatCurrency(item.paid_amount, invoice.currency) }}</td>
+                  <td v-if="showRoundingColumn">
+                    <span v-if="item.rounding_method || (item.rounding_digits && item.rounding_digits > 0)">
+                      <span v-if="item.rounding_method">{{ item.rounding_method.toUpperCase() }}</span>
+                      <span v-if="item.rounding_digits && item.rounding_digits > 0">
+                        <template v-if="item.rounding_method">, </template>{{ item.rounding_digits }}
+                      </span>
+                    </span>
+                  </td>
                 </tr>
                 <tr class="no-datatable fw-bold">
                   <td colspan="8" class="text-end"><strong>TOTAL</strong></td>
@@ -103,6 +112,7 @@
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.vat) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.deposit) || 0), 0), invoice.currency) }}</td>
                   <td>{{ formatCurrency(invoice.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0), invoice.currency) }}</td>
+                   <th v-if="showRoundingColumn"></th>
                 </tr>
               </tbody>
             </table>
@@ -133,15 +143,23 @@ import { formatCurrency, formatDate, getTransactionType, getPaymentType, getFile
 const { props } = usePage();
 const invoice = ref(props.invoice);
 
+const showRoundingColumn = computed(() =>
+  invoice.value.items.some(
+    item =>
+      (item.rounding_method && item.rounding_method !== '') ||
+      (item.rounding_digits && item.rounding_digits > 0)
+  )
+);
+
 console.log('Fetched invoice:', invoice.value); // Add logging to see the fetched invoice data
 
 const goBack = () => {
   window.history.back();
 };
 
-const navigateToPrint = () => {
-  router.visit(`/purchase/invoices/${invoice.value.id}/print`); // Update route to navigate to Print page
-};
+// const navigateToPrint = () => {
+//   router.visit(`/purchase/invoices/${invoice.value.id}/print`); // Update route to navigate to Print page
+// };
 
 // const initializeDataTable = (selector) => {
 //   const table = $(selector);

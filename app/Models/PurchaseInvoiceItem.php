@@ -40,6 +40,8 @@ class PurchaseInvoiceItem extends Model
         'total_khr',
         // 'due_amount',
         'paid_amount',
+        'rounding_method',
+        'rounding_digits',
         'requested_by',
         'campus',
         'division',

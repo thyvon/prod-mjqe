@@ -554,6 +554,8 @@ class InvoiceController extends Controller
             'items.*.return' => 'nullable|numeric',
             'items.*.retention' => 'nullable|numeric',
             'items.*.paid_amount' => 'required|numeric',
+            'items.*.rounding_method' => 'nullable|string',
+            'items.*.rounding_digits' => 'nullable|integer',
             'items.*.requested_by' => 'nullable|integer|exists:users,id',
             'items.*.campus' => 'required|string',
             'items.*.division' => 'required|string',
@@ -696,7 +698,6 @@ class InvoiceController extends Controller
                 $itemData['item_code'] = $prItem->product_id;
                 $itemData['requested_by'] = $prItem->purchaseRequest->request_by; // Use relationship to get requested_by
             }
-
             if (isset($itemData['po_item'])) {
                 $poItem = PoItems::find($itemData['po_item']);
                 if ($poItem) {
@@ -751,6 +752,8 @@ class InvoiceController extends Controller
             $itemData['discount_total'] = $invoice->discount_total;
 
             $itemData['deposit'] = $itemData['deposit'] ?? 0;
+            $itemData['rounding_method'] = $itemData['rounding_method'] ?? '';
+            $itemData['rounding_digits'] = $itemData['rounding_digits'] ?? 0;
 
             if ($existingItems && isset($itemData['id']) && $existingItems->has($itemData['id'])) {
                 $existingItem = $existingItems->get($itemData['id']);

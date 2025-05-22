@@ -120,6 +120,20 @@ watch(() => form.discount_total, () => {
   invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
 });
 
+watch(
+  () => form.items.map(item => [
+    item.qty, item.unit_price, item.discount, item.return, item.retention,
+    item.vat, item.service_charge, item.deposit, item.rounding_method, item.rounding_digits
+  ]),
+  () => {
+    form.items.forEach(item => {
+      item.paid_amount = calculateGrandTotal(item);
+    });
+    invoiceItemsTableInstance.value.clear().rows.add(form.items).draw();
+  },
+  { deep: true }
+);
+
 watch(() => [form.service_charge, form.discount_total], () => {
   form.items.forEach(item => {
     item.paid_amount = calculateGrandTotal(item);
@@ -152,6 +166,8 @@ const editItemForm = reactive({
   po_number: '',
   item_code: '',
   paid_amount: 0.0,
+  rounding_method: '',
+  rounding_digits: 0,
   total_price: 0,
   uom: '',
   product_price: 0.0,
@@ -188,23 +204,35 @@ const calculateGrandTotal = (item) => {
     retention = 0,
     vat = 0,
     service_charge = 0,
-    deposit = 0
+    deposit = 0,
+    rounding_method = '',
+    rounding_digits = 0
   } = item;
 
+  let grandTotal = 0;
   if (form.payment_type === 2) {
-    // Deposit-based payment
     const vatAmount = (deposit * vat) / 100;
-    const grandTotal = parseFloat(deposit) + vatAmount - parseFloat(retention) - parseFloat(returnAmount);
-    return grandTotal.toFixed(2);
+    grandTotal = parseFloat(deposit) + vatAmount - parseFloat(retention) - parseFloat(returnAmount);
   } else {
-    // Regular calculation
     const total_price = qty * unit_price;
     const vatAmount = ((total_price - discount) * vat) / 100;
-    const grandTotal = total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge);
-    return grandTotal.toFixed(2);
+    grandTotal = total_price - discount - returnAmount - retention + vatAmount + parseFloat(service_charge);
   }
-};
 
+  // Apply rounding if specified
+  if (rounding_method && rounding_digits >= 0) {
+    const factor = Math.pow(10, rounding_digits);
+    if (rounding_method === 'round') {
+      grandTotal = Math.round(grandTotal * factor) / factor;
+    } else if (rounding_method === 'ceil') {
+      grandTotal = Math.ceil(grandTotal * factor) / factor;
+    } else if (rounding_method === 'floor') {
+      grandTotal = Math.floor(grandTotal * factor) / factor;
+    }
+  }
+
+  return grandTotal.toFixed(4);
+};
 
 const calculateTotalPrice = (item) => {
   const { qty = 0, unit_price = 0 } = item;
@@ -226,11 +254,12 @@ watch(
     editItemForm.retention,
     editItemForm.vat,
     editItemForm.service_charge,
-    editItemForm.deposit
+    editItemForm.deposit,
+    editItemForm.rounding_method,   // <-- Add this
+    editItemForm.rounding_digits    // <-- Add this
   ],
   () => {
     const grandTotal = calculateGrandTotal(editItemForm);
-    // Optionally assign it somewhere:
     editItemForm.paid_amount = grandTotal;
   },
   { immediate: true }
@@ -249,7 +278,7 @@ watch(
 const grandTotal = computed(() => {
   const total = form.items.reduce((sum, item) => sum + (parseFloat(item.paid_amount) || 0), 0);
   const grandTotal = total;
-  return isNaN(grandTotal) ? '0.00' : grandTotal.toFixed(2);
+  return isNaN(grandTotal) ? '0.0000' : grandTotal.toFixed(4);
 });
 
 const totalServiceCharge = computed(() => {
@@ -260,7 +289,7 @@ const formErrors = reactive({});
 const editItemFormErrors = reactive({});
 
 const formatNumber = (value, decimalPlaces = 2) => {
-  return isNaN(parseFloat(value)) ? '0.00' : parseFloat(value).toFixed(decimalPlaces);
+  return isNaN(parseFloat(value)) ? '0.0000' : parseFloat(value).toFixed(decimalPlaces);
 };
 
 const prepareInvoiceItems = (items) => {
@@ -602,6 +631,8 @@ const selectPrItem = (prItem) => {
       retention: 0,
       service_charge: service_charge,
       paid_amount: paid_amount,
+      rounding_method: '',
+      rounding_digits: 0, 
       campus: prItem.campus,
       division: prItem.division,
       department: prItem.department,
@@ -671,6 +702,8 @@ const selectPoItem = (poItem) => {
       retention: 0,
       service_charge: service_charge,
       paid_amount: paid_amount,
+      rounding_method: '',   // <-- Add this
+      rounding_digits: 0, 
       campus: poItem.campus,
       division: poItem.division,
       department: poItem.department,
@@ -810,6 +843,8 @@ const editInvoice = async (invoiceId) => {
         return: formatNumber(item.return),
         retention: formatNumber(item.retention),
         paid_amount: formatNumber(item.paid_amount),
+        rounding_method: item.rounding_method || '',      // <-- Ensure this is mapped
+        rounding_digits: item.rounding_digits ?? 0,  // <-- Ensure this is mapped
         campus: item.campus,
         division: item.division,
         department: item.department,
@@ -2243,6 +2278,8 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                           <th>Retention</th>
                           <th>Deposit</th>
                           <th>Grand Total</th>
+                          <th>Rounding Method</th>
+                          <th>Rounding Digits</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2300,6 +2337,19 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                           <td class="p-0">
                             <input type="number" v-model="editItemForm.paid_amount" class="form-control border-0" step="0.0001" readonly>
                             <div v-if="editItemFormErrors.paid_amount" class="text-danger small">{{ editItemFormErrors.paid_amount }}</div>
+                          </td>
+                          <td class="p-0">
+                            <select v-model="editItemForm.rounding_method" class="form-control border-0">
+                              <option value="">None</option>
+                              <option value="round">Round</option>
+                              <option value="roundup">Round Up</option>
+                              <option value="rounddown">Round Down</option>
+                              <option value="ceil">Ceil</option>
+                              <option value="floor">Floor</option>
+                            </select>
+                          </td>
+                          <td class="p-0">
+                            <input type="number" v-model="editItemForm.rounding_digits" class="form-control border-0" min="0" max="6">
                           </td>
                         </tr>
                       </tbody>

@@ -1,6 +1,7 @@
 export const formatCurrency = (value, currency) => {
   const symbol = currency === 1 ? '$' : '៛';
-  return `${symbol} ${parseFloat(value).toFixed(2)}`;
+  const num = isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+  return `${symbol} ${num.toFixed(4)}`;
 };
 
 export const formatDate = (date) => {
