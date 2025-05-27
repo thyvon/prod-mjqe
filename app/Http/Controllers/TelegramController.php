@@ -112,16 +112,23 @@ class TelegramController extends Controller
             // Try to find user by telegram_id
             $user = User::where('telegram_id', $client->chat_id)->first();
 
-            // Build profile URL if user and profile exists
-            $photo_url = null;
-            if ($user && $user->profile) {
-                $photo_url = asset('storage/' . $user->profile);
+            // If user exists, use their name and profile
+            if ($user) {
+                $name = $user->name;
+                $photo_url = $user->profile ? asset('storage/' . $user->profile) : null;
+            } else {
+                // Otherwise, get the latest name and photo_url from Telegrams table
+                $latest = Telegram::where('chat_id', $client->chat_id)
+                    ->orderByDesc('id')
+                    ->first();
+                $name = $latest ? $latest->name : null;
+                $photo_url = $latest ? $latest->photo_url : null;
             }
 
             $result[] = [
-                'chat_id'    => $client->chat_id,
-                'name'       => $user ? $user->name : null,
-                'photo_url'  => $photo_url,
+                'chat_id'   => $client->chat_id,
+                'name'      => $name,
+                'photo_url' => $photo_url,
             ];
         }
 
