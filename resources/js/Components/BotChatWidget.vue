@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex h-100 bot-chat-widget-fixed">
+  <div class="d-flex h-100">
     <!-- Sidebar: List of clients -->
     <div class="bg-light border-right p-2" style="width: 220px; overflow-y: auto;">
       <input v-model="search" type="text" class="form-control mb-3" placeholder="Search user..." />
@@ -179,11 +179,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.bot-chat-widget-fixed {
-  height: 600px;
-  min-height: 600px;
-  max-height: 600px;
-}
 .client-item {
   transition: background 0.15s, box-shadow 0.15s;
 }

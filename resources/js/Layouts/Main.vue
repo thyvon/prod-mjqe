@@ -269,7 +269,7 @@ const logout = () => {
       <div id="footer" class="app-footer mt-auto">
         &copy; 2024 PROD MJQE All Right Reserved
       </div>
-	    <div>
+      <div>
         <button
           class="btn btn-primary btn-lg rounded-circle shadow"
           style="position: fixed; bottom: 30px; right: 30px; z-index: 1050;"
@@ -283,7 +283,7 @@ const logout = () => {
             v-if="showBotChat"
             style="position: fixed; bottom: 90px; right: 30px; z-index: 1060; width: 420px; max-width: 100vw;"
           >
-            <div class="card shadow-lg">
+            <div class="card shadow-lg" style="height: 600px; display: flex; flex-direction: column;">
               <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
                 <span><i class="fa fa-robot mr-2"></i>Telegram Bot Chat</span>
                 <button class="btn btn-sm btn-danger" @click="showBotChat = false">
