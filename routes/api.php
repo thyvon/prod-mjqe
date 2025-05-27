@@ -39,3 +39,4 @@ Route::get('/telegram/history/{chat_id}', [TelegramController::class, 'getHistor
 Route::get('/telegram/clients', [TelegramController::class, 'getClients']);
 Route::get('/telegram/unread-counts', [TelegramController::class, 'unreadCounts']);
 Route::post('/telegram/mark-read', [TelegramController::class, 'markRead']);
+Route::post('/telegram/webhook', [TelegramController::class, 'webhook']);
