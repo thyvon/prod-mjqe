@@ -1,0 +1,71 @@
+/* @tailwind base; */
+/* @tailwind components; */
+@tailwind utilities;
+
+/* Center all modals */
+.modal-content {
+  display: flex;
+  flex-direction: column; /* Ensure the modal body and footer stack properly */
+  max-height: calc(100vh - 1rem); /* Prevent overflow outside the viewport */
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030; /* Ensure it stays above the body content */
+}
+
+.modal-body {
+  overflow-y: auto; /* Enable vertical scrolling */
+  flex-grow: 1; /* Allow the body to take up remaining space */
+}
+
+.form-control,
+select.form-select,
+.select2-container .select2-selection,
+.panel,
+.panel-heading,
+button {
+  border-radius: 0 !important;
+}
+
+@font-face {
+  font-family: 'Tw Cen MT';
+  src: url('/Fonts/TwCenMT.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Khmer OS Content';
+  src: url('/Fonts/KhmerOScontent.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Khmer OS Moul Light';
+  src: url('/Fonts/KhmerOSmuollight.woff2') format('woff2');
+}
+
+body {
+    /* font-size: 14px !important; */
+    font-family: 'TW Cen MT','Khmer OS Content','Khmer OS Moul Light','Poppins', 'Montserrat', sans-serif;
+}
+
+#demo-upload {
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+}
+
+.attachment-thumbnail {
+  position: relative;
+}
+
+.attachment-thumbnail .btn-danger {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  padding: 2px 5px;
+  border-radius: 50%;
+  font-size: 8px;
+}
