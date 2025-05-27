@@ -31,6 +31,7 @@ class User extends Authenticatable
         'microsoft_token',
         'microsoft_refresh_token',
         'microsoft_token_expires', // Added
+        'telegram_id', // Added
     ];
 
     /**

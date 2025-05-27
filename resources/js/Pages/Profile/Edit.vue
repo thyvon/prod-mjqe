@@ -37,6 +37,7 @@ const profileForm = useForm({
     department: user.department || '',
     phone: user.phone || '',
     extension: user.extension || '',
+    telegram_id: user.telegram_id || '',
 });
 
 const passwordForm = useForm({
@@ -374,6 +375,20 @@ onMounted(async () => {
                                             />
                                             <label for="extension">Extension</label>
                                             <InputError class="text-danger mt-2" :message="profileForm.errors.extension" />
+                                        </div>
+                                    </div>
+                                     <div class="col-md-6">
+                                        <div class="form-floating mb-3">
+                                        <TextInput
+                                            id="telegram_id"
+                                            type="text"
+                                            class="form-control"
+                                            v-model="profileForm.telegram_id"
+                                            autocomplete="telegram_id"
+                                            placeholder="Telegram ID"
+                                        />
+                                        <label for="telegram_id">Telegram ID</label>
+                                        <InputError class="text-danger mt-2" :message="profileForm.errors.telegram_id" />
                                         </div>
                                     </div>
                                 </div>

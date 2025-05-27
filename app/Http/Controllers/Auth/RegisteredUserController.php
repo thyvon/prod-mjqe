@@ -42,6 +42,7 @@ class RegisteredUserController extends Controller
             'department' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:255',
             'extension' => 'nullable|string|max:255',
+            'telegram_id' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -55,6 +56,7 @@ class RegisteredUserController extends Controller
             'department' => $request->department,
             'phone' => $request->phone,
             'extension' => $request->extension,
+            'telegram_id' => $request->telegram_id,
         ]);
 
         event(new Registered($user));

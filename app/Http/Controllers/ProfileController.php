@@ -40,6 +40,7 @@ class ProfileController extends Controller
             'department' => $request->input('department'),
             'phone' => $request->input('phone'),
             'extension' => $request->input('extension'),
+            'telegram_id' => $request->input('telegram_id'),
         ]);
 
         if ($request->user()->isDirty('email')) {
