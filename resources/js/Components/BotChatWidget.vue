@@ -31,7 +31,9 @@
             {{ client.name || client.chat_id }}
           </span>
         </div>
-        <span v-if="client.unreadCount > 0" class="badge badge-danger ml-2">{{ client.unreadCount }}</span>
+        <span v-if="client.unreadCount > 0" class="badge bg-danger ml-2">
+          {{ client.unreadCount }}
+        </span>
       </div>
     </div>
     <!-- Chat area -->
