@@ -269,32 +269,32 @@ const logout = () => {
       <div id="footer" class="app-footer mt-auto">
         &copy; 2024 PROD MJQE All Right Reserved
       </div>
-      <div>
-        <button
-          class="btn btn-primary btn-lg rounded-circle shadow"
-          style="position: fixed; bottom: 30px; right: 30px; z-index: 1050;"
-          @click="showBotChat = true"
-          v-if="!showBotChat"
+    <div>
+      <button
+        class="btn btn-primary btn-lg rounded-circle shadow"
+        style="position: fixed; bottom: 30px; right: 30px; z-index: 1050;"
+        @click="showBotChat = true"
+        v-if="!showBotChat"
+      >
+        <i class="fa fa-robot"></i>
+      </button>
+      <transition name="fade">
+        <div
+          v-if="showBotChat"
+          class="bot-chat-popup"
         >
-          <i class="fa fa-robot"></i>
-        </button>
-        <transition name="fade">
-          <div
-            v-if="showBotChat"
-            style="position: fixed; bottom: 90px; right: 30px; z-index: 1060; width: 420px; max-width: 100vw;"
-          >
-            <div class="card shadow-lg" style="height: 600px; display: flex; flex-direction: column;">
-              <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-                <span><i class="fa fa-robot mr-2"></i>Telegram Bot Chat</span>
-                <button class="btn btn-sm btn-danger" @click="showBotChat = false">
-                  <i class="fa fa-times"></i>
-                </button>
-              </div>
-              <BotChatWidget />
+          <div class="card shadow-lg bot-chat-card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+              <span><i class="fa fa-robot mr-2"></i>Telegram Bot Chat</span>
+              <button class="btn btn-sm btn-danger" @click="showBotChat = false">
+                <i class="fa fa-times"></i>
+              </button>
             </div>
+            <BotChatWidget />
           </div>
-        </transition>
-      </div>
+        </div>
+      </transition>
+    </div>
     </div>
 	<a href="javascript:;" class="btn btn-icon btn-circle btn-theme btn-scroll-to-top" data-toggle="scroll-to-top">
 		<i class="fa fa-angle-up"></i>
@@ -435,5 +435,34 @@ const logout = () => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+.bot-chat-popup {
+  position: fixed;
+  bottom: 90px;
+  right: 30px;
+  z-index: 1060;
+  width: 420px;
+  max-width: 100vw;
+}
+.bot-chat-card {
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 600px) {
+  .bot-chat-popup {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    z-index: 1060;
+  }
+  .bot-chat-card {
+    height: 100vh;
+    border-radius: 0;
+  }
 }
 </style>

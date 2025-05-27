@@ -1,7 +1,7 @@
 <template>
-  <div class="d-flex h-100">
+  <div class="bot-chat-widget d-flex h-100">
     <!-- Sidebar: List of clients -->
-    <div class="bg-light border-right p-2" style="width: 220px; overflow-y: auto;">
+    <div class="sidebar bg-light border-right p-2">
       <input v-model="search" type="text" class="form-control mb-3" placeholder="Search user..." />
       <div
         v-for="client in filteredClients"
@@ -37,7 +37,7 @@
       </div>
     </div>
     <!-- Chat area -->
-    <div class="card h-100 d-flex flex-column flex-grow-1" style="max-width: 480px; width: 480px; height: 600px;">
+    <div class="chat-area card h-100 d-flex flex-column flex-grow-1">
       <div class="card-body overflow-auto chat-scroll" ref="chatContainer">
         <div v-for="msg in messages" :key="msg.id || msg.created_at" class="mb-3">
           <div :class="['d-inline-block px-3 py-2 rounded', msg.direction === 'incoming' ? 'bg-light text-dark' : 'bg-primary text-white float-right']">
@@ -87,7 +87,6 @@ const search = ref('')
 const fetchClients = async () => {
   const { data } = await axios.get('/api/telegram/clients')
   clients.value = data
-  // Optionally auto-select the first client
   if (data.length && !chatId.value) {
     selectClient(data[0].chat_id)
   }
@@ -95,7 +94,6 @@ const fetchClients = async () => {
 
 const fetchUnreadCounts = async () => {
   const { data } = await axios.get('/api/telegram/unread-counts')
-  // Merge unread counts into clients
   clients.value = clients.value.map(client => {
     const found = data.find(c => c.chat_id === client.chat_id)
     return { ...client, unreadCount: found ? found.unread_count : 0 }
@@ -114,7 +112,6 @@ const fetchHistory = async () => {
       chatContainer.value.scrollTop = chatContainer.value.scrollHeight
     }
   })
-  // Mark messages as read after loading
   await axios.post('/api/telegram/mark-read', { chat_id: chatId.value })
   fetchUnreadCounts()
 }
@@ -179,6 +176,57 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.bot-chat-widget {
+  height: 600px;
+  min-height: 600px;
+  max-height: 600px;
+  max-width: 100vw;
+}
+.sidebar {
+  width: 220px;
+  overflow-y: auto;
+}
+.chat-area {
+  max-width: 480px;
+  width: 480px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.card-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: 0.5rem;
+}
+.card-footer {
+  flex-shrink: 0;
+  /* background: #fff; */
+}
+@media (max-width: 600px) {
+  .bot-chat-widget {
+    flex-direction: column !important;
+    height: 100vh;
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+  .sidebar {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+  }
+  .chat-area {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    height: 100%;
+  }
+  .card-body {
+    max-height: 50vh;
+  }
+}
 .client-item {
   transition: background 0.15s, box-shadow 0.15s;
 }
@@ -197,7 +245,6 @@ onMounted(async () => {
   justify-content: center;
   font-size: 18px;
 }
-/* Make chat history scrollable and fit the widget */
 .chat-scroll {
   max-height: 420px;
   min-height: 100px;
