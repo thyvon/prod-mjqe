@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use App\Models\Telegram;
 use App\Models\User;
 
@@ -102,27 +103,28 @@ class TelegramController extends Controller
 
     public function getClients()
     {
-        $clients = Telegram::select('chat_id')
+        $latestMessages = Telegram::select('chat_id', DB::raw('MAX(id) as latest_id'))
             ->whereNotNull('chat_id')
-            ->groupBy('chat_id')
+            ->where('direction', 'incoming') // only incoming messages
+            ->groupBy('chat_id');
+
+        $clients = Telegram::joinSub($latestMessages, 'latest_messages', function ($join) {
+                $join->on('telegrams.id', '=', 'latest_messages.latest_id');
+            })
+            ->orderByDesc(DB::raw('telegrams.is_read = 0')) // unread first
+            ->orderByDesc('telegrams.id') // then latest messages
             ->get();
 
         $result = [];
         foreach ($clients as $client) {
-            // Try to find user by telegram_id
             $user = User::where('telegram_id', $client->chat_id)->first();
 
-            // If user exists, use their name and profile
             if ($user) {
                 $name = $user->name;
                 $photo_url = $user->profile ? asset('storage/' . $user->profile) : null;
             } else {
-                // Otherwise, get the latest name and photo_url from Telegrams table
-                $latest = Telegram::where('chat_id', $client->chat_id)
-                    ->orderByDesc('id')
-                    ->first();
-                $name = $latest ? $latest->name : null;
-                $photo_url = $latest ? $latest->photo_url : null;
+                $name = $client->name;
+                $photo_url = $client->photo_url;
             }
 
             $result[] = [
