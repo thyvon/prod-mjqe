@@ -47,7 +47,7 @@ class TelegramController extends Controller
     }
 
     // Ask OpenRouter API for AI response
-    private function askOpenRouter(string $prompt): string
+    private function askOpenRouter(array $messages): string
     {
         $apiKey = env('OPENROUTER_API_KEY');
 
@@ -55,11 +55,9 @@ class TelegramController extends Controller
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'openai/gpt-4.1',
-            'messages' => [
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'max_tokens' => 800, // prevent credit error
+            'model' => 'openai/gpt-4.1',  // or 'openai/gpt-4o' if preferred
+            'messages' => $messages,
+            'max_tokens' => 800,
         ]);
 
         if ($response->successful()) {
@@ -68,6 +66,7 @@ class TelegramController extends Controller
 
         return "⚠️ API error: " . $response->body();
     }
+
 
     // Receive incoming message from Telegram webhook, save, get AI reply, respond, save outgoing
     public function webhook(Request $request)
@@ -81,114 +80,7 @@ class TelegramController extends Controller
             $lastName = $msg['chat']['last_name'] ?? '';
             $name = trim($firstName . ' ' . $lastName);
 
-            // Try to get profile photo URL (optional)
-            $photoUrl = null;
-            try {
-                $photosResp = Http::get("{$this->baseUrl}/getUserProfilePhotos", [
-                    'user_id' => $chatId,
-                    'limit' => 1
-                ]);
-                $photos = $photosResp->json();
-
-                if (!empty($photos['result']['photos'][0][0]['file_id'])) {
-                    $fileId = $photos['result']['photos'][0][0]['file_id'];
-                    $fileResp = Http::get("{$this->baseUrl}/getFile", [
-                        'file_id' => $fileId
-                    ]);
-                    $fileData = $fileResp->json();
-                    if (!empty($fileData['result']['file_path'])) {
-                        $photoUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $fileData['result']['file_path'];
-                    }
-                }
-            } catch (\Exception $e) {
-                // Silently ignore errors fetching photo
-            }
-
-            $messageText = null;
-            $fileUrl = null;
-            $type = 'text'; // default
-
-            // Handle text message
-            if (isset($msg['text'])) {
-                $messageText = $msg['text'];
-            }
-            // Handle photo message
-            elseif (isset($msg['photo'])) {
-                $type = 'photo';
-
-                // Get largest photo size
-                $photoArray = $msg['photo'];
-                $largestPhoto = end($photoArray);
-                $fileId = $largestPhoto['file_id'];
-
-                // Get file path from Telegram API
-                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                    'file_id' => $fileId
-                ]);
-                $fileData = $fileResponse->json();
-
-                if (!empty($fileData['result']['file_path'])) {
-                    $filePath = $fileData['result']['file_path'];
-                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
-                }
-
-                $messageText = "[Photo]";
-            }
-            // Handle document message
-            elseif (isset($msg['document'])) {
-                $type = 'document';
-
-                $fileId = $msg['document']['file_id'];
-
-                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                    'file_id' => $fileId
-                ]);
-                $fileData = $fileResponse->json();
-
-                if (!empty($fileData['result']['file_path'])) {
-                    $filePath = $fileData['result']['file_path'];
-                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
-                }
-
-                $messageText = "[Document]";
-            }
-            // Handle video message
-            elseif (isset($msg['video'])) {
-                $type = 'video';
-
-                $fileId = $msg['video']['file_id'];
-
-                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                    'file_id' => $fileId
-                ]);
-                $fileData = $fileResponse->json();
-
-                if (!empty($fileData['result']['file_path'])) {
-                    $filePath = $fileData['result']['file_path'];
-                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
-                }
-
-                $messageText = "[Video]";
-            }
-            // Handle audio message
-            elseif (isset($msg['audio'])) {
-                $type = 'audio';
-
-                $fileId = $msg['audio']['file_id'];
-
-                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                    'file_id' => $fileId
-                ]);
-                $fileData = $fileResponse->json();
-
-                if (!empty($fileData['result']['file_path'])) {
-                    $filePath = $fileData['result']['file_path'];
-                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
-                }
-
-                $messageText = "[Audio]";
-            }
-            // Other media types you can add similarly...
+            // (Your existing code for getting photo URL and message text/type...)
 
             // Save incoming message to DB
             Telegram::create([
@@ -202,8 +94,32 @@ class TelegramController extends Controller
                 'is_read' => false,
             ]);
 
-            // Get AI reply from OpenRouter
-            $aiReply = $this->askOpenRouter($messageText ?? '');
+            // Retrieve last 15 messages for this chat for context (adjust limit as needed)
+            $history = Telegram::where('chat_id', $chatId)
+                ->orderBy('created_at', 'desc')
+                ->limit(15)
+                ->get()
+                ->reverse() // to get chronological order oldest->newest
+                ->map(function ($msg) {
+                    return [
+                        'role' => $msg->direction === 'incoming' ? 'user' : 'assistant',
+                        'content' => $msg->message,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            // Append the current user message as the last entry (optional, since saved already)
+            // Usually, it's already in history, so no need to add again.
+
+            // Optionally, add system prompt at the start
+            array_unshift($history, [
+                'role' => 'system',
+                'content' => 'You are a helpful assistant.',
+            ]);
+
+            // Get AI reply from OpenRouter with full chat history
+            $aiReply = $this->askOpenRouter($history);
 
             // Send AI reply to Telegram user
             Http::post("{$this->baseUrl}/sendMessage", [
@@ -226,8 +142,7 @@ class TelegramController extends Controller
 
         return response()->json(['ok' => true]);
     }
-
-
+    
     // Get chat history for a specific chat_id
     public function getHistory($chat_id)
     {
