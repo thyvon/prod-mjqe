@@ -45,7 +45,6 @@ class TelegramController extends Controller
 
     private function askOpenRouterWithHistory(string $chatId, array $messages): string
     {
-        $apiKey = config('services.openrouter.api_key');
         $models = [
             'meta-llama/llama-4-maverick:free',
             'deepseek/deepseek-chat:free',
@@ -57,7 +56,22 @@ class TelegramController extends Controller
             $messages[] = ['role' => 'user', 'content' => 'Hello'];
         }
 
+        // Map models to their API keys (match exact model string)
+        $apiKeyMap = [
+            'deepseek/deepseek-chat:free' => config('services.openrouter.keys.deepseek-chat'),
+            'deepseek/deepseek-r1:free' => config('services.openrouter.keys.deepseek-r1'),
+            'mistralai/devstral-small:free' => config('services.openrouter.keys.mistralai'),
+            'meta-llama/llama-4-maverick:free' => config('services.openrouter.keys.meta-llama'),
+        ];
+
         foreach ($models as $model) {
+            $apiKey = $apiKeyMap[$model] ?? null;
+
+            if (!$apiKey) {
+                \Log::warning("No API key found for model {$model}. Skipping.");
+                continue;
+            }
+
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$apiKey}",
                 'Content-Type' => 'application/json',
@@ -67,22 +81,20 @@ class TelegramController extends Controller
                 'max_tokens' => 800,
             ]);
 
-            // ✅ Success
             if ($response->successful()) {
                 return $response['choices'][0]['message']['content']
                     ?? "🤖 Sorry, I couldn't generate a response.";
             }
 
-            // 🟡 Only retry if it's rate-limited
+            \Log::warning("OpenRouter API call failed for model {$model} with status {$response->status()}: " . $response->body());
+
             if ($response->status() !== 429) {
-                break; // stop retrying on other errors
+                break; // Stop retrying on errors other than rate limit
             }
         }
 
-        // ❌ All models failed
         return "⚠️ AI error: " . ($response['error']['message'] ?? $response->body());
     }
-
 
     public function webhook(Request $request)
     {

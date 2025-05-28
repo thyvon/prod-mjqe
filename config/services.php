@@ -38,12 +38,17 @@ return [
         'site_id' => env('MICROSOFT_SITE_ID'),
         'drive_id' => env('MICROSOFT_DRIVE_ID'),
     ],
-    
+
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
     ],
 
     'openrouter' => [
-        'api_key' => env('OPENROUTER_API_KEY'),
+        'keys' => [
+            'deepseek-chat' => env('OPENROUTER_API_KEY_DEEPSEEK_CHAT'),
+            'deepseek-r1' => env('OPENROUTER_API_KEY_DEEPSEEK_R1'),
+            'mistralai' => env('OPENROUTER_API_KEY_MISTRALAI'),
+            'meta-llama' => env('OPENROUTER_API_KEY_META_LLAMA'),
+        ],
     ],
 ];
