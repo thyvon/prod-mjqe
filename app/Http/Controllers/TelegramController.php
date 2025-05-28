@@ -57,7 +57,7 @@ class TelegramController extends Controller
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
             'model' => 'meta-llama/llama-4-maverick:free',
             'messages' => $messages,
-            'max_tokens' => 800,
+            // 'max_tokens' => 800,
         ]);
 
         if ($response->successful()) {
