@@ -55,10 +55,11 @@ class TelegramController extends Controller
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'openai/gpt-4o',
+            'model' => 'meta-llama/llama-3-8b-instruct',
             'messages' => [
                 ['role' => 'user', 'content' => $prompt],
             ],
+            'max_tokens' => 800, // prevent credit error
         ]);
 
         if ($response->successful()) {
