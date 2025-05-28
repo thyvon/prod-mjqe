@@ -57,7 +57,7 @@
       </div>
       <div class="card-footer">
         <form @submit.prevent="sendMessage" class="d-flex flex-column">
-          <textarea v-model="newMessage" rows="2" class="form-control mb-2" placeholder="Type a message..." :disabled="sending || !chatId"></textarea>
+          <textarea v-model="newMessage" rows="6" class="form-control mb-2" placeholder="Type a message..." :disabled="sending || !chatId"></textarea>
           <div class="d-flex justify-content-end">
             <button class="btn btn-primary" type="submit" :disabled="sending || !newMessage.trim() || !chatId">
               <span v-if="sending">Sending...</span>
