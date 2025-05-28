@@ -67,16 +67,15 @@ class TelegramController extends Controller
         $lastErrorMessage = null;
 
         foreach ($models as $model) {
-            // Check if model is rate limited recently
+            // Skip if cached as rate limited
             if (Cache::has("model_rate_limited_{$model}")) {
                 \Log::info("Skipping model {$model} due to recent rate limiting.");
-                continue;
+                continue; // skip this model
             }
 
             $apiKey = $apiKeyMap[$model] ?? null;
-
             if (!$apiKey) {
-                \Log::warning("No API key found for model {$model}. Skipping.");
+                \Log::warning("No API key for model {$model}. Skipping.");
                 continue;
             }
 
@@ -92,21 +91,28 @@ class TelegramController extends Controller
             if ($response->successful()) {
                 $content = $response['choices'][0]['message']['content'] ?? null;
                 if ($content) {
-                    return $content;
+                    return $content;  // success, return immediately
                 } else {
-                    $lastErrorMessage = "🤖 Sorry, no content returned from model {$model}.";
+                    $lastErrorMessage = "🤖 No content returned from model {$model}.";
                     \Log::warning($lastErrorMessage);
-                }
-            } else {
-                $errorMsg = $response['error']['message'] ?? $response->body();
-                $lastErrorMessage = "OpenRouter API call failed for model {$model} with status {$response->status()}: " . $errorMsg;
-                \Log::warning($lastErrorMessage);
-
-                // If rate limited, cache for 10 minutes to skip next attempts
-                if ($response->status() == 429) {
-                    Cache::put("model_rate_limited_{$model}", true, now()->addMinutes(10));
+                    continue;  // try next model
                 }
             }
+
+            // Handle errors
+            $errorMsg = $response['error']['message'] ?? $response->body();
+            $status = $response->status();
+            $lastErrorMessage = "OpenRouter API call failed for model {$model} with status {$status}: {$errorMsg}";
+            \Log::warning($lastErrorMessage);
+
+            if ($status == 429) {
+                // Mark this model as rate-limited, skip next attempts for 10 minutes
+                Cache::put("model_rate_limited_{$model}", true, now()->addMinutes(10));
+                continue;  // skip to next model
+            }
+
+            // For other errors, break (optional: or continue if you want)
+            // break; // <-- comment this out if you want to continue trying other models even on other errors
         }
 
         return "⚠️ AI error: " . ($lastErrorMessage ?? "No models responded successfully.");
