@@ -55,7 +55,7 @@ class TelegramController extends Controller
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'openai/gpt-4.1',
+            'model' => 'meta-llama/llama-4-maverick:free',
             'messages' => $messages,
             'max_tokens' => 800,
         ]);
