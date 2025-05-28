@@ -81,7 +81,6 @@ import updateLocale from 'dayjs/plugin/updateLocale'
 dayjs.extend(relativeTime)
 dayjs.extend(updateLocale)
 
-// Override the relative time strings
 dayjs.updateLocale('en', {
   relativeTime: {
     future: 'in %s',
@@ -154,11 +153,13 @@ const sendMessage = async () => {
   errorMsg.value = ''
 
   try {
-    await axios.post('/api/telegram/send-message', {
+    // Send user message & wait AI reply from backend
+    const { data } = await axios.post('/api/telegram/send-message', {
       chat_id: chatId.value,
       message: text
     })
 
+    // Append user's message locally
     messages.value.push({
       id: Date.now(),
       direction: 'outgoing',
@@ -172,6 +173,24 @@ const sendMessage = async () => {
         chatContainer.value.scrollTop = chatContainer.value.scrollHeight
       }
     })
+
+    // Append AI reply if exists
+    if (data.ai_reply) {
+      messages.value.push({
+        id: Date.now() + 1,
+        direction: 'incoming',
+        message: data.ai_reply,
+        type: 'text',
+        created_at: new Date().toISOString()
+      })
+
+      await nextTick(() => {
+        if (chatContainer.value) {
+          chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+        }
+      })
+    }
+
     fetchUnreadCounts()
   } catch (e) {
     errorMsg.value = 'Failed to send message.'
