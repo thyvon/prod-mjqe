@@ -56,13 +56,14 @@ class TelegramController extends Controller
             $messages[] = ['role' => 'user', 'content' => 'Hello'];
         }
 
-        // Map models to their API keys (match exact model string)
         $apiKeyMap = [
             'deepseek/deepseek-chat:free' => config('services.openrouter.keys.deepseek-chat'),
             'deepseek/deepseek-r1:free' => config('services.openrouter.keys.deepseek-r1'),
             'mistralai/devstral-small:free' => config('services.openrouter.keys.mistralai'),
             'meta-llama/llama-4-maverick:free' => config('services.openrouter.keys.meta-llama'),
         ];
+
+        $lastErrorMessage = null;
 
         foreach ($models as $model) {
             $apiKey = $apiKeyMap[$model] ?? null;
@@ -82,18 +83,23 @@ class TelegramController extends Controller
             ]);
 
             if ($response->successful()) {
-                return $response['choices'][0]['message']['content']
-                    ?? "🤖 Sorry, I couldn't generate a response.";
+                $content = $response['choices'][0]['message']['content'] ?? null;
+                if ($content) {
+                    return $content;
+                } else {
+                    $lastErrorMessage = "🤖 Sorry, no content returned from model {$model}.";
+                    \Log::warning($lastErrorMessage);
+                }
+            } else {
+                $errorMsg = $response['error']['message'] ?? $response->body();
+                $lastErrorMessage = "OpenRouter API call failed for model {$model} with status {$response->status()}: " . $errorMsg;
+                \Log::warning($lastErrorMessage);
             }
 
-            \Log::warning("OpenRouter API call failed for model {$model} with status {$response->status()}: " . $response->body());
-
-            if ($response->status() !== 429) {
-                break; // Stop retrying on errors other than rate limit
-            }
+            // continue to next model regardless of error
         }
 
-        return "⚠️ AI error: " . ($response['error']['message'] ?? $response->body());
+        return "⚠️ AI error: " . ($lastErrorMessage ?? "No models responded successfully.");
     }
 
     public function webhook(Request $request)
