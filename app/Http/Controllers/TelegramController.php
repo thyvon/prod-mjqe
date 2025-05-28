@@ -55,7 +55,7 @@ class TelegramController extends Controller
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'gpt-3.5-turbo',
+            'model' => 'openai/gpt-4-turbo',
             'messages' => [
                 ['role' => 'user', 'content' => $prompt],
             ],
