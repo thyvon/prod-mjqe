@@ -447,6 +447,7 @@ const logout = () => {
 }
 .bot-chat-card {
   height: 600px;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }

@@ -240,15 +240,17 @@ onMounted(async () => {
   height: 600px;
   min-height: 600px;
   max-height: 600px;
-  max-width: 100vw;
+  max-width: 100%;
 }
 .sidebar {
-  width: 220px;
+  width: auto;
+  max-width: 300px; /* or whatever upper limit fits your design */
   overflow-y: auto;
+  flex-shrink: 0;
 }
 .chat-area {
-  max-width: 480px;
-  width: 480px;
+  max-width: 640px; /* previously 480px */
+  width: 640px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -269,19 +271,18 @@ onMounted(async () => {
     max-height: 100vh;
   }
   .sidebar {
-    width: 100vw;
-    max-width: 100vw;
-    min-width: 0;
-    border-right: none;
-    border-bottom: 1px solid #dee2e6;
-    flex-shrink: 0;
+    width: 280px; /* previously 220px */
+    overflow-y: auto;
   }
+
   .chat-area {
-    width: 100vw;
-    max-width: 100vw;
-    min-width: 0;
+    max-width: 640px; /* previously 480px */
+    width: 640px;
     height: 100%;
+    display: flex;
+    flex-direction: column;
   }
+
   .card-body {
     max-height: 50vh;
   }
