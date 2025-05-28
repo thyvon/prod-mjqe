@@ -99,7 +99,7 @@ class TelegramController extends Controller
                 }
             }
 
-            // /start command
+            // Handle /start command
             if (isset($msg['text']) && $msg['text'] === '/start') {
                 Http::post("{$this->baseUrl}/sendMessage", [
                     'chat_id' => $chatId,
@@ -108,27 +108,43 @@ class TelegramController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            $messageText = $msg['text'] ?? '';
-            $type = isset($msg['photo']) ? 'photo' : 'text';
+            // 🧠 Detect message type
+            $type = 'text';
             $fileUrl = null;
+            $fileId = null;
+            $messageText = $msg['caption'] ?? $msg['text'] ?? '';
 
-            if ($type === 'photo') {
-                $fileId = $msg['photo'][count($msg['photo']) - 1]['file_id'] ?? null;
-                if ($fileId) {
-                    $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                        'file_id' => $fileId,
-                    ]);
-                    if ($fileResponse->successful()) {
-                        $filePath = $fileResponse['result']['file_path'];
-                        $fileUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
-                    }
+            if (isset($msg['photo'])) {
+                $type = 'photo';
+                $photos = $msg['photo'];
+                $fileId = $photos[count($photos) - 1]['file_id'] ?? null;
+                if (!$messageText) {
+                    $messageText = '[User sent a photo]';
+                }
+            } elseif (isset($msg['document'])) {
+                $type = 'document';
+                $fileId = $msg['document']['file_id'] ?? null;
+                if (!$messageText) {
+                    $messageText = '[User sent a document]';
                 }
             }
 
+            // 🗂️ Fetch file URL if file_id is available
+            if ($fileId) {
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId,
+                ]);
+                if ($fileResponse->successful()) {
+                    $filePath = $fileResponse['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
+                }
+            }
+
+            // 💾 Store incoming message
             Telegram::create([
                 'chat_id' => $chatId,
                 'direction' => 'incoming',
-                'message' => $messageText ?? '',
+                'message' => $messageText,
                 'file_url' => $fileUrl,
                 'type' => $type,
                 'name' => $name,
@@ -136,15 +152,17 @@ class TelegramController extends Controller
                 'is_read' => false,
             ]);
 
+            // 🧠 Fetch recent chat history and generate reply
             $history = Telegram::where('chat_id', $chatId)
                 ->orderBy('created_at', 'desc')
                 ->limit(15)
                 ->get()
                 ->reverse()
                 ->map(function ($msg) {
+                    $content = $msg->type === 'photo' && !$msg->message ? '[Image sent]' : $msg->message;
                     return [
                         'role' => $msg->direction === 'incoming' ? 'user' : 'assistant',
-                        'content' => $msg->message,
+                        'content' => $content,
                     ];
                 })
                 ->values()
@@ -157,11 +175,13 @@ class TelegramController extends Controller
 
             $aiReply = $this->askOpenRouterWithHistory($chatId, $history);
 
+            // 📤 Reply to user via Telegram
             Http::post("{$this->baseUrl}/sendMessage", [
                 'chat_id' => $chatId,
                 'text' => $aiReply,
             ]);
 
+            // 💾 Store AI's response
             Telegram::create([
                 'chat_id' => $chatId,
                 'direction' => 'outgoing',
