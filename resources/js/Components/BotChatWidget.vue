@@ -74,6 +74,31 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import updateLocale from 'dayjs/plugin/updateLocale'
+
+dayjs.extend(relativeTime)
+dayjs.extend(updateLocale)
+
+// Override the relative time strings
+dayjs.updateLocale('en', {
+  relativeTime: {
+    future: 'in %s',
+    past: '%s ago',
+    s: 'a few seconds',
+    m: '1 minute',
+    mm: '%d minutes',
+    h: '1 hour',
+    hh: '%d hours',
+    d: '1 day',
+    dd: '%d days',
+    M: '1 month',
+    MM: '%d months',
+    y: '1 year',
+    yy: '%d years'
+  }
+})
 
 const clients = ref([])
 const chatId = ref(null)
@@ -157,8 +182,7 @@ const sendMessage = async () => {
 }
 
 const formatTimestamp = (ts) => {
-  const date = new Date(ts)
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return dayjs(ts).fromNow()
 }
 
 const filteredClients = computed(() => {
