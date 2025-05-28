@@ -61,7 +61,7 @@ class TelegramController extends Controller
             'deepseek/deepseek-chat:free' => config('services.openrouter.keys.deepseek-chat'),
             'deepseek/deepseek-r1:free' => config('services.openrouter.keys.deepseek-r1'),
             'mistralai/devstral-small:free' => config('services.openrouter.keys.mistralai'),
-            'meta-llama/llama-4-maverick:free' => config('services.openrouter.keys.meta-llama'),
+            // 'meta-llama/llama-4-maverick:free' => config('services.openrouter.keys.meta-llama'),
         ];
 
         $lastErrorMessage = null;
