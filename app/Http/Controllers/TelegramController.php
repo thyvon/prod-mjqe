@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Telegram;
 use App\Models\User;
 
@@ -66,6 +67,12 @@ class TelegramController extends Controller
         $lastErrorMessage = null;
 
         foreach ($models as $model) {
+            // Check if model is rate limited recently
+            if (Cache::has("model_rate_limited_{$model}")) {
+                \Log::info("Skipping model {$model} due to recent rate limiting.");
+                continue;
+            }
+
             $apiKey = $apiKeyMap[$model] ?? null;
 
             if (!$apiKey) {
@@ -94,14 +101,16 @@ class TelegramController extends Controller
                 $errorMsg = $response['error']['message'] ?? $response->body();
                 $lastErrorMessage = "OpenRouter API call failed for model {$model} with status {$response->status()}: " . $errorMsg;
                 \Log::warning($lastErrorMessage);
-            }
 
-            // continue to next model regardless of error
+                // If rate limited, cache for 10 minutes to skip next attempts
+                if ($response->status() == 429) {
+                    Cache::put("model_rate_limited_{$model}", true, now()->addMinutes(10));
+                }
+            }
         }
 
         return "⚠️ AI error: " . ($lastErrorMessage ?? "No models responded successfully.");
     }
-
     public function webhook(Request $request)
     {
         $data = $request->all();
