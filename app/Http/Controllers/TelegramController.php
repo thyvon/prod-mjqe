@@ -74,13 +74,12 @@ class TelegramController extends Controller
     {
         $data = $request->all();
 
-        if (isset($data['message']['text'])) {
+        if (isset($data['message'])) {
             $msg = $data['message'];
             $chatId = $msg['chat']['id'];
             $firstName = $msg['chat']['first_name'] ?? '';
             $lastName = $msg['chat']['last_name'] ?? '';
             $name = trim($firstName . ' ' . $lastName);
-            $userMessage = $msg['text'];
 
             // Try to get profile photo URL (optional)
             $photoUrl = null;
@@ -105,20 +104,106 @@ class TelegramController extends Controller
                 // Silently ignore errors fetching photo
             }
 
+            $messageText = null;
+            $fileUrl = null;
+            $type = 'text'; // default
+
+            // Handle text message
+            if (isset($msg['text'])) {
+                $messageText = $msg['text'];
+            }
+            // Handle photo message
+            elseif (isset($msg['photo'])) {
+                $type = 'photo';
+
+                // Get largest photo size
+                $photoArray = $msg['photo'];
+                $largestPhoto = end($photoArray);
+                $fileId = $largestPhoto['file_id'];
+
+                // Get file path from Telegram API
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId
+                ]);
+                $fileData = $fileResponse->json();
+
+                if (!empty($fileData['result']['file_path'])) {
+                    $filePath = $fileData['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
+                }
+
+                $messageText = "[Photo]";
+            }
+            // Handle document message
+            elseif (isset($msg['document'])) {
+                $type = 'document';
+
+                $fileId = $msg['document']['file_id'];
+
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId
+                ]);
+                $fileData = $fileResponse->json();
+
+                if (!empty($fileData['result']['file_path'])) {
+                    $filePath = $fileData['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
+                }
+
+                $messageText = "[Document]";
+            }
+            // Handle video message
+            elseif (isset($msg['video'])) {
+                $type = 'video';
+
+                $fileId = $msg['video']['file_id'];
+
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId
+                ]);
+                $fileData = $fileResponse->json();
+
+                if (!empty($fileData['result']['file_path'])) {
+                    $filePath = $fileData['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
+                }
+
+                $messageText = "[Video]";
+            }
+            // Handle audio message
+            elseif (isset($msg['audio'])) {
+                $type = 'audio';
+
+                $fileId = $msg['audio']['file_id'];
+
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId
+                ]);
+                $fileData = $fileResponse->json();
+
+                if (!empty($fileData['result']['file_path'])) {
+                    $filePath = $fileData['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . env('TELEGRAM_BOT_TOKEN') . "/" . $filePath;
+                }
+
+                $messageText = "[Audio]";
+            }
+            // Other media types you can add similarly...
+
             // Save incoming message to DB
             Telegram::create([
                 'chat_id' => $chatId,
                 'direction' => 'incoming',
-                'message' => $userMessage,
-                'file_url' => null,
-                'type' => 'text',
+                'message' => $messageText ?? '',
+                'file_url' => $fileUrl,
+                'type' => $type,
                 'name' => $name,
                 'photo_url' => $photoUrl,
                 'is_read' => false,
             ]);
 
             // Get AI reply from OpenRouter
-            $aiReply = $this->askOpenRouter($userMessage);
+            $aiReply = $this->askOpenRouter($messageText ?? '');
 
             // Send AI reply to Telegram user
             Http::post("{$this->baseUrl}/sendMessage", [
@@ -141,6 +226,7 @@ class TelegramController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
 
     // Get chat history for a specific chat_id
     public function getHistory($chat_id)

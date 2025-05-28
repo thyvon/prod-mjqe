@@ -41,13 +41,30 @@
       <div class="card-body overflow-auto chat-scroll" ref="chatContainer">
         <div v-for="msg in messages" :key="msg.id || msg.created_at" class="mb-3">
           <div :class="['d-inline-block px-3 py-2 rounded', msg.direction === 'incoming' ? 'bg-light text-dark' : 'bg-primary text-white float-right']">
+            
+            <!-- Text message -->
             <div v-if="msg.type === 'text'"
                  style="white-space: pre-line; word-break: break-word;">
               {{ msg.message }}
             </div>
-            <div v-else-if="msg.type === 'document'">
-              <a :href="msg.file_url" class="text-white" target="_blank">📎 {{ msg.message }}</a>
+
+            <!-- Image message -->
+            <div v-else-if="msg.type === 'photo'">
+              <img :src="msg.file_url" alt="Image" style="max-width: 250px; max-height: 250px; border-radius: 8px;" />
             </div>
+
+            <!-- Document message -->
+            <div v-else-if="msg.type === 'document'">
+              <a :href="msg.file_url" target="_blank" style="color: inherit; text-decoration: underline;">
+                📎 {{ msg.message || 'Download file' }}
+              </a>
+            </div>
+
+            <!-- Fallback for unsupported types -->
+            <div v-else>
+              <em>Unsupported message type</em>
+            </div>
+
           </div>
           <div class="clearfix"></div>
           <small class="text-muted d-block" :class="msg.direction === 'incoming' ? 'text-left' : 'text-right'">
@@ -243,7 +260,6 @@ onMounted(async () => {
 }
 .card-footer {
   flex-shrink: 0;
-  /* background: #fff; */
 }
 @media (max-width: 600px) {
   .bot-chat-widget {
