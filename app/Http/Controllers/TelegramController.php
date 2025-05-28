@@ -17,7 +17,6 @@ class TelegramController extends Controller
         $this->baseUrl = "https://api.telegram.org/bot" . config('services.telegram.bot_token');
     }
 
-    // Send outgoing message to Telegram and save to DB
     public function sendMessage(Request $request)
     {
         $validated = $request->validate([
@@ -44,7 +43,6 @@ class TelegramController extends Controller
         return response()->json($response->json());
     }
 
-    // Ask OpenRouter API for AI response
     private function askOpenRouterWithHistory(string $chatId, array $messages): string
     {
         $apiKey = config('services.openrouter.api_key');
@@ -57,7 +55,7 @@ class TelegramController extends Controller
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'openai/gpt-4o',
+            'model' => 'openai/gpt-4.1',
             'messages' => $messages,
             'max_tokens' => 800,
         ]);
@@ -69,7 +67,6 @@ class TelegramController extends Controller
         return "⚠️ API error: " . $response->body();
     }
 
-    // Receive incoming Telegram message, save, respond with AI, and store both
     public function webhook(Request $request)
     {
         $data = $request->all();
@@ -81,7 +78,28 @@ class TelegramController extends Controller
             $lastName = $msg['chat']['last_name'] ?? '';
             $name = trim($firstName . ' ' . $lastName);
 
-            // Handle /start command
+            // 🔄 Get Telegram user's profile photo
+            $photoUrl = null;
+            $photosResponse = Http::get("{$this->baseUrl}/getUserProfilePhotos", [
+                'user_id' => $chatId,
+                'limit' => 1,
+            ]);
+
+            if ($photosResponse->successful() && $photosResponse['result']['total_count'] > 0) {
+                $photo = $photosResponse['result']['photos'][0][0];
+                $fileId = $photo['file_id'];
+
+                $fileInfo = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId,
+                ]);
+
+                if ($fileInfo->successful()) {
+                    $filePath = $fileInfo['result']['file_path'];
+                    $photoUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
+                }
+            }
+
+            // /start command
             if (isset($msg['text']) && $msg['text'] === '/start') {
                 Http::post("{$this->baseUrl}/sendMessage", [
                     'chat_id' => $chatId,
@@ -90,7 +108,6 @@ class TelegramController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            // Extract message content
             $messageText = $msg['text'] ?? '';
             $type = isset($msg['photo']) ? 'photo' : 'text';
             $fileUrl = null;
@@ -108,7 +125,6 @@ class TelegramController extends Controller
                 }
             }
 
-            // Save incoming message
             Telegram::create([
                 'chat_id' => $chatId,
                 'direction' => 'incoming',
@@ -116,11 +132,10 @@ class TelegramController extends Controller
                 'file_url' => $fileUrl,
                 'type' => $type,
                 'name' => $name,
-                'photo_url' => null,
+                'photo_url' => $photoUrl,
                 'is_read' => false,
             ]);
 
-            // Retrieve last 15 messages for chat
             $history = Telegram::where('chat_id', $chatId)
                 ->orderBy('created_at', 'desc')
                 ->limit(15)
@@ -140,7 +155,6 @@ class TelegramController extends Controller
                 'content' => 'You are a helpful assistant.',
             ]);
 
-            // Get AI reply
             $aiReply = $this->askOpenRouterWithHistory($chatId, $history);
 
             Http::post("{$this->baseUrl}/sendMessage", [
@@ -163,7 +177,6 @@ class TelegramController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    // Get full message history for a specific chat_id
     public function getHistory($chat_id)
     {
         $messages = Telegram::where('chat_id', $chat_id)
@@ -173,7 +186,6 @@ class TelegramController extends Controller
         return response()->json($messages);
     }
 
-    // Get list of clients based on latest incoming message
     public function getClients()
     {
         $latestMessages = Telegram::select('chat_id', DB::raw('MAX(id) as latest_id'))
@@ -204,7 +216,6 @@ class TelegramController extends Controller
         return response()->json($result);
     }
 
-    // Get unread message counts per chat_id
     public function unreadCounts()
     {
         $clients = Telegram::select('chat_id')
@@ -230,7 +241,6 @@ class TelegramController extends Controller
         return response()->json($result);
     }
 
-    // Mark messages as read
     public function markRead(Request $request)
     {
         $request->validate(['chat_id' => 'required|string']);
