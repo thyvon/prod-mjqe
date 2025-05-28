@@ -46,26 +46,43 @@ class TelegramController extends Controller
     private function askOpenRouterWithHistory(string $chatId, array $messages): string
     {
         $apiKey = config('services.openrouter.api_key');
+        $models = [
+            'meta-llama/llama-4-maverick:free',
+            'deepseek/deepseek-chat:free',
+            'deepseek/deepseek-r1:free',
+            'mistralai/devstral-small:free',
+        ];
 
         if (empty($messages)) {
             $messages[] = ['role' => 'user', 'content' => 'Hello'];
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => "Bearer {$apiKey}",
-            'Content-Type' => 'application/json',
-        ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'meta-llama/llama-4-maverick:free',
-            'messages' => $messages,
-            // 'max_tokens' => 800,
-        ]);
+        foreach ($models as $model) {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+                'Content-Type' => 'application/json',
+            ])->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => $model,
+                'messages' => $messages,
+                'max_tokens' => 800,
+            ]);
 
-        if ($response->successful()) {
-            return $response['choices'][0]['message']['content'] ?? "🤖 Sorry, I couldn't generate a response.";
+            // ✅ Success
+            if ($response->successful()) {
+                return $response['choices'][0]['message']['content']
+                    ?? "🤖 Sorry, I couldn't generate a response.";
+            }
+
+            // 🟡 Only retry if it's rate-limited
+            if ($response->status() !== 429) {
+                break; // stop retrying on other errors
+            }
         }
 
-        return "⚠️ API error: " . $response->body();
+        // ❌ All models failed
+        return "⚠️ AI error: " . ($response['error']['message'] ?? $response->body());
     }
+
 
     public function webhook(Request $request)
     {
