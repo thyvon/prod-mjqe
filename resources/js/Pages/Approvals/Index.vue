@@ -3,7 +3,7 @@
     <Head :title="'Approvals'" />
     <div class="panel panel-inverse">
       <div class="panel-heading">
-        <h4 class="panel-title">Approvals</h4>
+        <h4 class="panel-title">Approval Notifications</h4>
         <div class="panel-heading-btn">
           <!-- ...existing code... -->
         </div>
@@ -36,9 +36,9 @@ import { onMounted, nextTick } from 'vue';
 
 const props = defineProps({
   approvals: {
-    type: Array,
+    type: [Array, Object],
     required: true,
-    default: () => [] // Ensure approvals is always an array
+    default: () => [],
   }
 });
 

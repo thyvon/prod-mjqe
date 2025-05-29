@@ -519,7 +519,10 @@ const rejectRequest = async (statusType) => {
 }
 
 .border-black {
-  border: 1px solid #000 !important; /* Force black border */
+  border-bottom: 1px solid #000 !important; /* Only bottom border */
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
 }
 
 @media print {

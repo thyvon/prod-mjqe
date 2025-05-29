@@ -47,7 +47,7 @@ return [
         'keys' => [
             'deepseek-chat' => env('OPENROUTER_API_KEY_DEEPSEEK_CHAT'),
             'deepseek-r1' => env('OPENROUTER_API_KEY_DEEPSEEK_R1'),
-            // 'mistralai' => env('OPENROUTER_API_KEY_MISTRALAI'),
+            'mistralai' => env('OPENROUTER_API_KEY_MISTRALAI'),
             'meta-llama' => env('OPENROUTER_API_KEY_META_LLAMA'),
         ],
     ],
