@@ -207,10 +207,7 @@ class TelegramController extends Controller
                 if (isset($msg['text']) && in_array(strtolower(trim($msg['text'])), ['invoice', '/invoice'])) {
                     // Fetch some invoice items for this user or chat (example: limit 5)
                     // You may want to filter by user or other params as needed
-                    $invoiceItems = PurchaseInvoiceItem::where('requested_by', $chatId) // or other criteria
-                        ->orderBy('invoice_date', 'desc')
-                        ->limit(5)
-                        ->get();
+                    $invoiceItems = PurchaseInvoiceItem::orderBy('invoice_date', 'desc')->get();
 
                     if ($invoiceItems->isEmpty()) {
                         $aiReply = "No invoice items found for you.";
