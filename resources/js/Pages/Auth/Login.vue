@@ -124,9 +124,9 @@ onMounted(() => {
                     </div>
 
                     <!-- Register -->
-                    <div class="text-gray-500">
+                    <!-- <div class="text-gray-500">
                         Not a member yet? Click <Link href="/register" class="text-white">here</Link> to register.
-                    </div>
+                    </div> -->
                 </form>
             </div>
         </div>

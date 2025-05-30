@@ -94,7 +94,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
 // Auth routes (login, logout, registration)
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn() => Inertia::render('Auth/Login'))->name('login');
-    Route::get('/register', fn() => Inertia::render('Auth/Register'))->name('register');
+    // Route::get('/register', fn() => Inertia::render('Auth/Register'))->name('register');
     Route::get('/auth/microsoft/redirect', [MicrosoftAuthController::class, 'redirect'])->name('auth.microsoft.redirect');
     Route::get('/auth/microsoft/callback', [MicrosoftAuthController::class, 'callback'])->name('auth.microsoft.callback');
 });
@@ -208,10 +208,9 @@ Route::middleware('auth')->group(function () {
     // File upload route
     Route::post('/documents/upload-image', [DocumentController::class, 'uploadArticleImage']);
 
+    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
 
-    // Ad
 });
-// Routes for Statement Invoices
-Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+
 
 require __DIR__.'/auth.php';
