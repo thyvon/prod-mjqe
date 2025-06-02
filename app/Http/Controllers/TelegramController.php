@@ -68,10 +68,9 @@ class TelegramController extends Controller
         $lastErrorMessage = null;
 
         foreach ($models as $model) {
-            // Skip if cached as rate limited
             if (Cache::has("model_rate_limited_{$model}")) {
                 \Log::info("Skipping model {$model} due to recent rate limiting.");
-                continue; // skip this model
+                continue;
             }
 
             $apiKey = $apiKeyMap[$model] ?? null;
@@ -92,185 +91,197 @@ class TelegramController extends Controller
             if ($response->successful()) {
                 $content = $response['choices'][0]['message']['content'] ?? null;
                 if ($content) {
-                    return $content;  // success, return immediately
+                    return $content;
                 } else {
                     $lastErrorMessage = "🤖 No content returned from model {$model}.";
                     \Log::warning($lastErrorMessage);
-                    continue;  // try next model
+                    continue;
                 }
             }
 
-            // Handle errors
             $errorMsg = $response['error']['message'] ?? $response->body();
             $status = $response->status();
             $lastErrorMessage = "OpenRouter API call failed for model {$model} with status {$status}: {$errorMsg}";
             \Log::warning($lastErrorMessage);
 
             if ($status == 429) {
-                // Mark this model as rate-limited, skip next attempts for 10 minutes
                 Cache::put("model_rate_limited_{$model}", true, now()->addMinutes(10));
-                continue;  // skip to next model
+                continue;
             }
-
-            // For other errors, break (optional: or continue if you want)
-            // break; // <-- comment this out if you want to continue trying other models even on other errors
         }
 
         return "⚠️ AI error: " . ($lastErrorMessage ?? "No models responded successfully.");
     }
-        public function webhook(Request $request)
-        {
-            $data = $request->all();
 
-            if (isset($data['message'])) {
-                $msg = $data['message'];
-                $chatId = $msg['chat']['id'];
-                $firstName = $msg['chat']['first_name'] ?? '';
-                $lastName = $msg['chat']['last_name'] ?? '';
-                $name = trim($firstName . ' ' . $lastName);
+    public function webhook(Request $request)
+    {
+        $data = $request->all();
 
-                // 🔄 Get Telegram user's profile photo
-                $photoUrl = null;
-                $photosResponse = Http::get("{$this->baseUrl}/getUserProfilePhotos", [
-                    'user_id' => $chatId,
-                    'limit' => 1,
+        if (isset($data['message'])) {
+            $msg = $data['message'];
+            $chatId = $msg['chat']['id'];
+            $firstName = $msg['chat']['first_name'] ?? '';
+            $lastName = $msg['chat']['last_name'] ?? '';
+            $name = trim($firstName . ' ' . $lastName);
+
+            // 🔄 Get Telegram user's profile photo
+            $photoUrl = null;
+            $photosResponse = Http::get("{$this->baseUrl}/getUserProfilePhotos", [
+                'user_id' => $chatId,
+                'limit' => 1,
+            ]);
+
+            if ($photosResponse->successful() && $photosResponse['result']['total_count'] > 0) {
+                $photo = $photosResponse['result']['photos'][0][0];
+                $fileId = $photo['file_id'];
+
+                $fileInfo = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId,
                 ]);
 
-                if ($photosResponse->successful() && $photosResponse['result']['total_count'] > 0) {
-                    $photo = $photosResponse['result']['photos'][0][0];
-                    $fileId = $photo['file_id'];
-
-                    $fileInfo = Http::get("{$this->baseUrl}/getFile", [
-                        'file_id' => $fileId,
-                    ]);
-
-                    if ($fileInfo->successful()) {
-                        $filePath = $fileInfo['result']['file_path'];
-                        $photoUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
-                    }
+                if ($fileInfo->successful()) {
+                    $filePath = $fileInfo['result']['file_path'];
+                    $photoUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
                 }
+            }
 
-                // Handle /start command
-                if (isset($msg['text']) && $msg['text'] === '/start') {
-                    Http::post("{$this->baseUrl}/sendMessage", [
-                        'chat_id' => $chatId,
-                        'text' => "Hi $name 👋, how can I help you today?",
-                    ]);
-                    return response()->json(['ok' => true]);
-                }
-
-                // 🧠 Detect message type
-                $type = 'text';
-                $fileUrl = null;
-                $fileId = null;
-                $messageText = $msg['caption'] ?? $msg['text'] ?? '';
-
-                if (isset($msg['photo'])) {
-                    $type = 'photo';
-                    $photos = $msg['photo'];
-                    $fileId = $photos[count($photos) - 1]['file_id'] ?? null;
-                    if (!$messageText) {
-                        $messageText = '[User sent a photo]';
-                    }
-                } elseif (isset($msg['document'])) {
-                    $type = 'document';
-                    $fileId = $msg['document']['file_id'] ?? null;
-                    if (!$messageText) {
-                        $messageText = '[User sent a document]';
-                    }
-                }
-
-                // 🗂️ Fetch file URL if file_id is available
-                if ($fileId) {
-                    $fileResponse = Http::get("{$this->baseUrl}/getFile", [
-                        'file_id' => $fileId,
-                    ]);
-                    if ($fileResponse->successful()) {
-                        $filePath = $fileResponse['result']['file_path'];
-                        $fileUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
-                    }
-                }
-
-                // 💾 Store incoming message
-                Telegram::create([
+            // Handle /start command
+            if (isset($msg['text']) && $msg['text'] === '/start') {
+                Http::post("{$this->baseUrl}/sendMessage", [
                     'chat_id' => $chatId,
-                    'direction' => 'incoming',
-                    'message' => $messageText,
-                    'file_url' => $fileUrl,
-                    'type' => $type,
-                    'name' => $name,
-                    'photo_url' => $photoUrl,
-                    'is_read' => false,
+                    'text' => "Hi $name 👋, how can I help you today? (Updated: June 02, 2025, 10:33 AM +07)",
                 ]);
+                return response()->json(['ok' => true]);
+            }
 
-                // --- NEW: Check if user asked for invoices ---
-                if (isset($msg['text']) && in_array(strtolower(trim($msg['text'])), ['invoice', '/invoice'])) {
-                    // Fetch some invoice items for this user or chat (example: limit 5)
-                    // You may want to filter by user or other params as needed
-                    $invoiceItems = PurchaseInvoiceItem::orderBy('invoice_date', 'desc')->get();
+            // 🧠 Detect message type
+            $type = 'text';
+            $fileUrl = null;
+            $fileId = null;
+            $messageText = $msg['caption'] ?? $msg['text'] ?? '';
 
-                    if ($invoiceItems->isEmpty()) {
-                        $aiReply = "No invoice items found for you.";
-                    } else {
-                        $lines = [];
-                        foreach ($invoiceItems as $item) {
-                            $lines[] = "Invoice#: {$item->invoice_no}, Date: {$item->invoice_date}, Item: {$item->description}, Qty: {$item->qty}, Total: {$item->total_usd} USD";
-                        }
-                        $aiReply = "Here are your latest invoice items:\n\n" . implode("\n", $lines);
-                    }
-
-                    // Send this invoice reply directly and store it
-                    Http::post("{$this->baseUrl}/sendMessage", [
-                        'chat_id' => $chatId,
-                        'text' => $aiReply,
-                    ]);
-
-                    Telegram::create([
-                        'chat_id' => $chatId,
-                        'direction' => 'outgoing',
-                        'message' => $aiReply,
-                        'file_url' => null,
-                        'type' => 'text',
-                        'name' => 'AI Bot',
-                        'photo_url' => null,
-                        'is_read' => true,
-                    ]);
-
-                    // Return here, no AI chat needed
-                    return response()->json(['ok' => true]);
+            if (isset($msg['photo'])) {
+                $type = 'photo';
+                $photos = $msg['photo'];
+                $fileId = $photos[count($photos) - 1]['file_id'] ?? null;
+                if (!$messageText) {
+                    $messageText = '[User sent a photo]';
                 }
-                // --- END of invoice item handling ---
+            } elseif (isset($msg['document'])) {
+                $type = 'document';
+                $fileId = $msg['document']['file_id'] ?? null;
+                if (!$messageText) {
+                    $messageText = '[User sent a document]';
+                }
+            }
 
-                // 🧠 Fetch recent chat history and generate reply
-                $history = Telegram::where('chat_id', $chatId)
-                    ->orderBy('created_at', 'desc')
-                    ->limit(15)
-                    ->get()
-                    ->reverse()
-                    ->map(function ($msg) {
-                        $content = $msg->type === 'photo' && !$msg->message ? '[Image sent]' : $msg->message;
-                        return [
-                            'role' => $msg->direction === 'incoming' ? 'user' : 'assistant',
-                            'content' => $content,
-                        ];
-                    })
-                    ->values()
-                    ->all();
-
-                array_unshift($history, [
-                    'role' => 'system',
-                    'content' => 'You are a helpful assistant.',
+            // 🗂️ Fetch file URL if file_id is available
+            if ($fileId) {
+                $fileResponse = Http::get("{$this->baseUrl}/getFile", [
+                    'file_id' => $fileId,
                 ]);
+                if ($fileResponse->successful()) {
+                    $filePath = $fileResponse['result']['file_path'];
+                    $fileUrl = "https://api.telegram.org/file/bot" . config('services.telegram.bot_token') . "/{$filePath}";
+                }
+            }
 
-                $aiReply = $this->askOpenRouterWithHistory($chatId, $history);
+            // 💾 Store incoming message
+            Telegram::create([
+                'chat_id' => $chatId,
+                'direction' => 'incoming',
+                'message' => $messageText,
+                'file_url' => $fileUrl,
+                'type' => $type,
+                'name' => $name,
+                'photo_url' => $photoUrl,
+                'is_read' => false,
+            ]);
 
-                // 📤 Reply to user via Telegram
+            // --- Check if user asked for invoices ---
+            if (isset($msg['text']) && in_array(strtolower(trim($msg['text'])), ['invoice', '/invoice'])) {
+                // Fetch all invoice items with all specified columns (limit to 5 to manage data size)
+                $invoiceItems = PurchaseInvoiceItem::select(
+                    'pi_number',
+                    'invoice_date',
+                    'payment_type',
+                    'invoice_no',
+                    'pr_number',
+                    'po_number',
+                    'pr_item',
+                    'po_item',
+                    'supplier',
+                    'item_code',
+                    'description',
+                    'remark',
+                    'qty',
+                    'uom',
+                    'currency',
+                    'currency_rate',
+                    'unit_price',
+                    'total_price',
+                    'discount',
+                    'service_charge',
+                    'deposit',
+                    'vat',
+                    'return',
+                    'retention',
+                    'total_usd',
+                    'total_khr',
+                    'paid_amount',
+                    'rounding_method',
+                    'rounding_digits',
+                    'requested_by',
+                    'campus',
+                    'division',
+                    'department',
+                    'location',
+                    'purchased_by',
+                    'purpose',
+                    'payment_term',
+                    'transaction_type',
+                    'cash_ref',
+                    'stop_purchase',
+                    'asset_type'
+                )->orderBy('invoice_date', 'desc')->limit(5)->get();
+
+                if ($invoiceItems->isEmpty()) {
+                    $aiReply = "No invoice items found for you.";
+                } else {
+                    // Convert invoice items to JSON
+                    $invoiceJson = json_encode($invoiceItems->toArray(), JSON_PRETTY_PRINT);
+                    // Include JSON in chat history for AI to process
+                    $history = Telegram::where('chat_id', $chatId)
+                        ->orderBy('created_at', 'desc')
+                        ->limit(15)
+                        ->get()
+                        ->reverse()
+                        ->map(function ($msg) {
+                            $content = $msg->type === 'photo' && !$msg->message ? '[Image sent]' : $msg->message;
+                            return [
+                                'role' => $msg->direction === 'incoming' ? 'user' : 'assistant',
+                                'content' => $content,
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    array_unshift($history, [
+                        'role' => 'system',
+                        'content' => 'You are a helpful assistant. You will receive invoice data in JSON format. Analyze it and provide a concise, user-friendly summary or answer based on the user\'s request. The JSON contains fields like pi_number, invoice_date, payment_type, invoice_no, pr_number, po_number, pr_item, po_item, supplier, item_code, description, remark, qty, uom, currency, currency_rate, unit_price, total_price, discount, service_charge, deposit, vat, return, retention, total_usd, total_khr, paid_amount, rounding_method, rounding_digits, requested_by, campus, division, department, location, purchased_by, purpose, payment_term, transaction_type, cash_ref, stop_purchase, and asset_type.',
+                    ]);
+                    $history[] = ['role' => 'user', 'content' => 'Here is the invoice data: ' . $invoiceJson];
+                    $history[] = ['role' => 'user', 'content' => 'Please summarize the invoice data or assist me based on it.'];
+
+                    $aiReply = $this->askOpenRouterWithHistory($chatId, $history);
+                }
+
+                // Send the AI-generated reply to the user
                 Http::post("{$this->baseUrl}/sendMessage", [
                     'chat_id' => $chatId,
                     'text' => $aiReply,
                 ]);
 
-                // 💾 Store AI's response
                 Telegram::create([
                     'chat_id' => $chatId,
                     'direction' => 'outgoing',
@@ -281,11 +292,55 @@ class TelegramController extends Controller
                     'photo_url' => null,
                     'is_read' => true,
                 ]);
-            }
 
-            return response()->json(['ok' => true]);
+                return response()->json(['ok' => true]);
+            }
+            // --- END of invoice item handling ---
+
+            // 🧠 Fetch recent chat history and generate reply for other messages
+            $history = Telegram::where('chat_id', $chatId)
+                ->orderBy('created_at', 'desc')
+                ->limit(15)
+                ->get()
+                ->reverse()
+                ->map(function ($msg) {
+                    $content = $msg->type === 'photo' && !$msg->message ? '[Image sent]' : $msg->message;
+                    return [
+                        'role' => $msg->direction === 'incoming' ? 'user' : 'assistant',
+                        'content' => $content,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            array_unshift($history, [
+                'role' => 'system',
+                'content' => 'You are a helpful assistant.',
+            ]);
+
+            $aiReply = $this->askOpenRouterWithHistory($chatId, $history);
+
+            // 📤 Reply to user via Telegram
+            Http::post("{$this->baseUrl}/sendMessage", [
+                'chat_id' => $chatId,
+                'text' => $aiReply,
+            ]);
+
+            // 💾 Store AI's response
+            Telegram::create([
+                'chat_id' => $chatId,
+                'direction' => 'outgoing',
+                'message' => $aiReply,
+                'file_url' => null,
+                'type' => 'text',
+                'name' => 'AI Bot',
+                'photo_url' => null,
+                'is_read' => true,
+            ]);
         }
 
+        return response()->json(['ok' => true]);
+    }
 
     public function getHistory($chat_id)
     {
