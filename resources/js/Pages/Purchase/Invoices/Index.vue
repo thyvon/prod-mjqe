@@ -2269,52 +2269,52 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                 <div class="row">
                   <div class="col-md-12 border p-3">
                     <div class="table-responsive" style="max-width: 100%; overflow-x: auto;">
-                      <table class="table align-middle table-bordered border-secondary text-center" style="min-width: 1200px;">
-                        <thead class="table-light">
+                      <table class="table table-bordered text-center" style="min-width: 1200px;">
+                        <thead class="thead-light">
                           <tr>
-                            <th>Quantity</th>
-                            <th>UoM</th>
-                            <th>
+                            <th style="min-width: 100px;">Quantity</th>
+                            <th style="min-width: 80px;">UoM</th>
+                            <th style="min-width: 150px;">
                               Previous Price
                               <i 
-                                class="fas fa-exclamation-circle text-warning ms-1" 
-                                data-bs-toggle="tooltip"
+                                class="fas fa-exclamation-circle text-warning ml-1" 
+                                data-toggle="tooltip"
                                 title="This is just the previous price of the Product. It will not be updated in the database."
                               ></i>
                             </th>
-                            <th>Unit Price</th>
-                            <th>Total Price</th>
-                            <th>Discount</th>
-                            <th>Delivery</th>
-                            <th>VAT (%)</th>
-                            <th>Return</th>
-                            <th>Retention</th>
-                            <th>Deposit</th>
-                            <th>Grand Total</th>
-                            <th>Rounding Method</th>
-                            <th>Rounding Digits</th>
+                            <th style="min-width: 100px;">Unit Price</th>
+                            <th style="min-width: 100px;">Total Price</th>
+                            <th style="min-width: 100px;">Discount</th>
+                            <th style="min-width: 100px;">Delivery</th>
+                            <th style="min-width: 80px;">VAT (%)</th>
+                            <th style="min-width: 100px;">Return</th>
+                            <th style="min-width: 100px;">Retention</th>
+                            <th style="min-width: 100px;">Deposit</th>
+                            <th style="min-width: 100px;">Grand Total</th>
+                            <th style="min-width: 150px;">Rounding Method</th>
+                            <th style="min-width: 100px;">Rounding Digits</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.qty" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 2">
                               <div v-if="editItemFormErrors.qty" class="text-danger small">{{ editItemFormErrors.qty }}</div>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 80px;" class="p-0">
                               <input type="text" v-model="editItemForm.uom" class="form-control border-0" readonly>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 150px;" class="p-0">
                               <input type="text" v-model="editItemForm.product_price" class="form-control text-danger border-0" readonly>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.unit_price" class="form-control border-0" step="0.0001">
                               <div v-if="editItemFormErrors.unit_price" class="text-danger small">{{ editItemFormErrors.unit_price }}</div>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.total_price" class="form-control border-0" readonly>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input 
                                 type="number" 
                                 v-model="editItemForm.discount" 
@@ -2324,7 +2324,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                                 :value="form.discount_total > 0 ? modalDiscount : editItemForm.discount" 
                               >
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input 
                                 type="number" 
                                 v-model="editItemForm.service_charge" 
@@ -2334,24 +2334,24 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                                 :value="form.service_charge > 0 ? modalServiceCharge : editItemForm.service_charge" 
                               >
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 80px;" class="p-0">
                               <input type="number" v-model="editItemForm.vat" class="form-control border-0" step="0.01" readonly>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.return" class="form-control border-0" step="0.0001">
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.retention" class="form-control border-0" step="0.0001">
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.deposit" class="form-control border-0" step="0.0001" :readonly="form.payment_type === 1">
                               <div v-if="editItemFormErrors.deposit" class="text-danger small">{{ editItemFormErrors.deposit }}</div>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.paid_amount" class="form-control border-0" step="0.0001" readonly>
                               <div v-if="editItemFormErrors.paid_amount" class="text-danger small">{{ editItemFormErrors.paid_amount }}</div>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 150px;" class="p-0">
                               <select v-model="editItemForm.rounding_method" class="form-control border-0">
                                 <option value="">None</option>
                                 <option value="round">Round</option>
@@ -2361,7 +2361,7 @@ const formattedGrandTotal = computed(() => formatCurrency(grandTotal.value, form
                                 <option value="floor">Floor</option>
                               </select>
                             </td>
-                            <td class="p-0">
+                            <td style="min-width: 100px;" class="p-0">
                               <input type="number" v-model="editItemForm.rounding_digits" class="form-control border-0" min="0" max="6">
                             </td>
                           </tr>
