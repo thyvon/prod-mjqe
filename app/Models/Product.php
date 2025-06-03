@@ -115,4 +115,11 @@ class Product extends Model
     
         return $this->avg_price;
     }
+
+        public function quotations()
+        {
+            return $this->belongsToMany(Quotation::class, 'quotation_product')
+                        ->withPivot('quantity', 'price', 'discount', 'vat')
+                        ->withTimestamps();
+        }
 }

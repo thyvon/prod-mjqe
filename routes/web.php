@@ -21,6 +21,7 @@ use App\Http\Controllers\{
     StatementController,
     ApprovalController,
     DocumentController,
+    EvaluationController,
 };
 
 /*
@@ -124,6 +125,7 @@ Route::middleware('auth')->group(function () {
         'invoices' => InvoiceController::class,
         'cancellations' => CancellationController::class,
         'statements' => StatementController::class,
+        'evaluations' => EvaluationController::class,
         // 'documents' => DocumentController::class,
     ]);
 

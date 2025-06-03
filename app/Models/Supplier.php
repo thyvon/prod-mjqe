@@ -33,4 +33,8 @@ class Supplier extends Model
     {
         return $this->hasMany(PurchaseInvoice::class, 'supplier', 'name');
     }
+    public function Quotations()
+    {
+        return $this->hasMany(Quotation::class);
+    }
 }
