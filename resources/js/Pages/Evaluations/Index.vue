@@ -1,76 +1,190 @@
 <template>
   <Main>
     <Head title="Evaluations List" />
-
-    <div class="container mx-auto p-4">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Evaluations</h1>
-        <inertia-link
-          href="/evaluations/create"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + Create New
-        </inertia-link>
+    <div class="panel panel-inverse">
+      <div class="panel-heading">
+        <h4 class="panel-title">Evaluations</h4>
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-default" data-toggle="panel-expand"><i class="fa fa-expand"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-success" data-toggle="panel-reload"><i class="fa fa-redo"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-warning" data-toggle="panel-collapse"><i class="fa fa-minus"></i></a>
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-danger" data-toggle="panel-remove"><i class="fa fa-times"></i></a>
+        </div>
       </div>
+      <div class="panel-body">
+        <!-- Create New Evaluation Button -->
+        <Link href="/evaluations/create" class="btn btn-primary mb-4 btn-sm">Create New</Link>
 
-      <table class="min-w-full bg-white border border-gray-300 rounded">
-        <thead>
-          <tr>
-            <th class="py-2 px-4 border-b">#</th>
-            <th class="py-2 px-4 border-b text-left">Title</th>
-            <th class="py-2 px-4 border-b text-left">Created At</th>
-            <th class="py-2 px-4 border-b">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(evaluation, index) in evaluations"
-            :key="evaluation.id"
-            class="hover:bg-gray-100"
-          >
-            <td class="py-2 px-4 border-b text-center">{{ index + 1 }}</td>
-            <td class="py-2 px-4 border-b">{{ evaluation.title }}</td>
-            <td class="py-2 px-4 border-b">{{ new Date(evaluation.created_at).toLocaleDateString() }}</td>
-            <td class="py-2 px-4 border-b text-center space-x-2">
-              <inertia-link
-                :href="`/evaluations/${evaluation.id}/edit`"
-                class="text-blue-600 hover:underline"
-              >
-                Edit
-              </inertia-link>
-              <button
-                @click="destroy(evaluation.id)"
-                class="text-red-600 hover:underline"
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-
-          <tr v-if="evaluations.length === 0">
-            <td colspan="4" class="py-4 text-center text-gray-500">
-              No evaluations found.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <!-- Evaluations Table -->
+        <div class="table-responsive">
+          <table id="evaluations-table" class="table table-bordered table-sm align-middle" width="100%">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Reference</th>
+                <th>Description</th>
+                <th>Created At</th>
+                <th>Approval Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
     </div>
   </Main>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { Inertia } from '@inertiajs/inertia';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 
 const props = defineProps({
   evaluations: Array,
 });
 
-function destroy(id) {
-  if (confirm('Are you sure you want to delete this evaluation?')) {
-    Inertia.delete(`/evaluations/${id}`);
+let dataTableInstance;
+
+const deleteEvaluation = async (evaluationId) => {
+  const result = await swal({
+    title: 'Are you sure?',
+    text: 'You will not be able to recover this evaluation!',
+    icon: 'warning',
+    buttons: {
+      cancel: {
+        text: 'No, cancel!',
+        value: null,
+        visible: true,
+        className: 'btn btn-secondary',
+        closeModal: true,
+      },
+      confirm: {
+        text: 'Yes, delete it!',
+        value: true,
+        visible: true,
+        className: 'btn btn-danger',
+        closeModal: true,
+      },
+    },
+    dangerMode: true,
+  });
+
+  if (result) {
+    try {
+      await Inertia.delete(`/evaluations/${evaluationId}`);
+      dataTableInstance.row((idx, data) => data.id === evaluationId).remove().draw();
+      swal('Deleted!', 'Evaluation has been deleted.', 'success', { timer: 2000 });
+    } catch (error) {
+      swal('Error!', 'Failed to delete evaluation. Please try again.', 'error');
+    }
   }
-}
+};
+
+// Helper function to format dates
+const formatDate = (value) => {
+  const options = { year: 'numeric', month: 'short', day: '2-digit' };
+  const date = new Date(value);
+  return date.toLocaleDateString('en-US', options);
+};
+
+// Derive description from evaluation data
+const getDescription = (evaluation) => {
+  if (evaluation.products && evaluation.products.length > 0) {
+    const product = props.products?.find(p => p.id === evaluation.products[0]);
+    return product ? `${product.sku} - ${product.product_description}` : 'No products';
+  }
+  return evaluation.recommendation ? evaluation.recommendation.substring(0, 50) + '...' : 'No description';
+};
+
+// Initialize DataTable
+onMounted(() => {
+  nextTick(() => {
+    const table = $('#evaluations-table');
+    if (table.length) {
+      dataTableInstance = table.DataTable({
+        responsive: true,
+        autoWidth: true,
+        data: props.evaluations,
+        columns: [
+          { data: null, render: (data, type, row, meta) => meta.row + 1 },
+          { data: 'reference' },
+          { data: null, render: (data) => getDescription(data) },
+          { data: 'created_at', render: (data) => formatDate(data) },
+          {
+            data: null,
+            render: (data) => {
+              const hasReviewed = data.reviewed_by;
+              const hasAcknowledged = data.acknowledged_by;
+              const hasApproved = data.approved_by;
+              if (hasApproved) return '<span class="badge bg-success">Approved</span>';
+              if (hasAcknowledged) return '<span class="badge bg-warning">Acknowledged</span>';
+              if (hasReviewed) return '<span class="badge bg-primary">Reviewed</span>';
+              return '<span class="badge bg-secondary">Pending</span>';
+            },
+            defaultContent: '<span class="badge bg-secondary">Pending</span>',
+          },
+          {
+            data: null,
+            render: () => `
+              <div class="btn-group">
+                <a href="#" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
+                  <i class="fas fa-cog fa-fw"></i> <i class="fa fa-caret-down"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item btn-edit"><i class="fas fa-edit"></i> Edit</a></li>
+                  <li><a class="dropdown-item btn-delete text-danger"><i class="fas fa-trash-alt"></i> Delete</a></li>
+                  <li><a class="dropdown-item btn-show text-primary"><i class="fas fa-eye"></i> View</a></li>
+                </ul>
+              </div>
+            `,
+          },
+        ],
+      });
+
+      // Event listeners for main table
+      $('#evaluations-table')
+        .on('click', '.btn-edit', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) {
+            window.location.href = `/evaluations/${rowData.id}/edit`;
+          }
+        })
+        .on('click', '.btn-delete', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) deleteEvaluation(rowData.id);
+        })
+        .on('click', '.btn-show', function () {
+          const rowData = dataTableInstance.row($(this).closest('tr')).data();
+          if (rowData) {
+            window.location.href = `/evaluations/${rowData.id}`;
+          }
+        });
+
+      // Event listeners for responsive child rows
+      $('#evaluations-table').on('click', '.dtr-details .btn-edit', function () {
+        const tr = $(this).closest('tr').prev();
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) {
+          window.location.href = `/evaluations/${rowData.id}/edit`;
+        }
+      });
+
+      $('#evaluations-table').on('click', '.dtr-details .btn-delete', function () {
+        const tr = $(this).closest('tr').prev();
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) deleteEvaluation(rowData.id);
+      });
+
+      $('#evaluations-table').on('click', '.dtr-details .btn-show', function () {
+        const tr = $(this).closest('tr').prev();
+        const rowData = dataTableInstance.row(tr).data();
+        if (rowData) {
+          window.location.href = `/evaluations/${rowData.id}`;
+        }
+      });
+    }
+  });
+});
 </script>

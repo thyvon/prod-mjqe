@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('quotation_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity')->default(0);
+            $table->string('specification')->nullable();
+            $table->decimal('quantity', 10, 2)->default(0.00);
             $table->decimal('price', 10, 2)->default(0.00);
             $table->decimal('discount', 10, 2)->default(0.00);
             $table->decimal('vat', 10, 2)->default(0.00);

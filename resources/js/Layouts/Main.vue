@@ -48,6 +48,7 @@ const getApprovalTitle = (docs_type) => {
     5: 'Clear Credit',
     6: 'Purchase Request Cancel',
     7: 'Purchase Order Cancel',
+    8: 'Evaluation',
   }
   const docLabel = docsMap[docs_type] || 'Unknown Document'
   return `${docLabel}`
@@ -60,6 +61,8 @@ const getStatusInfo = (statusType) => {
     3: { text: 'Need Approve', badge: 'border border-primary text-primary bg-transparent', icon: 'fa-thumbs-up' }, // Icon for 'Need Approve'
     4: { text: 'Need Receive', badge: 'border border-success text-success bg-transparent', icon: 'fa-download' }, // Icon for 'Need Receive'
     5: { text: 'Need Authorize', badge: 'border border-warning text-warning bg-transparent', icon: 'fa-check-circle' }, // Updated for Authorize
+    7: { text: 'Need Review', badge: 'border border-danger text-danger bg-transparent', icon: 'fa-exclamation-triangle' }, // Icon for 'Need Review'
+
   }
 
   return statusMap[+statusType] || { text: 'Unknown Status', badge: 'border border-secondary text-secondary bg-transparent', icon: 'fa-question-circle' }

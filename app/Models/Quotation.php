@@ -26,7 +26,7 @@ class Quotation extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'quotation_product')
-                    ->withPivot('quantity', 'price', 'discount', 'vat')
+                    ->withPivot('specification', 'quantity', 'price', 'discount', 'vat')
                     ->withTimestamps();
     }
 }

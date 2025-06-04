@@ -1,6 +1,10 @@
 <template>
   <Main>
     <Head title="Create Evaluation" />
+    <div class="mt-3">
+      <button class="btn btn-secondary" @click="goBack">Back</button>
+      <!-- <button class="btn btn-primary" @click="navigateToPrint">Print</button> -->
+    </div>
     <div class="panel panel-inverse">
       <div class="panel-heading d-flex justify-content-between align-items-center">
         <h4 class="panel-title">Create Evaluation</h4>
@@ -13,13 +17,12 @@
       <div class="panel-body">
         <h1 class="text-center">Evaluation Form</h1>
         <form @submit.prevent="submit">
-          <div class="form-group mb-4">
-            <label class="font-weight-semibold" for="productSelect">Product</label>
+          <div class="form-group col-md-6">
+            <label class="fw-bold" for="productSelect">Search and Select Product</label>
             <select
               ref="productSelect"
               id="productSelect"
               class="form-control"
-              :class="{ 'is-invalid': errors.products }"
             >
               <option value="">Select a product</option>
               <option
@@ -44,21 +47,29 @@
               <thead>
                 <tr>
                   <th style="width: 5%;">Item Code</th>
-                  <th style="width: 15%;">Description</th>
-                  <th style="width: 2%;">Qty</th>
+                  <th style="width: 15%; min-width: 200px;">Description</th>
+                  <th style="width: 3%;">Qty</th>
                   <th style="width: 3%;">UoM</th>
                   <th
                     v-for="(quotation, qIndex) in form.quotations"
                     :key="'supplier-header-' + qIndex"
                     class="text-center"
-                    style="min-width: 180px;"
+                    style="min-width: 180px; vertical-align: top;"
                   >
                     <div class="font-weight-semibold">Quotation {{ toRoman(qIndex + 1) }}</div>
+                    <button
+                      v-if="form.quotations.length > 1"
+                      type="button"
+                      class="btn btn-link text-danger p-0 m-auto"
+                      @click="removeQuotation(qIndex)"
+                      title="Remove quotation"
+                    >
+                      <i class="fa fa-times"></i>
+                    </button>
                     <select
                       v-model="quotation.supplier_id"
                       :ref="el => supplierSelects[qIndex] = el"
                       class="form-control supplier-select"
-                      :class="{ 'is-invalid': errors[`quotations.${qIndex}.supplier_id`] }"
                     >
                       <option value="">Select supplier</option>
                       <option
@@ -73,15 +84,6 @@
                       <div>Phone: {{ suppliers.find(s => s.id === quotation.supplier_id)?.number || '-' }}</div>
                       <div>Address: {{ suppliers.find(s => s.id === quotation.supplier_id)?.address || '-' }}</div>
                     </div>
-                    <button
-                      v-if="form.quotations.length > 1"
-                      type="button"
-                      class="btn btn-link text-danger p-0 mt-1"
-                      @click="removeQuotation(qIndex)"
-                      title="Remove quotation"
-                    >
-                      Remove
-                    </button>
                     <div v-if="errors[`quotations.${qIndex}.supplier_id`]" class="invalid-feedback d-block">
                       {{ errors[`quotations.${qIndex}.supplier_id`] }}
                     </div>
@@ -95,7 +97,8 @@
                     class="text-center"
                   >
                     <div class="d-flex justify-content-between" style="gap: 8px;">
-                      <div style="min-width: 60px;">Price</div>
+                      <div style="min-width: 100px;">Brand/Spec</div>
+                      <div style="min-width: 80px;">Price</div>
                       <div style="min-width: 70px;">Discount</div>
                       <div style="min-width: 80px;">Total</div>
                     </div>
@@ -121,10 +124,15 @@
                       v-model.number="form.quantities[product.id]"
                       type="number"
                       min="0"
+                      step="0.01"
                       class="form-control form-control-sm"
+                      :class="{ 'is-invalid': errors[`quantities.${product.id}`] }"
                       style="width: 80px"
                       placeholder="Qty"
                     />
+                    <div v-if="errors[`quantities.${product.id}`]" class="invalid-feedback d-block">
+                      {{ errors[`quantities.${product.id}`] }}
+                    </div>
                   </td>
                   <td>{{ product.uom ?? '-' }}</td>
                   <td
@@ -133,29 +141,55 @@
                     class="text-center"
                   >
                     <div class="d-flex justify-content-between" style="gap: 8px;">
-                      <input
-                        v-model.number="quotation.prices[product.id]"
-                        type="number"
-                        min="0"
-                        class="form-control form-control-sm"
-                        placeholder="Price"
-                        style="min-width: 60px"
-                      />
-                      <input
-                        v-model.number="quotation.discounts[product.id]"
-                        type="number"
-                        min="0"
-                        class="form-control form-control-sm"
-                        placeholder="Discount"
-                        style="min-width: 70px"
-                      />
-                      <input
-                        :value="computeTotalPrice(quotation, product.id)"
-                        type="text"
-                        readonly
-                        class="form-control form-control-sm bg-light"
-                        style="min-width: 80px"
-                      />
+                      <div style="min-width: 100px;">
+                        <textarea
+                          v-model="quotation.specifications[product.id]"
+                          class="form-control form-control-sm"
+                          :class="{ 'is-invalid': errors[`quotations.${qIndex}.specifications.${product.id}`] }"
+                          placeholder="Brand/Spec"
+                          rows="1"
+                          style="resize: vertical;"
+                        ></textarea>
+                        <div v-if="errors[`quotations.${qIndex}.specifications.${product.id}`]" class="invalid-feedback d-block">
+                          {{ errors[`quotations.${qIndex}.specifications.${product.id}`] }}
+                        </div>
+                      </div>
+                      <div style="min-width: 60px;">
+                        <input
+                          v-model.number="quotation.prices[product.id]"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="form-control form-control-sm"
+                          :class="{ 'is-invalid': errors[`quotations.${qIndex}.prices.${product.id}`] }"
+                          placeholder="Price"
+                        />
+                        <div v-if="errors[`quotations.${qIndex}.prices.${product.id}`]" class="invalid-feedback d-block">
+                          {{ errors[`quotations.${qIndex}.prices.${product.id}`] }}
+                        </div>
+                      </div>
+                      <div style="min-width: 70px;">
+                        <input
+                          v-model.number="quotation.discounts[product.id]"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="form-control form-control-sm"
+                          :class="{ 'is-invalid': errors[`quotations.${qIndex}.discounts.${product.id}`] }"
+                          placeholder="Discount"
+                        />
+                        <div v-if="errors[`quotations.${qIndex}.discounts.${product.id}`]" class="invalid-feedback d-block">
+                          {{ errors[`quotations.${qIndex}.discounts.${product.id}`] }}
+                        </div>
+                      </div>
+                      <div style="min-width: 80px;">
+                        <input
+                          :value="computeTotalPrice(quotation, product.id)"
+                          type="text"
+                          readonly
+                          class="form-control form-control-sm bg-light"
+                        />
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -178,14 +212,13 @@
                     :key="'vat-' + qIndex"
                     class="text-right fw-bold"
                   >
+                    +{{ quotationSummaries[qIndex]?.vat || '0.00' }}
                     <small class="text-muted">
                       ({{ (() => {
                         const supplier = suppliers.find(s => s.id === quotation.supplier_id);
                         return supplier ? supplier.vat + '%' : '-';
                       })() }})
                     </small>
-                    <br />
-                    +{{ quotationSummaries[qIndex]?.vat || '0.00' }}
                   </td>
                 </tr>
                 <tr>
@@ -195,7 +228,13 @@
                   </td>
                 </tr>
                 <tr>
-                  <td colspan="4" class="text-center fw-bold">Criteria</td>
+                  <td colspan="4" class="text-start">
+                    <h6 class="fw-bold mb-4 mt-2">1. Price</h6>
+                    <h6 class="fw-bold mb-4">2. Quality</h6>
+                    <h6 class="fw-bold mb-4">3. Lead time on service/production/goods</h6>
+                    <h6 class="fw-bold mb-4">4. Warranty, (Services/Spare Parts/Goods)</h6>
+                    <h6 class="fw-bold mb-0">5. Term Payment/Deposit</h6>
+                  </td>
                   <td
                     v-for="(quotation, qIndex) in form.quotations"
                     :key="'criteria-' + qIndex"
@@ -203,23 +242,63 @@
                   >
                     <div class="input-group mb-1">
                       <span class="input-group-text">1.</span>
-                      <input v-model="quotation.criteria.price" class="form-control" placeholder="Price" />
+                      <input
+                        v-model="quotation.criteria.price"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors[`quotations.${qIndex}.criteria.price`] }"
+                        placeholder="Price"
+                      />
+                      <div v-if="errors[`quotations.${qIndex}.criteria.price`]" class="invalid-feedback d-block">
+                        {{ errors[`quotations.${qIndex}.criteria.price`] }}
+                      </div>
                     </div>
                     <div class="input-group mb-1">
                       <span class="input-group-text">2.</span>
-                      <input v-model="quotation.criteria.quality" class="form-control" placeholder="Quality" />
+                      <input
+                        v-model="quotation.criteria.quality"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors[`quotations.${qIndex}.criteria.quality`] }"
+                        placeholder="Quality"
+                      />
+                      <div v-if="errors[`quotations.${qIndex}.criteria.quality`]" class="invalid-feedback d-block">
+                        {{ errors[`quotations.${qIndex}.criteria.quality`] }}
+                      </div>
                     </div>
                     <div class="input-group mb-1">
                       <span class="input-group-text">3.</span>
-                      <input v-model="quotation.criteria.lead_time" class="form-control" placeholder="Lead Time" />
+                      <input
+                        v-model="quotation.criteria.lead_time"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors[`quotations.${qIndex}.criteria.lead_time`] }"
+                        placeholder="Lead Time"
+                      />
+                      <div v-if="errors[`quotations.${qIndex}.criteria.lead_time`]" class="invalid-feedback d-block">
+                        {{ errors[`quotations.${qIndex}.criteria.lead_time`] }}
+                      </div>
                     </div>
                     <div class="input-group mb-1">
                       <span class="input-group-text">4.</span>
-                      <input v-model="quotation.criteria.warranty" class="form-control" placeholder="Warranty" />
+                      <input
+                        v-model="quotation.criteria.warranty"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors[`quotations.${qIndex}.criteria.warranty`] }"
+                        placeholder="Warranty"
+                      />
+                      <div v-if="errors[`quotations.${qIndex}.criteria.warranty`]" class="invalid-feedback d-block">
+                        {{ errors[`quotations.${qIndex}.criteria.warranty`] }}
+                      </div>
                     </div>
                     <div class="input-group">
                       <span class="input-group-text">5.</span>
-                      <input v-model="quotation.criteria.term_payment" class="form-control" placeholder="Term Payment" />
+                      <input
+                        v-model="quotation.criteria.term_payment"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors[`quotations.${qIndex}.criteria.term_payment`] }"
+                        placeholder="Term Payment"
+                      />
+                      <div v-if="errors[`quotations.${qIndex}.criteria.term_payment`]" class="invalid-feedback d-block">
+                        {{ errors[`quotations.${qIndex}.criteria.term_payment`] }}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -243,14 +322,13 @@
           <div class="form-group mb-4">
             <h5 class="font-weight-semibold mb-3">Approval</h5>
             <div class="row">
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label for="reviewedBy" class="font-weight-semibold">Reviewed By</label>
                 <select
                   v-model="form.reviewed_by"
                   ref="reviewedBySelect"
                   id="reviewedBy"
                   class="form-control"
-                  :class="{ 'is-invalid': errors.reviewed_by }"
                 >
                   <option value="">Select reviewer</option>
                   <option
@@ -263,14 +341,32 @@
                 </select>
                 <div v-if="errors.reviewed_by" class="invalid-feedback d-block">{{ errors.reviewed_by }}</div>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
+                <label for="acknowledgedBy" class="font-weight-semibold">Acknowledged By</label>
+                <select
+                  v-model="form.acknowledged_by"
+                  ref="acknowledgedBySelect"
+                  id="acknowledgedBy"
+                  class="form-control"
+                >
+                  <option value="">Select Acknowledger</option>
+                  <option
+                    v-for="user in users"
+                    :key="user.id"
+                    :value="user.id"
+                  >
+                    {{ user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User' }}
+                  </option>
+                </select>
+                <div v-if="errors.acknowledged_by" class="invalid-feedback d-block">{{ errors.acknowledged_by }}</div>
+              </div>
+              <div class="col-md-4">
                 <label for="approvedBy" class="font-weight-semibold">Approved By</label>
                 <select
                   v-model="form.approved_by"
                   ref="approvedBySelect"
                   id="approvedBy"
                   class="form-control"
-                  :class="{ 'is-invalid': errors.approved_by }"
                 >
                   <option value="">Select approver</option>
                   <option
@@ -316,7 +412,12 @@ const productSelect = ref(null);
 const supplierSelects = ref([]);
 const reviewedBySelect = ref(null);
 const approvedBySelect = ref(null);
+const acknowledgedBySelect = ref(null);
 const isSubmitting = ref(false);
+
+const goBack = () => {
+  window.history.back();
+};
 
 const form = ref({
   products: [],
@@ -324,6 +425,7 @@ const form = ref({
   quotations: [
     {
       supplier_id: '',
+      specifications: {},
       prices: {},
       discounts: {},
       criteria: {
@@ -338,6 +440,7 @@ const form = ref({
   recommendation: '',
   reviewed_by: '',
   approved_by: '',
+  acknowledged_by: '',
 });
 
 const selectedProducts = computed(() =>
@@ -373,6 +476,9 @@ const toRoman = (num) => {
 watch(
   () => form.value.products,
   (newProducts) => {
+    if (newProducts.length > 0 && errors.value.products) {
+      errors.value = { ...errors.value, products: null };
+    }
     newProducts.forEach(id => {
       if (!(id in form.value.quantities)) form.value.quantities[id] = 0;
     });
@@ -382,6 +488,7 @@ watch(
     form.value.quotations.forEach(quotation => {
       Object.keys(quotation.prices).forEach(pid => {
         if (!newProducts.includes(Number(pid))) {
+          delete quotation.specifications[pid];
           delete quotation.prices[pid];
           delete quotation.discounts[pid];
         }
@@ -391,9 +498,91 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => form.value.quantities,
+  (newQuantities) => {
+    Object.entries(newQuantities).forEach(([productId, quantity]) => {
+      if (quantity > 0 && errors.value[`quantities.${productId}`]) {
+        errors.value = { ...errors.value, [`quantities.${productId}`]: null };
+      }
+    });
+  },
+  { deep: true }
+);
+
+watch(
+  () => form.value.quotations,
+  (newQuotations) => {
+    newQuotations.forEach((quotation, qIndex) => {
+      if (quotation.supplier_id && errors.value[`quotations.${qIndex}.supplier_id`]) {
+        errors.value = { ...errors.value, [`quotations.${qIndex}.supplier_id`]: null };
+      }
+      Object.entries(quotation.specifications).forEach(([productId, specification]) => {
+        if (specification && errors.value[`quotations.${qIndex}.specifications.${productId}`]) {
+          errors.value = { ...errors.value, [`quotations.${qIndex}.specifications.${productId}`]: null };
+        }
+      });
+      Object.entries(quotation.prices).forEach(([productId, price]) => {
+        if (price >= 0 && errors.value[`quotations.${qIndex}.prices.${productId}`]) {
+          errors.value = { ...errors.value, [`quotations.${qIndex}.prices.${productId}`]: null };
+        }
+      });
+      Object.entries(quotation.discounts).forEach(([productId, discount]) => {
+        if (discount >= 0 && errors.value[`quotations.${qIndex}.discounts.${productId}`]) {
+          errors.value = { ...errors.value, [`quotations.${qIndex}.discounts.${productId}`]: null };
+        }
+      });
+      const criteria = quotation.criteria;
+      ['price', 'quality', 'lead_time', 'warranty', 'term_payment'].forEach(field => {
+        if (criteria[field] && errors.value[`quotations.${qIndex}.criteria.${field}`]) {
+          errors.value = { ...errors.value, [`quotations.${qIndex}.criteria.${field}`]: null };
+        }
+      });
+    });
+  },
+  { deep: true }
+);
+
+watch(
+  () => form.value.recommendation,
+  (newRecommendation) => {
+    if (newRecommendation && errors.value.recommendation) {
+      errors.value = { ...errors.value, recommendation: null };
+    }
+  }
+);
+
+watch(
+  () => form.value.reviewed_by,
+  (newReviewedBy) => {
+    if (newReviewedBy && errors.value.reviewed_by) {
+      errors.value = { ...errors.value, reviewed_by: null };
+    }
+  }
+);
+
+watch(
+  () => form.value.approved_by,
+  (newApprovedBy) => {
+    if (newApprovedBy && errors.value.approved_by) {
+      errors.value = { ...errors.value, approved_by: null };
+    }
+  }
+);
+
+watch(
+  () => form.value.acknowledged_by,
+  (newAcknowledgedBy) => {
+    if (newAcknowledgedBy && errors.value.acknowledged_by) {
+      errors.value = { ...errors.value, acknowledged_by: null };
+    }
+  }
+);
+
 const addQuotation = async () => {
   form.value.quotations.push({
     supplier_id: '',
+    specifications: {},
     prices: {},
     discounts: {},
     criteria: {
@@ -415,11 +604,30 @@ const removeQuotation = (index) => {
     }
     form.value.quotations.splice(index, 1);
     supplierSelects.value.splice(index, 1);
+    const newErrors = { ...errors.value };
+    Object.keys(newErrors).forEach(key => {
+      if (key.startsWith(`quotations.${index}.`)) {
+        delete newErrors[key];
+      }
+    });
+    errors.value = newErrors;
   }
 };
 
 const removeProduct = (productId) => {
   form.value.products = form.value.products.filter(id => id !== productId);
+  const newErrors = { ...errors.value };
+  Object.keys(newErrors).forEach(key => {
+    if (
+      key === `quantities.${productId}` ||
+      key.includes(`.specifications.${productId}`) ||
+      key.includes(`.prices.${productId}`) ||
+      key.includes(`.discounts.${productId}`)
+    ) {
+      delete newErrors[key];
+    }
+  });
+  errors.value = newErrors;
   $(productSelect.value).val('').trigger('change');
 };
 
@@ -564,6 +772,36 @@ onMounted(() => {
     const selectedId = $approvedBySelect.val() ? parseInt($approvedBySelect.val()) : '';
     form.value.approved_by = selectedId;
   });
+
+  const $acknowledgedBySelect = $(acknowledgedBySelect.value).select2({
+    placeholder: 'Select acknowledger',
+    width: '100%',
+    allowClear: true,
+    matcher: (params, data) => {
+      if (!params.term) return data;
+      const user = props.users.find(u => u.id === parseInt(data.id));
+      if (!user) return null;
+      const term = params.term.toLowerCase();
+      return user.name.toLowerCase().includes(term) || (user.card_id && user.position && user.card_id.toLowerCase().includes(term)) ? data : null;
+    },
+    templateResult: (data) => {
+      if (!data.id) return data.text;
+      const user = props.users.find(u => u.id === parseInt(data.id));
+      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
+    },
+    templateSelection: (data) => {
+      if (!data.id) return data.text;
+      const user = props.users.find(u => u.id === parseInt(data.id));
+      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
+    },
+  });
+
+  $acknowledgedBySelect.val(form.value.acknowledged_by || '').trigger('change');
+
+  $acknowledgedBySelect.on('select2:select select2:unselect', () => {
+    const selectedId = $acknowledgedBySelect.val() ? parseInt($acknowledgedBySelect.val()) : '';
+    form.value.acknowledged_by = selectedId;
+  });
 });
 
 const initializeSupplierSelect = (qIndex) => {
@@ -612,6 +850,7 @@ const submit = async () => {
 
     if (reviewedBySelect.value) $(reviewedBySelect.value).select2('destroy');
     if (approvedBySelect.value) $(approvedBySelect.value).select2('destroy');
+    if (acknowledgedBySelect.value) $(acknowledgedBySelect.value).select2('destroy');
 
     form.value = {
       products: [],
@@ -619,6 +858,7 @@ const submit = async () => {
       quotations: [
         {
           supplier_id: '',
+          specifications: {},
           prices: {},
           discounts: {},
           criteria: {
@@ -633,12 +873,13 @@ const submit = async () => {
       recommendation: '',
       reviewed_by: '',
       approved_by: '',
+      acknowledged_by: '',
     };
     supplierSelects.value = [];
     $(productSelect.value).val('').trigger('change');
-
     await nextTick();
     initializeSupplierSelect(0);
+    window.location.href = '/evaluations';
   } catch (error) {
     if (error.response?.status === 422) {
       errors.value = error.response.data.errors || {};

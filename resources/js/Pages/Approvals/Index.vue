@@ -67,6 +67,7 @@ onMounted(() => {
                 case 4: return '<span class="badge bg-warning">To Receive</span>';
                 case 5: return '<span class="badge bg-secondary">To Authorize</span>';
                 case 6: return '<span class="badge bg-danger">To Reject</span>';
+                case 7: return '<span class="badge bg-dark">To Review</span>';
                 default: return '<span class="badge bg-secondary">Unknown</span>';
               }
             }

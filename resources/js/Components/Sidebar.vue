@@ -167,6 +167,27 @@ const pendingApprovalsCount = computed(() => approvals.value.filter(approval => 
                     </div>
                 </div>
             </div>
+            <div class="menu-item has-sub" :class="{'active': isActive('/evaluations') || isActive('/evaluations/create')}">
+                <a href="javascript:;" class="menu-link">
+                    <div class="menu-icon">
+                        <i class="fa fa-check-square"></i>
+                    </div>
+                    <div class="menu-text">Evaluation</div>
+                    <div class="menu-caret"></div>
+                </a>
+                <div class="menu-submenu">
+                    <div class="menu-item" :class="{'active': isActive('/evaluations')}">
+                        <Link href="/evaluations" class="menu-link">
+                            <div class="menu-text">Evaluations List</div>
+                        </Link>
+                    </div>
+                    <div class="menu-item" :class="{'active': isActive('/evaluations/create')}">
+                        <Link href="/evaluations/create" class="menu-link">
+                            <div class="menu-text">Create Evaluation</div>
+                        </Link>
+                    </div>
+                </div>
+            </div>
             <div class="menu-item">
                 <a href="/documents" class="menu-link" v-bind:target="'_blank'">
                     <div class="menu-icon">

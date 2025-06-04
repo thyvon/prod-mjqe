@@ -16,6 +16,7 @@ class ApprovalController extends Controller
             'user:id,name',
             'cashRequest:id,id as approval_id,ref_no',
             'clearInvoice:id,id as approval_id,ref_no',
+            'evaluation:id,id as approval_id,reference',
             'clearStatment:id,id as approval_id,statement_number',
             'cancellation:id,id as approval_id,cancellation_no,pr_po_id',
             'cancellation.purchaseRequest:id,id as pr_po_id,pr_number',
@@ -41,6 +42,8 @@ class ApprovalController extends Controller
                 } elseif ($approval->docs_type == 7 && $approval->cancellation) {
                     $approval->reference = $approval->cancellation->cancellation_no .
                         ($approval->cancellation->purchaseOrder ? ' (' . $approval->cancellation->purchaseOrder->po_number . ')' : '');
+                } elseif ($approval->docs_type == 8 && $approval->evaluation) {
+                    $approval->reference = $approval->evaluation->reference;
                 } else {
                     $approval->reference = 'N/A';
                 }

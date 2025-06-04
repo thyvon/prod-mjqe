@@ -53,6 +53,10 @@ class Approval extends Model
     {
         return $this->belongsTo(PurchaseOrder::class, 'approval_id');
     }
+    public function evaluation()
+    {
+        return $this->belongsTo(Evaluation::class, 'approval_id');
+    }
 
     public function cancellation()
     {

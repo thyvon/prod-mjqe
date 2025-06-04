@@ -10,6 +10,7 @@ class Evaluation extends Model
     use HasFactory;
 
     protected $fillable = [
+        'reference',
         'recommendation',
         'status',
     ];
