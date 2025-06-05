@@ -405,18 +405,20 @@ onMounted(() => {
                     <th rowspan="2" style="width: 15%;">Description</th>
                     <th rowspan="2" style="width: 5%;">Qty</th>
                     <th rowspan="2" style="width: 5%;">UoM</th>
-                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'supplier-header-' + qIndex" colspan="4" style="width: 22%;">
-                      <div class="underline fw-bold">Quotation {{ toRoman(qIndex + 1) }}</div>
-                      <div class="text-start">Name: {{ getSupplierName(quotation) }}</div>
-                      <div class="text-start">Phone: {{ getSupplierPhone(quotation) }}</div>
-                      <div class="text-start">Address: {{ getSupplierAddress(quotation) }}</div>
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'supplier-header-' + qIndex" colspan="4" class="bg-light">
+                      <div class="fw-bold border-bottom pb-1">Quotation {{ toRoman(qIndex + 1) }}</div>
+                      <div class="text-start small">Name: {{ getSupplierName(quotation) }}</div>
+                      <div class="text-start small">Phone: {{ getSupplierPhone(quotation) }}</div>
+                      <div class="text-start small">Address: {{ getSupplierAddress(quotation) }}</div>
                     </th>
                   </tr>
                   <tr class="text-center">
-                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-spec'" style="width: 5.5%;">Brand/Spec</th>
-                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-price'" style="width: 5.5%;">Price</th>
-                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-discount'" style="width: 5.5%;">Discount</th>
-                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-total'" style="width: 5.5%;">Total</th>
+                    <template v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex">
+                      <th style="width: 5.5%;">Brand/Spec</th>
+                      <th style="width: 5.5%;">Price</th>
+                      <th style="width: 5.5%;">Discount</th>
+                      <th style="width: 5.5%;">Total</th>
+                    </template>
                   </tr>
                 </thead>
                 <tbody class="table-group-divider" style="font-size: 10px;">

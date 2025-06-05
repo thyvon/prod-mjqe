@@ -65,6 +65,7 @@ class EvaluationController extends Controller
                 $evaluation = Evaluation::create([
                     'reference' => $this->generateReference(),
                     'recommendation' => $data['recommendation'],
+                    'created_by' => auth()->id(),
                     'reviewed_by' => $data['reviewed_by'],
                     'approved_by' => $data['approved_by'],
                     'acknowledged_by' => $data['acknowledged_by'],
@@ -132,6 +133,8 @@ class EvaluationController extends Controller
                 ];
             })->all(),
             'recommendation' => $evaluation->recommendation,
+            'created_by' => $evaluation->created_by,
+            'created_at' => $evaluation->created_at,
             'reviewed_by' => $evaluation->reviewed_by,
             'approved_by' => $evaluation->approved_by,
             'acknowledged_by' => $evaluation->acknowledged_by,
