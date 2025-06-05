@@ -523,7 +523,7 @@ class EvaluationController extends Controller
             ]);
 
             $evaluation = Evaluation::findOrFail($id);
-            $evaluation->status = -1; // Rejected
+            $evaluation->status = 'Rejected'; // Rejected
             $evaluation->save();
 
             return response()->json(['message' => 'Rejection successful.']);

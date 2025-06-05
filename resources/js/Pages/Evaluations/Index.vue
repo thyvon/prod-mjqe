@@ -112,18 +112,22 @@ onMounted(() => {
           { data: 'reference' },
           { data: null, render: (data) => getDescription(data) },
           { data: 'created_at', render: (data) => formatDate(data) },
-          {
-            data: null,
-            render: (data) => {
-              const hasReviewed = data.reviewed_by;
-              const hasAcknowledged = data.acknowledged_by;
-              const hasApproved = data.approved_by;
-              if (hasApproved) return '<span class="badge bg-success">Approved</span>';
-              if (hasAcknowledged) return '<span class="badge bg-warning">Acknowledged</span>';
-              if (hasReviewed) return '<span class="badge bg-primary">Reviewed</span>';
-              return '<span class="badge bg-secondary">Pending</span>';
-            },
-            defaultContent: '<span class="badge bg-secondary">Pending</span>',
+          { data: 'status', render: (data) => {
+              switch (data) {
+                case 'Pending':
+                  return '<span class="badge bg-warning">Pending</span>';
+                case 'Approved':
+                  return '<span class="badge bg-success">Approved</span>';
+                case 'Rejected':
+                  return '<span class="badge bg-danger">Rejected</span>';
+                case 'Acknowledged':
+                  return '<span class="badge bg-info">Acknowledged</span>';
+                case 'Reviewed':
+                  return '<span class="badge bg-primary">Reviewed</span>';
+                default:
+                  return '<span class="badge bg-secondary">Unknown</span>';
+              }
+            } 
           },
           {
             data: null,
