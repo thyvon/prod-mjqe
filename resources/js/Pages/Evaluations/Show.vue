@@ -428,18 +428,12 @@ onMounted(() => {
                     <td>{{ getProductName(productId) }}</td>
                     <td>{{ props.evaluation.quantities[productId] || 0 }}</td>
                     <td>{{ getProductUom(productId) }}</td>
-                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-spec`" class="text-center">
-                      {{ getQuotationSpec(quotation, productId) }}
-                    </td>
-                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-price`" class="text-center">
-                      {{ formatCurrency(getQuotationPrice(quotation, productId)) }}
-                    </td>
-                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-discount`" class="text-center">
-                      {{ formatCurrency(quotation.discounts[productId] || 0) }}
-                    </td>
-                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-total`" class="text-center">
-                      {{ formatCurrency(calculateTotalCost(quotation, productId)) }}
-                    </td>
+                    <template v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'quotation-' + qIndex + '-product-' + productId">
+                      <td class="text-center">{{ getQuotationSpec(quotation, productId) }}</td>
+                      <td class="text-center">{{ formatCurrency(getQuotationPrice(quotation, productId)) }}</td>
+                      <td class="text-center">{{ formatCurrency(quotation.discounts[productId] || 0) }}</td>
+                      <td class="text-center">{{ formatCurrency(calculateTotalCost(quotation, productId)) }}</td>
+                    </template>
                   </tr>
                   <tr>
                     <td colspan="5" class="fw-bold">Subtotal</td>
@@ -466,7 +460,7 @@ onMounted(() => {
                       {{ formatCurrency(computeSummary(quotation).grandTotal) }}
                     </td>
                   </tr>
-                  <tr><td colspan="13" class="border-0"></td></tr>
+                  <tr><td colspan="5" class="border-0"></td><td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'spacer-' + qIndex" colspan="4" class="border-0"></td></tr>
                   <tr>
                     <td colspan="5" class="fw-bold">1 - Price</td>
                     <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'price-' + qIndex" colspan="4" class="text-center">
