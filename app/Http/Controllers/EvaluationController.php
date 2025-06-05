@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Approval;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -161,7 +162,7 @@ class EvaluationController extends Controller
                     'position' => $approval->user ? ($approval->user->position ?? 'N/A') : 'N/A',
                     'status' => $approval->status ?? 0, // 0: pending, 1: approved, -1: rejected
                     'signature' => $approval->signature ?? null,
-                    'click_date' => $approval->updated_at ? $approval->updated_at->format('Y-m-d') : null,
+                    'click_date' => $approval->click_date ? $approval->click_date : null,
                 ];
             })->all();
 
@@ -436,5 +437,102 @@ class EvaluationController extends Controller
         }
 
         return sprintf("EV-%s-%04d", $yearMonth, $sequence);
+    }
+
+    public function approve(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+
+            // Determine docs_type based on clear_type
+            $evaluation = Evaluation::findOrFail($id);
+            $docsType = 8; // Default docs_type for evaluations
+
+            // Find or create the approval record for the current user, status type, and docs_type
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
+
+            if (!$approval) {
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+
+            // Update the approval status
+            $approval->update([
+                'status' => 1, // Update the status to 'approved'
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            // Update the clear invoice's status based on status_type
+            if ($request->status_type == 1) {
+                $evaluation->status = 'Checked'; // Checked
+            } elseif ($request->status_type == 3) {
+                $evaluation->status = 'Approved'; // Approved
+            } elseif ($request->status_type == 2) {
+                $evaluation->status = 'Acknowledged'; // Acknowledged
+            } elseif( $request->status_type == 7) {
+                $evaluation->status = 'Reviewed'; // Reviewed
+            } else {
+                return response()->json(['message' => 'Invalid status type.'], 400);
+            }
+            $evaluation->save();
+
+            return response()->json(['message' => 'Approval successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Approval Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the approval.'], 500);
+        }
+    }
+
+    public function reject(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'status_type' => 'required|integer',
+            ]);
+
+            $currentUser = Auth::user();
+            $docsType = 8;
+
+            // Find or create the approval record for the current user, status type, and docs_type
+            $approval = Approval::where([
+                'approval_id' => $id,
+                'status_type' => $request->status_type,
+                'user_id' => $currentUser->id,
+                'docs_type' => $docsType, // Added docs_type condition
+            ])->first();
+
+            if (!$approval) {
+                return response()->json(['message' => 'Approval record not found or unauthorized.'], 403);
+            }
+
+            // Update the approval status to rejected
+            $approval->update([
+                'status' => -1, // Set status to -1 for rejection
+                'click_date' => now(), // Capture the current date
+            ]);
+
+            $evaluation = Evaluation::findOrFail($id);
+            $evaluation->status = -1; // Rejected
+            $evaluation->save();
+
+            return response()->json(['message' => 'Rejection successful.']);
+        } catch (\Exception $e) {
+            \Log::error('Rejection Error:', [
+                'error' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'An error occurred while processing the rejection.'], 500);
+        }
     }
 }

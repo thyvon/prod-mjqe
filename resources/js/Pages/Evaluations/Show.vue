@@ -1,5 +1,4 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
 import axios from 'axios';
@@ -31,12 +30,6 @@ const props = defineProps({
     default: () => null,
   },
 });
-
-// Refs for Select2
-const supplierSelects = ref([]);
-const reviewedBySelect = ref(null);
-const acknowledgedBySelect = ref(null);
-const approvedBySelect = ref(null);
 
 // Format currency
 const formatCurrency = (value) => {
@@ -186,90 +179,124 @@ const getStatusTypeString = (statusType) => {
 };
 
 const approveRequest = async (statusType) => {
-  const confirmResult = await Swal.fire({
-    title: 'Confirm',
-    text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
-    icon: 'warning',
-    showCancelButton: true,
-    cancelButtonText: 'No',
-    confirmButtonText: 'Yes',
-    buttonsStyling: false,
-    customClass: {
-      cancelButton: 'btn btn-secondary',
-      confirmButton: 'btn btn-primary',
-    },
-  });
-
-  if (!confirmResult.isConfirmed) return;
-
   try {
+    const confirmResult = await swal({
+      title: 'Confirm',
+      text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
+      icon: 'warning',
+      buttons: {
+        cancel: {
+          text: 'No',
+          value: null,
+          visible: true,
+          className: 'btn btn-secondary',
+          closeModal: true,
+        },
+        confirm: {
+          text: 'Yes',
+          value: true,
+          visible: true,
+          className: 'btn btn-primary',
+          closeModal: true,
+        },
+      },
+      dangerMode: true,
+    });
+
+    // Check if the user confirmed the action
+    if (confirmResult !== true) return;
+
+    // Send approval request
     await axios.post(`/evaluations/${props.evaluation.id}/approve`, {
       status_type: statusType,
     });
-    await Swal.fire({
+
+    // Show success message
+    await swal({
       title: 'Success',
       text: `The Evaluation is successfully ${getStatusTypeString(statusType)}.`,
       icon: 'success',
-      confirmButtonText: 'OK',
-      customClass: {
-        confirmButton: 'btn btn-primary',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
       },
     });
+
+    // Reload the page
     window.location.reload();
   } catch (error) {
     console.error('Approval Error:', error);
-    await Swal.fire({
+
+    // Show error message
+    await swal({
       title: 'Error',
       text: `The request failed to ${getStatusTypeString(statusType)}.`,
       icon: 'error',
-      confirmButtonText: 'OK',
-      customClass: {
-        confirmButton: 'btn btn-danger',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
       },
     });
   }
 };
 
 const rejectRequest = async (statusType) => {
-  const confirmResult = await Swal.fire({
-    title: 'Confirm',
-    text: `Are you sure you want to Reject?`,
-    icon: 'warning',
-    showCancelButton: true,
-    cancelButtonText: 'No, cancel!',
-    confirmButtonText: 'Yes, reject it!',
-    buttonsStyling: false,
-    customClass: {
-      cancelButton: 'btn btn-secondary',
-      confirmButton: 'btn btn-danger',
-    },
-  });
-
-  if (!confirmResult.isConfirmed) return;
-
   try {
+    const confirmResult = await swal({
+      title: 'Confirm',
+      text: `Are you sure you want to Reject?`,
+      icon: 'warning',
+      buttons: {
+        cancel: {
+          text: 'No, cancel!',
+          value: null,
+          visible: true,
+          className: 'btn btn-secondary',
+          closeModal: true,
+        },
+        confirm: {
+          text: 'Yes, reject it!',
+          value: true,
+          visible: true,
+          className: 'btn btn-danger',
+          closeModal: true,
+        },
+      },
+      dangerMode: true,
+    });
+
+    // Check if the user confirmed the action
+    if (confirmResult !== true) return;
+
+    // Send rejection request
     await axios.post(`/evaluations/${props.evaluation.id}/reject`, {
       status_type: statusType,
     });
-    await Swal.fire({
+
+    // Show success message
+    await swal({
       title: 'Success',
       text: `Evaluation has been rejected for ${getStatusTypeString(statusType)} step.`,
       icon: 'success',
-      confirmButtonText: 'OK',
-      customClass: {
-        confirmButton: 'btn btn-primary',
+      button: {
+        text: 'OK',
+        className: 'btn btn-primary',
       },
     });
+
+    // Reload the page
     window.location.reload();
   } catch (error) {
     console.error('Rejection Error:', error);
-    await Swal.fire({
+
+    // Show error message
+    await swal({
       title: 'Error',
       text: `Failed to reject evaluation for ${getStatusTypeString(statusType)} step.`,
       icon: 'error',
-      confirmButtonText: 'OK',
-      customClass: {
-        confirmButton: 'btn btn-danger',
+      button: {
+        text: 'OK',
+        className: 'btn btn-danger',
       },
     });
   }
@@ -290,76 +317,6 @@ const printForm = () => {
 const goBack = () => {
   window.history.back();
 };
-
-// Initialize Select2
-const initializeSupplierSelect = (qIndex) => {
-  const $supplierSelect = $(supplierSelects.value[qIndex]);
-  if (!$supplierSelect.length) {
-    console.warn(`Supplier select element at index ${qIndex} not found.`);
-    return;
-  }
-
-  $supplierSelect.select2({
-    placeholder: 'Select supplier',
-    width: '100%',
-    allowClear: false,
-    disabled: true,
-    templateResult: (data) => {
-      if (!data.id) return data.text;
-      const supplier = props.suppliers.find(s => s.id === parseInt(data.id));
-      return supplier ? `${supplier.name}` : data.text;
-    },
-    templateSelection: (data) => {
-      if (!data.id) return data.text;
-      const supplier = props.suppliers.find(s => s.id === parseInt(data.id));
-      return supplier ? `${supplier.name}` : data.text;
-    },
-  });
-
-  $supplierSelect.val(props.evaluation.quotations[qIndex].supplier_id || '').trigger('change');
-};
-
-const initializeUserSelect = (selectRef, userId, placeholder) => {
-  const $select = $(selectRef.value);
-  if (!$select.length) {
-    console.warn(`${placeholder} select element not found.`);
-    return;
-  }
-
-  $select.select2({
-    placeholder,
-    width: '100%',
-    allowClear: false,
-    disabled: true,
-    templateResult: (data) => {
-      if (!data.id) return data.text;
-      const user = props.users.find(u => u.id === parseInt(data.id));
-      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
-    },
-    templateSelection: (data) => {
-      if (!data.id) return data.text;
-      const user = props.users.find(u => u.id === parseInt(data.id));
-      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
-    },
-  });
-
-  $select.val(userId || '').trigger('change');
-};
-
-onMounted(() => {
-  if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') {
-    console.warn('jQuery or Select2 is not loaded. Please ensure both are included in your project.');
-    return;
-  }
-
-  props.evaluation.quotations.forEach((_, qIndex) => {
-    initializeSupplierSelect(qIndex);
-  });
-
-  initializeUserSelect(reviewedBySelect, props.evaluation.reviewed_by, 'Select reviewer');
-  initializeUserSelect(acknowledgedBySelect, props.evaluation.acknowledged_by, 'Select acknowledger');
-  initializeUserSelect(approvedBySelect, props.evaluation.approved_by, 'Select approver');
-});
 </script>
 
 <template>
@@ -395,7 +352,7 @@ onMounted(() => {
             </div>
           </div>
           <!-- Table Section -->
-          <div class="row mb-3">
+          <div class="row mb-2">
             <div class="table-responsive width-full p-0">
               <table class="table table-bordered border-dark table-sm">
                 <thead style="font-size: 11px; font-family: 'TW Cen MT';">
@@ -496,21 +453,16 @@ onMounted(() => {
             </div>
           </div>
           <!-- Recommendation -->
-          <div class="row mb-3">
+          <div class="row mb-2">
             <div class="table-responsive width-full p-0">
-              <table class="table table-bordered border-dark table-sm">
-                <tbody style="font-size: 10px;">
-                  <tr>
-                    <td style="width: 20%;">Recommendation</td>
-                    <td>{{ props.evaluation.recommendation || 'No recommendation provided' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <label class="form-label fw-bold">Recommendation</label>
+              <p class="border p-2">{{ props.evaluation.recommendation || 'No recommendation provided' }}</p>
             </div>
           </div>
           <!-- Footer Section (Approvals) -->
           <div class="row mb-3" style="height: 150px;">
-            <div class="col-4 text-center px-2 mb-3">
+            <!-- Prepared By -->
+            <div class="col-3 text-center px-2 mb-3">
               <div>រៀបចំដោយ</div>
               <div>Prepared By</div>
               <img
@@ -524,31 +476,88 @@ onMounted(() => {
                 <div>Date: {{ formatDate(props.evaluation.created_at) }}</div>
               </div>
             </div>
-            <div v-for="approval in props.approvals" :key="approval.status_type" class="col-4 text-center px-2 mb-3">
-              <div v-if="approval.status_type === 3">អនុម័តដោយ</div>
-              <div>{{ approval.approval_name }}</div>
+            <!-- Acknowledged By -->
+            <div class="col-3 text-center px-2 mb-3">
+              <div>ទទួលស្គាល់ដោយ</div>
+              <div>Acknowledged By</div>
               <img
-                v-if="approval.status === 1"
-                :src="getSignatureUrl(approval.signature)"
+                v-if="props.approvals.find(a => a.status_type === 2)?.status === 1"
+                :src="getSignatureUrl(props.approvals.find(a => a.status_type === 2)?.signature)"
                 alt="Signature"
                 style="width: 130px; height: 80px; object-fit: contain;"
               />
-              <div v-else-if="approval.status === -1" class="text-danger mt-2">
+              <div v-else-if="props.approvals.find(a => a.status_type === 2)?.status === -1" class="text-danger mt-2">
                 <i class="fas fa-times-circle fa-2x"></i>
                 <div>Rejected</div>
               </div>
-              <div v-if="approval.user_id === props.currentUser?.id && approval.status === 0" class="mt-2">
-                <button class="btn btn-success btn-sm" @click="approveRequest(approval.status_type)">
+              <div v-if="props.approvals.find(a => a.status_type === 2)?.user_id === props.currentUser?.id && props.approvals.find(a => a.status_type === 2)?.status === 0" class="mt-2">
+                <button class="btn btn-success btn-sm" @click="approveRequest(2)">
                   Sign
                 </button>
-                <button class="btn btn-danger btn-sm ms-2" @click="rejectRequest(approval.status_type)">
+                <button class="btn btn-danger btn-sm ms-2" @click="rejectRequest(2)">
                   Reject
                 </button>
               </div>
               <div class="border-top mt-2 pt-1 text-start">
-                <div>Name: {{ approval.name }}</div>
-                <div>Position: {{ approval.position }}</div>
-                <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
+                <div>Name: {{ props.approvals.find(a => a.status_type === 2)?.name || 'N/A' }}</div>
+                <div>Position: {{ props.approvals.find(a => a.status_type === 2)?.position || 'N/A' }}</div>
+                <div>Date: {{ props.approvals.find(a => a.status_type === 2)?.click_date ? formatDate(props.approvals.find(a => a.status_type === 2).click_date) : '' }}</div>
+              </div>
+            </div>
+            <!-- Reviewed By -->
+            <div class="col-3 text-center px-2 mb-3">
+              <div>ពិនិត្យដោយ</div>
+              <div>Reviewed By</div>
+              <img
+                v-if="props.approvals.find(a => a.status_type === 7)?.status === 1"
+                :src="getSignatureUrl(props.approvals.find(a => a.status_type === 7)?.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div v-else-if="props.approvals.find(a => a.status_type === 7)?.status === -1" class="text-danger mt-2">
+                <i class="fas fa-times-circle fa-2x"></i>
+                <div>Rejected</div>
+              </div>
+              <div v-if="props.approvals.find(a => a.status_type === 7)?.user_id === props.currentUser?.id && props.approvals.find(a => a.status_type === 7)?.status === 0" class="mt-2">
+                <button class="btn btn-success btn-sm" @click="approveRequest(7)">
+                  Sign
+                </button>
+                <button class="btn btn-danger btn-sm ms-2" @click="rejectRequest(7)">
+                  Reject
+                </button>
+              </div>
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ props.approvals.find(a => a.status_type === 7)?.name || 'N/A' }}</div>
+                <div>Position: {{ props.approvals.find(a => a.status_type === 7)?.position || 'N/A' }}</div>
+                <div>Date: {{ props.approvals.find(a => a.status_type === 7)?.click_date ? formatDate(props.approvals.find(a => a.status_type === 7).click_date) : '' }}</div>
+              </div>
+            </div>
+            <!-- Approved By -->
+            <div class="col-3 text-center px-2 mb-3">
+              <div>អនុម័តដោយ</div>
+              <div>Approved By</div>
+              <img
+                v-if="props.approvals.find(a => a.status_type === 3)?.status === 1"
+                :src="getSignatureUrl(props.approvals.find(a => a.status_type === 3)?.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div v-else-if="props.approvals.find(a => a.status_type === 3)?.status === -1" class="text-danger mt-2">
+                <i class="fas fa-times-circle fa-2x"></i>
+                <div>Rejected</div>
+              </div>
+              <div v-if="props.approvals.find(a => a.status_type === 3)?.user_id === props.currentUser?.id && props.approvals.find(a => a.status_type === 3)?.status === 0" class="mt-2">
+                <button class="btn btn-success btn-sm" @click="approveRequest(3)">
+                  Sign
+                </button>
+                <button class="btn btn-danger btn-sm ms-2" @click="rejectRequest(3)">
+                  Reject
+                </button>
+              </div>
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ props.approvals.find(a => a.status_type === 3)?.name || 'N/A' }}</div>
+                <div>Position: {{ props.approvals.find(a => a.status_type === 3)?.position || 'N/A' }}</div>
+                <div>Date: {{ props.approvals.find(a => a.status_type === 3)?.click_date ? formatDate(props.approvals.find(a => a.status_type === 3).click_date) : '' }}</div>
               </div>
             </div>
           </div>

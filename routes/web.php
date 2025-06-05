@@ -212,6 +212,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
 
+    // Evaluation routes
+    Route::post('/evaluations/{evaluation}/approve', [EvaluationController::class, 'approve'])->name('evaluations.approve');
+    Route::post('/evaluations/{evaluation}/reject', [EvaluationController::class, 'reject'])->name('evaluations.reject');
+
 });
 
 
