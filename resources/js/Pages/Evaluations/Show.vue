@@ -359,7 +359,7 @@ const goBack = () => {
                   <tr class="text-center">
                     <th rowspan="2" style="width: 3%;">No.</th>
                     <th rowspan="2" style="width: 8%;">Item Code</th>
-                    <th rowspan="2" style="width: 15%;">Description</th>
+                    <th rowspan="2" style="min-width: 150px;">Description</th>
                     <th rowspan="2" style="width: 5%;">Qty</th>
                     <th rowspan="2" style="width: 5%;">UoM</th>
                     <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'supplier-header-' + qIndex" colspan="4" class="bg-light">
