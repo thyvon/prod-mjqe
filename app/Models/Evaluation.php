@@ -13,6 +13,8 @@ class Evaluation extends Model
         'reference',
         'recommendation',
         'status',
+        'created_by',
+        'crated_at',
     ];
 
     public function quotations()

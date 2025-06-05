@@ -140,9 +140,79 @@ class EvaluationController extends Controller
 
     public function show(Evaluation $evaluation)
     {
-        return Inertia::render('Evaluations/Show', [
-            'evaluation' => $this->transformEvaluationData($evaluation),
-        ]);
+        try {
+            // Load related data for the evaluation
+            $evaluation->load('quotations.supplier', 'quotations.products');
+
+            // Fetch associated approvals
+            $approvals = Approval::where([
+                'approval_id' => $evaluation->id,
+                'docs_type' => 8,
+            ])->get()->map(function ($approval) {
+                return [
+                    'status_type' => $approval->status_type,
+                    'user_id' => $approval->user_id,
+                    'approval_name' => $approval->approval_name,
+                    'docs_type' => $approval->docs_type,
+                    'name' => $approval->user ? $approval->user->name : 'N/A',
+                    'position' => $approval->user ? ($approval->user->position ?? 'N/A') : 'N/A',
+                    'status' => $approval->status ?? 0, // 0: pending, 1: approved, -1: rejected
+                    'signature' => $approval->signature ?? null,
+                    'click_date' => $approval->updated_at ? $approval->updated_at->format('Y-m-d') : null,
+                ];
+            })->all();
+
+            // Log the access for auditing
+            Log::info('Evaluation viewed', [
+                'evaluation_id' => $evaluation->id,
+                'user_id' => auth()->id(),
+            ]);
+
+            // Render Inertia view
+            return Inertia::render('Evaluations/Show', [
+                'evaluation' => $this->transformEvaluationData($evaluation),
+                'approvals' => $approvals,
+                'suppliers' => Supplier::all()->map(function ($supplier) {
+                    return [
+                        'id' => $supplier->id,
+                        'name' => $supplier->name,
+                        'address' => $supplier->address ?? '',
+                        'phone' => $supplier->number ?? '',
+                        'vat' => $supplier->vat ?? 0,
+                    ];
+                })->all(),
+                'products' => Product::all()->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'code' => $product->sku ?? '',
+                        'name' => $product->product_description ?? '',
+                        'uom' => $product->uom ?? '',
+                    ];
+                })->all(),
+                'users' => User::all()->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'position' => $user->position ?? 'N/A',
+                        'signature' => $user->signature ?? null,
+                    ];
+                })->all(),
+                'currentUser' => auth()->user() ? [
+                    'id' => auth()->user()->id,
+                    'name' => auth()->user()->name,
+                    'position' => auth()->user()->position ?? 'N/A',
+                ] : null,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error in EvaluationController@show', [
+                'message' => $e->getMessage(),
+                'evaluation_id' => $evaluation->id,
+                'user_id' => auth()->id(),
+            ]);
+
+            return redirect()->back()->with('error', 'An error occurred while retrieving the evaluation.');
+        }
     }
 
     public function edit(Evaluation $evaluation)

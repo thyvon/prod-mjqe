@@ -1,217 +1,631 @@
-<template>
-  <div class="container-fluid py-4">
-    <!-- Header Section -->
-    <div class="row mb-3">
-      <div class="col-md-5">
-        <img src="/logo.png" alt="MJQ Logo" style="height: 50px;" /><br />
-        <strong>MJQ</strong><br />
-        Mengly J. Quach Education
-      </div>
-      <div class="col-md-4 text-center align-self-center">
-        <h4 class="header-title">Price Evaluation Form</h4>
-      </div>
-      <div class="col-md-3 text-end">
-        Code: MJQE0055<br />
-        Version: 4.1
-      </div>
-    </div>
-
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th rowspan="2">No.</th>
-          <th rowspan="2">Item Code</th>
-          <th rowspan="2">Item Description</th>
-          <th rowspan="2">QTY</th>
-          <th rowspan="2">UoM</th>
-          <!-- Dynamic Quotation Headers -->
-          <th
-            v-for="(q, i) in quotations"
-            :key="'header1-' + i"
-            colspan="3"
-            class="text-start"
-          >
-            <div><strong>Quotation {{ i + 1 }}</strong></div>
-            <div style="font-weight: normal;">
-              Name: {{ q.supplier_name || '__________________' }}<br />
-              Add : {{ q.supplier_address || '__________________' }}<br />
-              Tel : {{ q.supplier_tel || '__________________' }}
-            </div>
-          </th>
-        </tr>
-        <tr>
-          <!-- Sub-headers for each quotation -->
-          <th v-for="(q, i) in quotations" :key="'header2-' + i" colspan="3" class="text-start">
-            <table style="width: 100%; border: none;">
-              <tr>
-                <th style="width:33%; border:none;">Brand</th>
-                <th style="width:33%; border:none;">Unit Cost</th>
-                <th style="width:33%; border:none;">Total Cost</th>
-              </tr>
-            </table>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, idx) in evaluation.items" :key="item.id || idx">
-          <td>{{ idx + 1 }}</td>
-          <td>{{ item.code || '' }}</td>
-          <td class="text-start">{{ item.description || '' }}</td>
-          <td>{{ item.qty || '' }}</td>
-          <td>{{ item.uom || '' }}</td>
-
-          <!-- For each quotation, show brand, unit cost, total cost -->
-          <template v-for="(q, qIdx) in quotations" :key="'prod-' + idx + '-' + qIdx">
-            <td>
-              {{
-                q.products.find(p => p.item_id === item.id)?.brand || ''
-              }}
-            </td>
-            <td>
-              {{
-                q.products.find(p => p.item_id === item.id)?.unit_cost || ''
-              }}
-            </td>
-            <td>
-              {{
-                (() => {
-                  const product = q.products.find(p => p.item_id === item.id);
-                  if (product) return (product.unit_cost * item.qty).toFixed(2);
-                  return '';
-                })()
-              }}
-            </td>
-          </template>
-        </tr>
-
-        <!-- Totals Rows -->
-        <tr>
-          <td colspan="5">SubTotal:</td>
-          <td
-            v-for="(subtotal, i) in subTotals"
-            :key="'subtotal-' + i"
-            colspan="3"
-          >
-            {{ formatCurrency(subtotal) }}
-          </td>
-        </tr>
-        <tr>
-          <td colspan="5">Discount:</td>
-          <td
-            v-for="(discount, i) in discounts"
-            :key="'discount-' + i"
-            colspan="3"
-          >
-            {{ formatCurrency(discount) }}
-          </td>
-        </tr>
-        <tr>
-          <td colspan="5">VAT 10%:</td>
-          <td
-            v-for="(vat, i) in vats"
-            :key="'vat-' + i"
-            colspan="3"
-          >
-            {{ formatCurrency(vat) }}
-          </td>
-        </tr>
-        <tr>
-          <td colspan="5">Grand Total:</td>
-          <td
-            v-for="(grand, i) in grandTotals"
-            :key="'grand-' + i"
-            colspan="3"
-          >
-            {{ formatCurrency(grand) }}
-          </td>
-        </tr>
-
-        <tr><td colspan="5" class="py-2"></td></tr>
-
-        <!-- Criteria Scores Dynamically for all quotations -->
-        <tr v-for="(criteria, idx) in criteriaKeys" :key="'criteria-row-' + idx">
-          <td>{{ idx + 1 }}</td>
-          <td colspan="4" class="text-start">{{ criteriaLabels[criteria] }}</td>
-          <td
-            v-for="(q, i) in quotations"
-            :key="'criteria-score-' + idx + '-' + i"
-            colspan="3"
-          >
-            {{ q.scores?.[criteria] ?? '' }}
-          </td>
-        </tr>
-
-        <tr>
-          <td colspan="5" class="text-start">
-            Basis of supplier recommend: {{ evaluation.basis_of_supplier_recommend || '' }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</template>
-
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, nextTick } from 'vue';
+import { Head } from '@inertiajs/vue3';
+import Main from '@/Layouts/Main.vue';
+import axios from 'axios';
 
+// Define props
 const props = defineProps({
   evaluation: {
     type: Object,
-    required: true
+    required: true,
   },
-  quotations: {
+  approvals: {
     type: Array,
-    default: () => []
+    default: () => [],
+  },
+  suppliers: {
+    type: Array,
+    default: () => [],
+  },
+  products: {
+    type: Array,
+    default: () => [],
+  },
+  users: {
+    type: Array,
+    default: () => [],
+  },
+  currentUser: {
+    type: Object,
+    default: () => null,
+  },
+});
+
+// Refs for Select2
+const supplierSelects = ref([]);
+const reviewedBySelect = ref(null);
+const acknowledgedBySelect = ref(null);
+const approvedBySelect = ref(null);
+
+// Format currency
+const formatCurrency = (value) => {
+  return value ? `$${parseFloat(value).toFixed(2)}` : '$0.00';
+};
+
+// Format date
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const options = { year: 'numeric', month: 'short', day: '2-digit' };
+  return new Date(dateString).toLocaleDateString('en-US', options);
+};
+
+// Supplier details
+const getSupplierName = (quotation) => {
+  const supplier = props.suppliers.find((s) => s.id === quotation.supplier_id);
+  return supplier ? supplier.name : '-';
+};
+
+const getSupplierAddress = (quotation) => {
+  const supplier = props.suppliers.find((s) => s.id === quotation.supplier_id);
+  return supplier ? supplier.address : '-';
+};
+
+const getSupplierPhone = (quotation) => {
+  const supplier = props.suppliers.find((s) => s.id === quotation.supplier_id);
+  return supplier ? supplier.phone : '-';
+};
+
+// Product details
+const getProductCode = (productId) => {
+  const product = props.products.find((p) => p.id === productId);
+  return product ? product.code : '-';
+};
+
+const getProductName = (productId) => {
+  const product = props.products.find((p) => p.id === productId);
+  return product ? product.name : '-';
+};
+
+const getProductUom = (productId) => {
+  const product = props.products.find((p) => p.id === productId);
+  return product ? product.uom : '-';
+};
+
+// Quotation details
+const getQuotationSpec = (quotation, productId) => {
+  return quotation ? quotation.specifications[productId] || '' : '';
+};
+
+const getQuotationPrice = (quotation, productId) => {
+  return quotation ? quotation.prices[productId] || 0 : 0;
+};
+
+const calculateTotalCost = (quotation, productId) => {
+  if (!quotation) return 0;
+  const price = quotation.prices[productId] || 0;
+  const quantity = props.evaluation.quantities[productId] || 0;
+  const discount = quotation.discounts[productId] || 0;
+  return price * quantity - discount;
+};
+
+// Summary calculations
+const computeSummary = (quotation) => {
+  const selectedSupplier = props.suppliers.find(s => s.id === quotation.supplier_id);
+  const vatRate = selectedSupplier ? Number(selectedSupplier.vat) / 100 : 0;
+
+  let subtotal = 0;
+  let discount = 0;
+
+  props.evaluation.products.forEach(productId => {
+    const qty = Number(props.evaluation.quantities[productId] || 0);
+    const price = Number(quotation.prices[productId] || 0);
+    const disc = Number(quotation.discounts[productId] || 0);
+
+    subtotal += price * qty;
+    discount += disc;
+  });
+
+  const vat = (subtotal - discount) * vatRate;
+  const grandTotal = subtotal - discount + vat;
+
+  return {
+    subtotal: subtotal.toFixed(2),
+    discount: discount.toFixed(2),
+    vat: vat.toFixed(2),
+    grandTotal: grandTotal.toFixed(2),
+    vatRate: vatRate * 100,
+  };
+};
+
+// Criteria
+const getCriteria = (quotation, key) => {
+  return quotation ? quotation.criteria[key] || '' : '';
+};
+
+// User details
+const getUserName = (userId) => {
+  const user = props.users.find((u) => u.id === userId);
+  return user ? user.name : 'N/A';
+};
+
+// Signature
+const getSignatureUrl = (signature) => {
+  return signature ? `/storage/${signature}` : 'https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png';
+};
+
+// Roman numerals
+const toRoman = (num) => {
+  const romanMap = [
+    { value: 1000, numeral: 'M' },
+    { value: 900, numeral: 'CM' },
+    { value: 500, numeral: 'D' },
+    { value: 400, numeral: 'CD' },
+    { value: 100, numeral: 'C' },
+    { value: 90, numeral: 'XC' },
+    { value: 50, numeral: 'L' },
+    { value: 40, numeral: 'XL' },
+    { value: 10, numeral: 'X' },
+    { value: 9, numeral: 'IX' },
+    { value: 5, numeral: 'V' },
+    { value: 4, numeral: 'IV' },
+    { value: 1, numeral: 'I' },
+  ];
+  let result = '';
+  for (const { value, numeral } of romanMap) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
   }
-})
+  return result;
+};
 
-function formatCurrency(val) {
-  if (typeof val !== 'number') return ''
-  return val.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
-}
+// Approval actions
+const getStatusTypeString = (statusType) => {
+  switch (statusType) {
+    case 7:
+      return 'Review';
+    case 3:
+      return 'Approve';
+    case 2:
+      return 'Acknowledge';
+    default:
+      return 'Unknown';
+  }
+};
 
-// Compute SubTotals dynamically
-const subTotals = computed(() =>
-  props.quotations.map((q) =>
-    q.products.reduce((sum, p) => {
-      const item = props.evaluation.items.find((it) => it.id === p.item_id)
-      return sum + (p.unit_cost * (item?.qty || 0))
-    }, 0)
-  )
-)
+const approveRequest = async (statusType) => {
+  const confirmResult = await Swal.fire({
+    title: 'Confirm',
+    text: `Are you sure you want to ${getStatusTypeString(statusType)}?`,
+    icon: 'warning',
+    showCancelButton: true,
+    cancelButtonText: 'No',
+    confirmButtonText: 'Yes',
+    buttonsStyling: false,
+    customClass: {
+      cancelButton: 'btn btn-secondary',
+      confirmButton: 'btn btn-primary',
+    },
+  });
 
-// For demo, discounts all zero (replace if you have real discount data)
-const discounts = computed(() => props.quotations.map(() => 0))
+  if (!confirmResult.isConfirmed) return;
 
-const vats = computed(() =>
-  subTotals.value.map((subtotal) => subtotal * 0.1)
-)
+  try {
+    await axios.post(`/evaluations/${props.evaluation.id}/approve`, {
+      status_type: statusType,
+    });
+    await Swal.fire({
+      title: 'Success',
+      text: `The Evaluation is successfully ${getStatusTypeString(statusType)}.`,
+      icon: 'success',
+      confirmButtonText: 'OK',
+      customClass: {
+        confirmButton: 'btn btn-primary',
+      },
+    });
+    window.location.reload();
+  } catch (error) {
+    console.error('Approval Error:', error);
+    await Swal.fire({
+      title: 'Error',
+      text: `The request failed to ${getStatusTypeString(statusType)}.`,
+      icon: 'error',
+      confirmButtonText: 'OK',
+      customClass: {
+        confirmButton: 'btn btn-danger',
+      },
+    });
+  }
+};
 
-const grandTotals = computed(() =>
-  subTotals.value.map((subtotal, i) => subtotal - discounts.value[i] + vats.value[i])
-)
+const rejectRequest = async (statusType) => {
+  const confirmResult = await Swal.fire({
+    title: 'Confirm',
+    text: `Are you sure you want to Reject?`,
+    icon: 'warning',
+    showCancelButton: true,
+    cancelButtonText: 'No, cancel!',
+    confirmButtonText: 'Yes, reject it!',
+    buttonsStyling: false,
+    customClass: {
+      cancelButton: 'btn btn-secondary',
+      confirmButton: 'btn btn-danger',
+    },
+  });
 
-// Criteria keys & labels to loop through
-const criteriaKeys = ['price', 'quality', 'lead_time', 'warranty', 'term_payment']
+  if (!confirmResult.isConfirmed) return;
 
-const criteriaLabels = {
-  price: 'Price',
-  quality: 'Quality',
-  lead_time: 'Lead time on service/production/goods',
-  warranty: 'Warranty (Services/Spare Parts/Goods)',
-  term_payment: 'Term Payment/Deposit'
-}
+  try {
+    await axios.post(`/evaluations/${props.evaluation.id}/reject`, {
+      status_type: statusType,
+    });
+    await Swal.fire({
+      title: 'Success',
+      text: `Evaluation has been rejected for ${getStatusTypeString(statusType)} step.`,
+      icon: 'success',
+      confirmButtonText: 'OK',
+      customClass: {
+        confirmButton: 'btn btn-primary',
+      },
+    });
+    window.location.reload();
+  } catch (error) {
+    console.error('Rejection Error:', error);
+    await Swal.fire({
+      title: 'Error',
+      text: `Failed to reject evaluation for ${getStatusTypeString(statusType)} step.`,
+      icon: 'error',
+      confirmButtonText: 'OK',
+      customClass: {
+        confirmButton: 'btn btn-danger',
+      },
+    });
+  }
+};
+
+// Print functionality
+const printForm = () => {
+  const printableContent = document.getElementById('printable-area').innerHTML;
+  const originalContent = document.body.innerHTML;
+
+  document.body.innerHTML = printableContent;
+  window.print();
+  document.body.innerHTML = originalContent;
+  window.location.reload();
+};
+
+// Back navigation
+const goBack = () => {
+  window.history.back();
+};
+
+// Initialize Select2
+const initializeSupplierSelect = (qIndex) => {
+  const $supplierSelect = $(supplierSelects.value[qIndex]);
+  if (!$supplierSelect.length) {
+    console.warn(`Supplier select element at index ${qIndex} not found.`);
+    return;
+  }
+
+  $supplierSelect.select2({
+    placeholder: 'Select supplier',
+    width: '100%',
+    allowClear: false,
+    disabled: true,
+    templateResult: (data) => {
+      if (!data.id) return data.text;
+      const supplier = props.suppliers.find(s => s.id === parseInt(data.id));
+      return supplier ? `${supplier.name}` : data.text;
+    },
+    templateSelection: (data) => {
+      if (!data.id) return data.text;
+      const supplier = props.suppliers.find(s => s.id === parseInt(data.id));
+      return supplier ? `${supplier.name}` : data.text;
+    },
+  });
+
+  $supplierSelect.val(props.evaluation.quotations[qIndex].supplier_id || '').trigger('change');
+};
+
+const initializeUserSelect = (selectRef, userId, placeholder) => {
+  const $select = $(selectRef.value);
+  if (!$select.length) {
+    console.warn(`${placeholder} select element not found.`);
+    return;
+  }
+
+  $select.select2({
+    placeholder,
+    width: '100%',
+    allowClear: false,
+    disabled: true,
+    templateResult: (data) => {
+      if (!data.id) return data.text;
+      const user = props.users.find(u => u.id === parseInt(data.id));
+      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
+    },
+    templateSelection: (data) => {
+      if (!data.id) return data.text;
+      const user = props.users.find(u => u.id === parseInt(data.id));
+      return user ? `${user.card_id && user.name && user.position ? `${user.card_id} - ${user.name} | ${user.position}` : user.name || 'Unknown User'}` : data.text;
+    },
+  });
+
+  $select.val(userId || '').trigger('change');
+};
+
+onMounted(() => {
+  if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+    console.warn('jQuery or Select2 is not loaded. Please ensure both are included in your project.');
+    return;
+  }
+
+  props.evaluation.quotations.forEach((_, qIndex) => {
+    initializeSupplierSelect(qIndex);
+  });
+
+  initializeUserSelect(reviewedBySelect, props.evaluation.reviewed_by, 'Select reviewer');
+  initializeUserSelect(acknowledgedBySelect, props.evaluation.acknowledged_by, 'Select acknowledger');
+  initializeUserSelect(approvedBySelect, props.evaluation.approved_by, 'Select approver');
+});
 </script>
 
+<template>
+  <Main>
+    <Head title="Evaluation Form" />
+    <div class="container a4-size">
+      <div class="row">
+        <div class="col text-end">
+          <button class="btn btn-secondary" @click="goBack">Back</button>
+          <button class="btn btn-primary" @click="printForm">Print</button>
+        </div>
+      </div>
+      <div id="printable-area">
+        <div class="row justify-content-center px-2">
+          <!-- Header Section -->
+          <div class="row mb-0">
+            <div class="col-3">
+              <a class="d-block text-start" href="#!">
+                <img src="https://sms.mjqeducation.edu.kh/assets/images/logo/logo-dark.png" class="img-fluid" alt="MJQ Logo" width="135" height="44">
+              </a>
+            </div>
+            <div class="col-6 pt-5">
+              <div class="row font-monospace">
+                <h5 class="text-uppercase text-center fw-bold" style="font-family: 'TW Cen MT';">Evaluation Form</h5>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="row font-monospace">
+                <span class="text-sm-end" style="font-size: x-small;">Code: MJQE0055</span>
+                <span class="text-sm-end" style="font-size: x-small;">Version: 4.1</span>
+                <span class="text-sm-end" style="font-size: x-small;">Ref: {{ props.evaluation.reference }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Table Section -->
+          <div class="row mb-3">
+            <div class="table-responsive width-full p-0">
+              <table class="table table-bordered border-dark table-sm">
+                <thead style="font-size: 11px; font-family: 'TW Cen MT';">
+                  <tr class="text-center">
+                    <th rowspan="2" style="width: 3%;">No.</th>
+                    <th rowspan="2" style="width: 8%;">Item Code</th>
+                    <th rowspan="2" style="width: 15%;">Description</th>
+                    <th rowspan="2" style="width: 5%;">Qty</th>
+                    <th rowspan="2" style="width: 5%;">UoM</th>
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'supplier-header-' + qIndex" colspan="4" style="width: 22%;">
+                      <div class="underline fw-bold">Quotation {{ toRoman(qIndex + 1) }}</div>
+                      <div class="text-start">Name: {{ getSupplierName(quotation) }}</div>
+                      <div class="text-start">Phone: {{ getSupplierPhone(quotation) }}</div>
+                      <div class="text-start">Address: {{ getSupplierAddress(quotation) }}</div>
+                    </th>
+                  </tr>
+                  <tr class="text-center">
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-spec'" style="width: 5.5%;">Brand/Spec</th>
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-price'" style="width: 5.5%;">Price</th>
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-discount'" style="width: 5.5%;">Discount</th>
+                    <th v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subheader-' + qIndex + '-total'" style="width: 5.5%;">Total</th>
+                  </tr>
+                </thead>
+                <tbody class="table-group-divider" style="font-size: 10px;">
+                  <tr v-for="(productId, pIndex) in props.evaluation.products" :key="'product-' + productId">
+                    <td>{{ pIndex + 1 }}</td>
+                    <td>{{ getProductCode(productId) }}</td>
+                    <td>{{ getProductName(productId) }}</td>
+                    <td>{{ props.evaluation.quantities[productId] || 0 }}</td>
+                    <td>{{ getProductUom(productId) }}</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-spec`" class="text-center">
+                      {{ getQuotationSpec(quotation, productId) }}
+                    </td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-price`" class="text-center">
+                      {{ formatCurrency(getQuotationPrice(quotation, productId)) }}
+                    </td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-discount`" class="text-center">
+                      {{ formatCurrency(quotation.discounts[productId] || 0) }}
+                    </td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="`q-${qIndex}-p-${pIndex}-total`" class="text-center">
+                      {{ formatCurrency(calculateTotalCost(quotation, productId)) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">Subtotal</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'subtotal-' + qIndex" colspan="4" class="text-right fw-bold">
+                      {{ formatCurrency(computeSummary(quotation).subtotal) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">Discount</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'discount-' + qIndex" colspan="4" class="text-right text-danger fw-bold">
+                      -{{ formatCurrency(computeSummary(quotation).discount) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">VAT</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'vat-' + qIndex" colspan="4" class="text-right fw-bold">
+                      +{{ formatCurrency(computeSummary(quotation).vat) }}
+                      <small class="text-muted">({{ props.suppliers.find(s => s.id === quotation.supplier_id)?.vat || 0 }}%)</small>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">Grand Total</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'grandTotal-' + qIndex" colspan="4" class="text-right fw-bold text-success">
+                      {{ formatCurrency(computeSummary(quotation).grandTotal) }}
+                    </td>
+                  </tr>
+                  <tr><td colspan="13" class="border-0"></td></tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">1 - Price</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'price-' + qIndex" colspan="4" class="text-center">
+                      {{ getCriteria(quotation, 'price') }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">2 - Quality</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'quality-' + qIndex" colspan="4" class="text-center">
+                      {{ getCriteria(quotation, 'quality') }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">3 - Lead time on service/production/goods</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'lead_time-' + qIndex" colspan="4" class="text-center">
+                      {{ getCriteria(quotation, 'lead_time') }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">4 - Warranty, (Services/Spare Parts/Goods)</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'warranty-' + qIndex" colspan="4" class="text-center">
+                      {{ getCriteria(quotation, 'warranty') }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="fw-bold">5 - Term Payment/Deposit</td>
+                    <td v-for="(quotation, qIndex) in props.evaluation.quotations" :key="'term_payment-' + qIndex" colspan="4" class="text-center">
+                      {{ getCriteria(quotation, 'term_payment') }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Recommendation -->
+          <div class="row mb-3">
+            <div class="table-responsive width-full p-0">
+              <table class="table table-bordered border-dark table-sm">
+                <tbody style="font-size: 10px;">
+                  <tr>
+                    <td style="width: 20%;">Recommendation</td>
+                    <td>{{ props.evaluation.recommendation || 'No recommendation provided' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Footer Section (Approvals) -->
+          <div class="row mb-3" style="height: 150px;">
+            <div class="col-4 text-center px-2 mb-3">
+              <div>រៀបចំដោយ</div>
+              <div>Prepared By</div>
+              <img
+                :src="getSignatureUrl(props.users.find(u => u.id === props.evaluation.created_by)?.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ getUserName(props.evaluation.created_by) }}</div>
+                <div>Position: {{ props.users.find(u => u.id === props.evaluation.created_by)?.position || 'N/A' }}</div>
+                <div>Date: {{ formatDate(props.evaluation.created_at) }}</div>
+              </div>
+            </div>
+            <div v-for="approval in props.approvals" :key="approval.status_type" class="col-4 text-center px-2 mb-3">
+              <div v-if="approval.status_type === 3">អនុម័តដោយ</div>
+              <div>{{ approval.approval_name }}</div>
+              <img
+                v-if="approval.status === 1"
+                :src="getSignatureUrl(approval.signature)"
+                alt="Signature"
+                style="width: 130px; height: 80px; object-fit: contain;"
+              />
+              <div v-else-if="approval.status === -1" class="text-danger mt-2">
+                <i class="fas fa-times-circle fa-2x"></i>
+                <div>Rejected</div>
+              </div>
+              <div v-if="approval.user_id === props.currentUser?.id && approval.status === 0" class="mt-2">
+                <button class="btn btn-success btn-sm" @click="approveRequest(approval.status_type)">
+                  Sign
+                </button>
+                <button class="btn btn-danger btn-sm ms-2" @click="rejectRequest(approval.status_type)">
+                  Reject
+                </button>
+              </div>
+              <div class="border-top mt-2 pt-1 text-start">
+                <div>Name: {{ approval.name }}</div>
+                <div>Position: {{ approval.position }}</div>
+                <div>Date: {{ approval.click_date ? formatDate(approval.click_date) : '' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Main>
+</template>
+
 <style scoped>
-body {
-  font-size: 13px;
+.a4-size {
+  width: 297mm; /* A4 landscape width */
+  height: 210mm; /* A4 landscape height */
+  margin: 10mm auto;
+  padding: 10mm;
+  background: white !important;
+  color: black !important;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  overflow: auto;
 }
-table.table > thead > tr > th,
-table.table > tbody > tr > td {
-  vertical-align: middle;
+
+.a4-size * {
+  color: black !important;
+}
+
+.table th,
+.table td {
+  border: 1px solid black;
+}
+
+@media print {
+  .a4-size {
+    width: 297mm;
+    height: 210mm;
+    margin: 10mm auto;
+    padding: 20mm !important;
+    box-shadow: none;
+    background: white !important;
+    color: black !important;
+    overflow: visible;
+  }
+
+  #printable-area {
+    padding: 20mm !important;
+  }
+
+  .btn {
+    display: none !important;
+  }
+
+  .form-control[readonly],
+  .form-control,
+  select,
+  textarea[readonly] {
+    border: none;
+    background: none;
+    padding: 0;
+    height: auto;
+    line-height: normal;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  .input-group-text {
+    border: none;
+    background: none;
+    padding-left: 0;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
 }
 </style>
