@@ -160,8 +160,8 @@ class EvaluationController extends Controller
                     'docs_type' => $approval->docs_type,
                     'name' => $approval->user ? $approval->user->name : 'N/A',
                     'position' => $approval->user ? ($approval->user->position ?? 'N/A') : 'N/A',
+                    'signature' => $approval->user ? $approval->user->signature : null,
                     'status' => $approval->status ?? 0, // 0: pending, 1: approved, -1: rejected
-                    'signature' => $approval->signature ?? null,
                     'click_date' => $approval->click_date ? $approval->click_date : null,
                 ];
             })->all();
