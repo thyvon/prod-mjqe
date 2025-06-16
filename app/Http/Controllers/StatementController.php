@@ -217,88 +217,91 @@ class StatementController extends Controller
                 'description' => 'nullable|string',
                 'remark' => 'nullable|string',
                 'status' => 'sometimes|integer',
-                'invoices' => 'array', // Validate invoices array
-                'invoices.*.id' => 'required|exists:purchase_invoices,id', // Validate each invoice ID
+                'invoices' => 'array',
+                'invoices.*.id' => 'required|exists:purchase_invoices,id',
             ]);
+
+            // Start a transaction
+            \DB::beginTransaction();
 
             $statement = Statement::findOrFail($id);
 
-            // Extract existing invoice IDs from the database
+            // Get existing and new invoice IDs
             $existingInvoiceIds = StatementIvoice::where('clear_statement_id', $id)->pluck('invoice_id')->toArray();
-
-            // Extract new invoice IDs from the request
             $newInvoiceIds = collect($validated['invoices'])->pluck('id')->toArray();
-
-            // Identify invoices to be removed
             $invoicesToRemove = array_diff($existingInvoiceIds, $newInvoiceIds);
 
-            // Remove invoices that are no longer in the request
+            // Remove old invoices
             StatementIvoice::where('clear_statement_id', $id)
                 ->whereIn('invoice_id', $invoicesToRemove)
                 ->delete();
 
-            // Filter out invoices that are already in the statement
+            // Filter new invoices
             $newInvoices = collect($validated['invoices'])->filter(function ($invoice) use ($existingInvoiceIds) {
                 return !in_array($invoice['id'], $existingInvoiceIds);
             });
 
-            // Validate only new invoices for duplicates
+            // Check for duplicate invoices
             $duplicateInvoices = StatementIvoice::whereIn('invoice_id', $newInvoices->pluck('id'))
-                ->with('purchaseInvoice:id,pi_number') // Use purchase_invoice relationship
+                ->with('purchaseInvoice:id,pi_number')
                 ->get()
                 ->map(function ($statementInvoice) {
-                    return $statementInvoice->purchaseInvoice->pi_number ?? 'Unknown'; // Access pi_number via purchase_invoice
+                    return $statementInvoice->purchaseInvoice->pi_number ?? 'Unknown';
                 })
                 ->toArray();
 
             if (!empty($duplicateInvoices)) {
+                \DB::rollBack();
                 return response()->json([
                     'error' => 'Some invoices are already included in another statement.',
-                    'existing_invoices' => $duplicateInvoices, // Return pi_number instead of invoice ID
+                    'existing_invoices' => $duplicateInvoices,
                 ], 422);
             }
 
+            // Update statement with validated data
             $statement->update($validated);
 
-            $totalAmount = 0;
-            $successfulInvoices = 0;
-
-            // Add new invoices and calculate total amount
+            // Add new invoices
             foreach ($newInvoices as $invoice) {
                 $purchaseInvoice = PurchaseInvoice::findOrFail($invoice['id']);
-
-                $statementInvoice = StatementIvoice::create([
+                if (is_null($purchaseInvoice->paid_amount) || $purchaseInvoice->paid_amount < 0) {
+                    \DB::rollBack();
+                    return response()->json(['error' => 'Invalid paid_amount for invoice ID: ' . $purchaseInvoice->id], 422);
+                }
+                StatementIvoice::create([
                     'clear_statement_id' => $statement->id,
                     'invoice_id' => $purchaseInvoice->id,
                     'supplier_id' => $validated['supplier_id'] ?? $statement->supplier_id,
                     'clear_by_id' => $validated['clear_by_id'] ?? $statement->clear_by_id,
                     'clear_date' => $validated['clear_date'] ?? $statement->clear_date,
                     'total_amount' => $purchaseInvoice->paid_amount,
-                    'status' => 0, // Default status
-                ]);
-
-                if ($statementInvoice) {
-                    $totalAmount += $purchaseInvoice->paid_amount;
-                    $successfulInvoices++;
-                }
-            }
-
-            // Update the statement's total_amount and total_invoices only if invoices were successfully stored
-            if ($successfulInvoices > 0 || count($invoicesToRemove) > 0) {
-                $statement->update([
-                    'total_amount' => $statement->total_amount + $totalAmount - StatementIvoice::whereIn('invoice_id', $invoicesToRemove)->sum('paid_amount'),
-                    'total_invoices' => $statement->total_invoices + $successfulInvoices - count($invoicesToRemove),
+                    'status' => 0,
                 ]);
             }
+
+            // Recalculate total_amount and total_invoices every time
+            $totalAmount = StatementIvoice::where('clear_statement_id', $statement->id)->sum('total_amount');
+            $totalInvoices = StatementIvoice::where('clear_statement_id', $statement->id)->count();
+
+            // Update statement with recalculated values
+            $statement->update([
+                'total_amount' => $totalAmount,
+                'total_invoices' => $totalInvoices,
+            ]);
 
             $this->storeApprovals($statement->id, $request);
-            // Load the supplier relationship
-            $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']); // Ensure currency is included
+            $statement->load(['supplier:id,name,currency', 'invoices', 'clearedBy:id,name']);
 
-            return response()->json($statement, 200); // Return the statement with the supplier relationship
+            \DB::commit();
+            return response()->json($statement, 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation Error in update method:', $e->errors());
+            \DB::rollBack();
+            \Log::error('Validation Error in update method: ' . json_encode($e->errors()));
             return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error in update method: ' . $e->getMessage());
+            return response()->json(['error' => 'An unexpected error occurred.'], 500);
         }
     }
 
