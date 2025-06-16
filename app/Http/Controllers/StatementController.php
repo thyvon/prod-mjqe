@@ -286,7 +286,7 @@ class StatementController extends Controller
             // Update the statement's total_amount and total_invoices only if invoices were successfully stored
             if ($successfulInvoices > 0 || count($invoicesToRemove) > 0) {
                 $statement->update([
-                    'total_amount' => $statement->total_amount + $totalAmount - StatementIvoice::whereIn('invoice_id', $invoicesToRemove)->sum('total_amount'),
+                    'total_amount' => $statement->total_amount + $totalAmount - StatementIvoice::whereIn('invoice_id', $invoicesToRemove)->sum('paid_amount'),
                     'total_invoices' => $statement->total_invoices + $successfulInvoices - count($invoicesToRemove),
                 ]);
             }
