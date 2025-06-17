@@ -61,7 +61,14 @@
 	                    <span></span>
 	                    <span></span>
 	                </button>
-	                <div class="site-logo"><a class="navbar-brand" href="/"><img class="logo-icon me-2" src="{{ asset('documentation/images/coderdocs-logo.svg') }}" alt="logo"><span class="logo-text text-white">E-Purchasing <span class="text-alt">Docs</span></span></a></div>    
+	                <div class="site-logo">
+                        <a class="navbar-brand" href="/">
+                            <img class="logo-icon me-2" src="{{ asset('documentation/images/coderdocs-logo.svg') }}" alt="logo">
+                            <span class="logo-text text-white">E-Purchasing <span class="text-alt">Docs</span></span>
+                        </a>
+                        <a href="/" class="ms-2 text-white">Go to Demo</a>
+                    </div>
+                    <!--//site-logo-->    
                 </div><!--//docs-logo-wrapper-->
 	            <div class="docs-top-utilities d-flex justify-content-end align-items-center">
 	                <!-- <div class="top-search-box d-none d-lg-flex">
