@@ -45,7 +45,6 @@ class HandleInertiaRequests extends Middleware
         ->where('status', 0) // Filter by status = 0
         ->orderBy('status_type', 'asc') // Sort by status_type
         ->get()
-        ->unique('approval_id') // Ensure uniqueness by approval_id
         ->values() // Reindex the collection
         ->toArray() : null;
         return array_merge(parent::share($request), [
