@@ -40,13 +40,43 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $approvals = $user ? $user->approvals()
-        ->select('id', 'status', 'created_at', 'approval_name', 'status_type', 'docs_type', 'approval_id')
-        ->where('status', 0) // Filter by status = 0
-        ->orderBy('status_type', 'asc') // Sort by status_type
-        ->get()
-        ->values() // Reindex the collection
-        ->toArray() : null;
+
+        $approvals = null;
+        if ($user) {
+            $approvals = $user->approvals()
+                ->select('id', 'status', 'created_at', 'approval_name', 'status_type', 'docs_type', 'approval_id')
+                ->where('status', 0)
+                ->orderBy('status_type', 'asc')
+                ->get()
+                ->map(function ($approval) {
+                    // Workflow dependency logic
+                    $statusOrders = [
+                        1 => [1, 3, 4],
+                        2 => [1, 2, 3, 4],
+                        3 => [1, 3],
+                        5 => [1, 3],
+                        6 => [3, 5],
+                        7 => [3],
+                        8 => [2, 7, 3],
+                    ];
+                    $shouldShow = true;
+                    $statusOrder = $statusOrders[$approval->docs_type] ?? [];
+                    $currentIndex = array_search($approval->status_type, $statusOrder);
+                    if ($currentIndex !== false && $currentIndex > 0) {
+                        $previousStatusType = $statusOrder[$currentIndex - 1];
+                        $previousApproval = \App\Models\Approval::where('approval_id', $approval->approval_id)
+                            ->where('docs_type', $approval->docs_type)
+                            ->where('status_type', $previousStatusType)
+                            ->first();
+                        $shouldShow = $previousApproval && $previousApproval->status == 1;
+                    }
+                    return $shouldShow ? $approval : null;
+                })
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user,
