@@ -34,6 +34,7 @@ class ApprovalController extends Controller
                 'click_date'
             )
             ->where('user_id', $currentUserId)
+            ->orderByRaw('status = 0 DESC') // Prioritize status = 0 at the top
             ->orderBy('docs_type', 'asc')
             ->orderBy('status_type', 'asc')
             ->get();
