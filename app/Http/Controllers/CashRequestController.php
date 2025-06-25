@@ -168,7 +168,7 @@ class CashRequestController extends Controller
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
-                        'approval_name' => $docsType == 1 ? 'Cash Request-'.$approvalName : 'Cash Advance-'.$approvalName, // Set approval_name based on docsType
+                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance',
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -177,7 +177,7 @@ class CashRequestController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
-                        'approval_name' => $docsType == 1 ? 'Cash Request-'.$approvalName : 'Cash Advance-'.$approvalName, // Set approval_name based on docsType
+                        'approval_name' => $docsType == 1 ? 'Cash Request' : 'Cash Advance',
                     ]);
                 }
             }

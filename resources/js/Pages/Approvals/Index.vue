@@ -1,9 +1,65 @@
 <template>
   <Main>
     <Head :title="'Approvals'" />
+    <!-- Dashboard Summary Start -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-hourglass-half fa-2x me-3"></i>
+              <div>
+                <h5 class="card-title mb-0">Pending</h5>
+                <h2 class="mb-0">{{ pendingCount }}</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-times-circle fa-2x me-3"></i>
+              <div>
+                <h5 class="card-title mb-0">Rejected</h5>
+                <h2 class="mb-0">{{ rejectedCount }}</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-check-circle fa-2x me-3"></i>
+              <div>
+                <h5 class="card-title mb-0">Completed</h5>
+                <h2 class="mb-0">{{ completedCount }}</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <i class="fa fa-list-ol fa-2x me-3"></i>
+              <div>
+                <h5 class="card-title mb-0">Total</h5>
+                <h2 class="mb-0">{{ totalApprovals }}</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Dashboard Summary End -->
     <div class="panel panel-inverse">
       <div class="panel-heading">
-        <h4 class="panel-title">Approval Notifications</h4>
+        <h4 class="panel-title">My Approval List</h4>
         <div class="panel-heading-btn">
           <!-- ...existing code... -->
         </div>
@@ -14,11 +70,12 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Approval Name</th>
-                <th>Reference</th>
+                <th>Document Type</th>
+                <th>Reference No</th>
                 <th>Requested Date</th>
                 <th>Request Type</th>
                 <th>Status</th>
+                <th>Responded Date</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -32,7 +89,7 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
 import Main from '@/Layouts/Main.vue';
-import { onMounted, nextTick } from 'vue';
+import { onMounted, nextTick, computed } from 'vue';
 
 const props = defineProps({
   approvals: {
@@ -41,6 +98,27 @@ const props = defineProps({
     default: () => [],
   }
 });
+
+// Dashboard summary computed properties
+const totalApprovals = computed(() => {
+  return Array.isArray(props.approvals) ? props.approvals.length : 0;
+});
+
+const pendingCount = computed(() =>
+  Array.isArray(props.approvals)
+    ? props.approvals.filter(a => a.status === 0).length
+    : 0
+);
+const rejectedCount = computed(() =>
+  Array.isArray(props.approvals)
+    ? props.approvals.filter(a => a.status !== 0 && a.status !== 1).length
+    : 0
+);
+const completedCount = computed(() =>
+  Array.isArray(props.approvals)
+    ? props.approvals.filter(a => a.status === 1).length
+    : 0
+);
 
 let dataTableInstance;
 
@@ -61,13 +139,13 @@ onMounted(() => {
             data: 'status_type',
             render: (data) => {
               switch (data) {
-                case 1: return '<span class="badge bg-info">To Check</span>';
-                case 2: return '<span class="badge bg-primary">To Acknowledge</span>';
-                case 3: return '<span class="badge bg-success">To Approve</span>';
-                case 4: return '<span class="badge bg-warning">To Receive</span>';
-                case 5: return '<span class="badge bg-secondary">To Authorize</span>';
-                case 6: return '<span class="badge bg-danger">To Reject</span>';
-                case 7: return '<span class="badge bg-dark">To Review</span>';
+                case 1: return '<span class="badge bg-info">Need Check</span>';
+                case 2: return '<span class="badge bg-primary">Need Acknowledge</span>';
+                case 3: return '<span class="badge bg-success">Need Approve</span>';
+                case 4: return '<span class="badge bg-warning">Need Receive</span>';
+                case 5: return '<span class="badge bg-secondary">Need Authorize</span>';
+                case 6: return '<span class="badge bg-danger">Need Reject</span>';
+                case 7: return '<span class="badge bg-dark">Need Review</span>';
                 default: return '<span class="badge bg-secondary">Unknown</span>';
               }
             }
@@ -76,15 +154,16 @@ onMounted(() => {
             data: 'status',
             render: (data) => {
               if (data === 0) return '<span class="badge bg-warning">Pending</span>';
-              if (data === 1) return '<span class="badge bg-success">Approved</span>';
+              if (data === 1) return '<span class="badge bg-success">Completed</span>';
               return '<span class="badge bg-danger">Rejected</span>';
             }
           }, // Status with badge
+          { data: 'click_date', render: (data) => formatDate(data) }, // Responded date
           {
             data: null,
             render: (data) => `
               <div class="btn-group">
-                <button class="btn btn-primary btn-sm btn-view">Open</button>
+                <button class="btn btn-primary btn-sm btn-view">View</button>
               </div>
             `,
           }, // Actions

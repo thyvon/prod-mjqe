@@ -330,7 +330,7 @@ class StatementController extends Controller
                     $approval->update([
                         'user_id' => $data['user_id'],
                         'docs_type' => $docsType, // Update docs_type
-                        'approval_name' => 'Clear Statement-'.$approvalName, // Set approval_name based on docs_type
+                        'approval_name' => 'Clear Statement',
                     ]);
                 } else {
                     // Create a new record if it doesn't exist
@@ -339,7 +339,7 @@ class StatementController extends Controller
                         'status_type' => $data['status_type'],
                         'docs_type' => $docsType, // Set docs_type
                         'user_id' => $data['user_id'],
-                        'approval_name' => 'Clear Statement-'.$approvalName, // Set approval_name based on docs_type
+                        'approval_name' => 'Clear Statement',
                     ]);
                 }
             }

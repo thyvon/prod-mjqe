@@ -22,12 +22,12 @@ class ApprovalController extends Controller
             'cancellation.purchaseRequest:id,id as pr_po_id,pr_number',
             'cancellation.purchaseOrder:id,id as pr_po_id,po_number',
         ])
-            ->select('id', 'user_id', 'docs_type', 'status', 'created_at', 'approval_name', 'status_type', 'approval_id')
-            ->where('status', 0)
+            ->select('id', 'user_id', 'docs_type', 'status', 'created_at', 'approval_name', 'status_type', 'approval_id','click_date')
             ->where('user_id', Auth::id()) // Filter by authenticated user
+            ->orderBy('status', 'asc') // Sort by status
+            ->orderBy('created_at', 'desc') // Sort by created_at
             ->orderBy('status_type', 'asc') // Sort by status_type
             ->get()
-            ->unique('approval_id') // Filter unique by approval_id
             ->map(function ($approval) {
                 // Add a column to show ref_no or statement_number based on docs_type
                 if (in_array($approval->docs_type, [1, 2]) && $approval->cashRequest) {

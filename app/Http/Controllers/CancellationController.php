@@ -443,8 +443,8 @@ class CancellationController extends Controller
     private function storeNewApprovals($cancelId, $approvedBy, $authorizedBy, $docsType)
     {
         $docLabel = match ($docsType) {
-            6 => 'PR',
-            7 => 'PO',
+            6 => 'PR Cancellation',
+            7 => 'PO Cancellation',
             default => 'Document',
         };
         // Approved By
@@ -453,7 +453,7 @@ class CancellationController extends Controller
             'status_type' => 3,
             'docs_type' => $docsType,
             'user_id' => $approvedBy,
-            'approval_name' => "Request for Cancel $docLabel - Approved",
+            'approval_name' => "$docLabel",
         ]);
     
         // Authorized By (only if not null)
@@ -463,7 +463,7 @@ class CancellationController extends Controller
                 'status_type' => 5,
                 'docs_type' => $docsType,
                 'user_id' => $authorizedBy,
-                'approval_name' => "Request for Cancel $docLabel - Authorized",
+                'approval_name' => "$docLabel",
             ]);
         }
     }
@@ -485,7 +485,7 @@ class CancellationController extends Controller
         if ($approval) {
             $approval->update([
                 'user_id' => $approvedBy,
-                'approval_name' => "Request for Cancel $docLabel - Approve",
+                'approval_name' => "$docLabel",
             ]);
         } else {
             Approval::create([
@@ -493,7 +493,7 @@ class CancellationController extends Controller
                 'status_type' => 3,
                 'docs_type' => $docsType,
                 'user_id' => $approvedBy,
-                'approval_name' => "Request for Cancel $docLabel - Approve",
+                'approval_name' => "$docLabel",
             ]);
         }
     
@@ -507,7 +507,7 @@ class CancellationController extends Controller
             if ($authorization) {
                 $authorization->update([
                     'user_id' => $authorizedBy,
-                    'approval_name' => "Request for Cancel $docLabel - Authorize",
+                    'approval_name' => "$docLabel",
                 ]);
             } else {
                 Approval::create([
@@ -515,7 +515,7 @@ class CancellationController extends Controller
                     'status_type' => 5,
                     'docs_type' => $docsType,
                     'user_id' => $authorizedBy,
-                    'approval_name' => "Request for Cancel $docLabel - Authorize",
+                    'approval_name' => "$docLabel",
                 ]);
             }
         }

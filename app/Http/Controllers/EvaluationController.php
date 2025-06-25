@@ -66,6 +66,7 @@ class EvaluationController extends Controller
                 $evaluation = Evaluation::create([
                     'reference' => $this->generateReference(),
                     'recommendation' => $data['recommendation'],
+                    'status' => 'Pending', // Initial status
                     'created_by' => auth()->id(),
                     'reviewed_by' => $data['reviewed_by'],
                     'approved_by' => $data['approved_by'],
@@ -401,7 +402,7 @@ class EvaluationController extends Controller
                         $approval->update([
                             'user_id' => $data['user_id'],
                             'docs_type' => $docsType,
-                            'approval_name' => "Evaluation-$approvalName",
+                            'approval_name' => "Supplier Evaluation",
                         ]);
                     } else {
                         Approval::create([
@@ -409,7 +410,7 @@ class EvaluationController extends Controller
                             'status_type' => $data['status_type'],
                             'docs_type' => $docsType,
                             'user_id' => $data['user_id'],
-                            'approval_name' => "Evaluation-$approvalName",
+                            'approval_name' => "Supplier Evaluation",
                         ]);
                     }
                 }
