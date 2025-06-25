@@ -471,8 +471,8 @@ class CancellationController extends Controller
     private function updateApprovals($cancelId, $approvedBy, $authorizedBy, $docsType)
     {
         $docLabel = match ($docsType) {
-            6 => 'PR',
-            7 => 'PO',
+            6 => 'PR Cancellation',
+            7 => 'PO Cancellation',
             default => 'Document',
         };
     
