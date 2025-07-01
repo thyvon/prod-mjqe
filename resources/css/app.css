@@ -29,7 +29,7 @@ button {
   border-radius: 0 !important;
 }
 
-@font-face {
+/* @font-face {
   font-family: 'Tw Cen MT';
   src: url('/Fonts/TwCenMT.woff2') format('woff2');
 }
@@ -42,7 +42,7 @@ button {
 @font-face {
   font-family: 'Khmer OS Moul Light';
   src: url('/Fonts/KhmerOSmuollight.woff2') format('woff2');
-}
+} */
 
 body {
     /* font-size: 14px !important; */
