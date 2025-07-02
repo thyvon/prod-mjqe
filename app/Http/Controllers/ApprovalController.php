@@ -81,9 +81,15 @@ class ApprovalController extends Controller
                     4 => 'Receive'
                 ];
             } elseif ($approval->docs_type == 3) {
-                // Clear Invoice
+                // Clear Invoice (Petty Cash)
+                $stepMapping = [
+                    3 => 'Approve'
+                ];
+            } elseif ($approval->docs_type == 4) {
+                // Clear Invoice (Advance Payment)
                 $stepMapping = [
                     1 => 'Check',
+                    2 => 'Acknowledge',
                     3 => 'Approve',
                 ];
             } elseif ($approval->docs_type == 5) {
@@ -121,7 +127,9 @@ class ApprovalController extends Controller
                 } elseif ($approval->docs_type == 2) {
                     $statusOrder = [1, 2, 3, 4]; // Check -> Acknowledge -> Approve -> Receive
                 } elseif ($approval->docs_type == 3) {
-                    $statusOrder = [1, 3]; // Check -> Approve
+                    $statusOrder = [3]; // Only Approve
+                } elseif ($approval->docs_type == 4) {
+                    $statusOrder = [1, 2, 3]; // Check -> Acknowledge -> Approve
                 } elseif ($approval->docs_type == 5) {
                     $statusOrder = [1, 3]; // Check -> Approve
                 } elseif ($approval->docs_type == 6) {

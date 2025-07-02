@@ -288,7 +288,7 @@ class ClearInvoiceController extends Controller
 
             // Determine docs_type based on clear_type
             $clearInvoice = ClearInvoice::findOrFail($id);
-            $docsType = match ($cashRequest->clear_type) {
+            $docsType = match ($clearInvoice->clear_type) {
                 1 => 3,
                 2 => 4,
                 default => null, // Handle unexpected values
@@ -349,7 +349,7 @@ class ClearInvoiceController extends Controller
             ]);
 
             $currentUser = Auth::user();
-            $docsType = match ($cashRequest->clear_type) {
+            $docsType = match ($clearInvoice->clear_type) {
                 1 => 3,
                 2 => 4,
                 default => null, // Handle unexpected values

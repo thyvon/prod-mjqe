@@ -51,13 +51,14 @@ class HandleInertiaRequests extends Middleware
                 ->map(function ($approval) {
                     // Workflow dependency logic
                     $statusOrders = [
-                        1 => [1, 3, 4],
-                        2 => [1, 2, 3, 4],
-                        3 => [1, 3],
-                        5 => [1, 3],
-                        6 => [3, 5],
-                        7 => [3],
-                        8 => [2, 7, 3],
+                        1 => [1, 3, 4], // Cash Request (Check -> Approve -> Receive)
+                        2 => [1, 2, 3, 4], // Cash Request (Check -> Acknowledge -> Approve -> Receive)
+                        3 => [3], // Clear Invoice (Petty Cash)
+                        4 => [1, 2, 3], // Clear Invoice (Advance Payment)
+                        5 => [1, 3], // Clear Statement
+                        6 => [3, 5], // PR cancellation
+                        7 => [3], // PO cancellation
+                        8 => [2, 7, 3], // Evaluation   
                     ];
                     $shouldShow = true;
                     $statusOrder = $statusOrders[$approval->docs_type] ?? [];
