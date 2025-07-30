@@ -11,7 +11,7 @@ use App\Services\LocalFileService; // Update to use LocalFileService
 
 class InvoiceController extends Controller
 {
-    public function index()
+       public function index()
     {
         return Inertia::render('Purchase/Invoices/Index', [
             'purchaseInvoices' => PurchaseInvoice::with([
@@ -22,7 +22,7 @@ class InvoiceController extends Controller
             ->select([
                 'id', 'pi_number', 'invoice_date', 'total_amount',
                 'paid_amount', 'paid_usd', 'currency', 'currency_rate',
-                'transaction_type', 'payment_type', 'status', 'supplier', 'cash_ref' // Include foreign key
+                'transaction_type', 'payment_type', 'status', 'supplier', 'cash_ref'
             ])
             ->get(),
             'users' => User::select('id', 'name')->get(),
@@ -37,8 +37,61 @@ class InvoiceController extends Controller
             'purchaseOrders' => PurchaseOrder::select('id', 'po_number')->get(),
             'suppliers' => Supplier::select('id', 'name')->get(),
             'currentUser' => auth()->user()->only(['id', 'name']),
-
         ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('Purchase/Invoices/InvoiceForm', [
+            'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
+                ->select('id', 'product_id', 'po_id', 'qty', 'uom', 'unit_price')
+                ->get(),
+            'purchaseRequests' => PurchaseRequest::select('id', 'pr_number')->get(),
+            'purchaseOrders' => PurchaseOrder::select('id', 'po_number')->get(),
+            'suppliers' => Supplier::select('id', 'name', 'vat', 'currency')->get(),
+            'users' => User::select('id', 'name')->get(),
+            'currentUser' => auth()->user()->only(['id', 'name']),
+            'cashRequests' => CashRequest::select('id', 'ref_no', 'amount', 'currency', 'request_type', 'approval_status')->get(),
+            'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])
+                ->select('id', 'product_id', 'purchase_request_id', 'qty', 'uom', 'unit_price', 'total_price')
+                ->get(),
+            'vatRate' => config('app.vat_rate', 0),
+        ]);
+    }
+
+    public function edit($id)
+    {
+        try {
+            $invoice = PurchaseInvoice::with([
+                'items.purchaseRequest:id,pr_number',
+                'items.purchaseOrder:id,po_number',
+                'items.product:id,product_description,sku',
+                'supplier:id,name,vat,currency',
+                'attachments:id,purchase_invoice_id,file_url,file_name,sharepoint_file_id',
+                'purchasedBy:id,name',
+                'cashRequest:id,ref_no,amount,currency,request_type,approval_status'
+            ])->findOrFail($id);
+
+            return Inertia::render('Purchase/Invoices/InvoiceForm', [
+                'invoice' => $invoice,
+                'poItems' => PoItems::with(['product:id,product_description,sku,price', 'purchaseOrder:id,po_number,purpose', 'purchaseRequest:id,pr_number'])
+                    ->select('id', 'product_id', 'po_id', 'qty', 'uom', 'unit_price')
+                    ->get(),
+                'purchaseRequests' => PurchaseRequest::select('id', 'pr_number')->get(),
+                'purchaseOrders' => PurchaseOrder::select('id', 'po_number')->get(),
+                'suppliers' => Supplier::select('id', 'name', 'vat', 'currency')->get(),
+                'users' => User::select('id', 'name')->get(),
+                'currentUser' => auth()->user()->only(['id', 'name']),
+                'cashRequests' => CashRequest::select('id', 'ref_no', 'amount', 'currency', 'request_type', 'approval_status')->get(),
+                'prItems' => PrItem::with(['product:id,product_description,sku,price', 'purchaseRequest:id,pr_number,purpose'])
+                    ->select('id', 'product_id', 'purchase_request_id', 'qty', 'uom', 'unit_price', 'total_price')
+                    ->get(),
+                'vatRate' => config('app.vat_rate', 0),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in edit method:', ['message' => $e->getMessage(), 'stack_trace' => $e->getTraceAsString()]);
+            return redirect()->route('invoices.index')->with('error', 'Error fetching invoice details.');
+        }
     }
 
     public function getPrItems(Request $request)
@@ -109,24 +162,6 @@ class InvoiceController extends Controller
         }
     }
 
-    public function edit($id)
-    {
-        try {
-            $invoice = PurchaseInvoice::with(['items.purchaseRequest', 'items.purchaseOrder', 'items.product', 'supplier', 'attachments'])->findOrFail($id);
-
-            // Ensure purchased_by is included in the response
-            return response()->json([
-                'invoice' => $invoice,
-                'transaction_type' => $invoice->transaction_type,
-                'cash_ref' => $invoice->cash_ref, // Include cash_ref explicitly
-                'vat_rate' => $invoice->vat_rate,
-                'purchased_by' => $invoice->purchased_by, // Include purchased_by explicitly
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error in edit method:', ['message' => $e->getMessage()]);
-            return response()->json(['error' => 'Error fetching invoice.'], 500);
-        }
-    }
 
     public function show($id)
     {

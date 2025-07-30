@@ -1416,7 +1416,7 @@ onMounted(() => {
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <table id="pr-items-table" class="table table-bordered align-middle text-nowrap" width="100%">
+          <table id="pr-items-table" class="table table-bordered align-middle" width="100%">
             <thead>
               <tr>
                 <th style="width: 5%;">#</th>
