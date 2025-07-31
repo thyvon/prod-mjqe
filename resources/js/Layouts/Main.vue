@@ -272,7 +272,7 @@ const logout = () => {
       <div id="footer" class="app-footer mt-auto">
         &copy; 2024 PROD MJQE All Right Reserved
       </div>
-    <!-- <div>
+    <div>
       <button
         class="btn btn-primary btn-lg rounded-circle shadow"
         style="position: fixed; bottom: 30px; right: 30px; z-index: 1050;"
@@ -297,7 +297,7 @@ const logout = () => {
           </div>
         </div>
       </transition>
-    </div> -->
+    </div>
     </div>
 	<a href="javascript:;" class="btn btn-icon btn-circle btn-theme btn-scroll-to-top" data-toggle="scroll-to-top">
 		<i class="fa fa-angle-up"></i>

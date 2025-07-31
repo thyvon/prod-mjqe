@@ -160,18 +160,6 @@ class PrItem extends Model
         $this->save();
     }
 
-    public function calculateQtyPurchaseOrder()
-    {
-        if ($this->isCalculating) {
-            return;
-        }
-
-        $this->isCalculating = true;
-        $this->qty_po = PoItems::where('pr_item_id', $this->id)->sum('qty');
-        $this->isCalculating = false;
-        $this->save();
-    }
-
     public function recalculateQtyPurchase()
     {
         $this->calculateQtyPurchase();
